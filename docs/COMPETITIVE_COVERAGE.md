@@ -168,7 +168,7 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | Tendências a partir do builder | As fichas por espécie estão disponíveis nas duas fontes | PR #7 abre Usage para o integrante escolhido e permite trocar de fonte; não altera o set |
 | Aluguel de times/rentals | Nenhuma das duas APIs avaliadas fornece times de aluguel | Sem fonte; fora do escopo competitivo desta integração |
 | Contas, salas e pareamento | Nenhuma das APIs oferece identidade ou salas do Spinda Stop | Etapa comunitária própria |
-| Calculadora de dano | Nenhuma API substitui regras oficiais e um modelo de dano validado | Etapa própria; fontes de uso não serão usadas como fórmula |
+| Calculadora de dano | Nenhuma API de Usage fornece dano; o motor Smogon tem mecânicas de Champions | PR #8 usa `@smogon/calc` 0.12.0, compara um caso público e documenta lacunas; não é uma simulação completa nem um validador de regulamento |
 
 ## Decisões de produto
 
@@ -188,6 +188,6 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | #5 — MetaRoll: fichas e histórico | Adaptador próprio; perfil, ranking de espécies, histórico diário e temporadas arquivadas | Captura e atribuição próprias; sem tipo no arquivo |
 | #6 — MetaRoll: matchups e ladder | Matchups publicados, top de jogadores e filtros por país/idioma/posição/rating/partidas/taxa | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
 | #7 — Tendências a partir do time | Link de cada integrante para a ficha correspondente, com busca contextual e troca de fonte | Navegação contextual para a fonte ativa e seu período; nenhum campo do set é alterado |
-| #8 — Calculadora de dano | Regras cobertas, cálculo e casos de referência verificáveis | Não depende de percentuais de Usage; lacunas do motor devem aparecer na tela |
+| #8 — Calculadora de dano | Tela, regras do motor e casos reproduzíveis | Não depende de percentuais de Usage; `@smogon/calc` 0.12.0 tem limites documentados |
 | #9 — Fechar lacunas de contrato | Confirmar com as fontes se `ratingHistory`, `megas` e `ladder-cutoffs` têm semântica útil e validar o arquivo grande | Só integrar campos documentados ou confirmados; `all.json` segue baseado no contrato público |
 | #10 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |

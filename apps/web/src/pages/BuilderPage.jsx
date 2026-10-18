@@ -76,6 +76,14 @@ export function BuilderPage() {
   );
   const moveListId = "move-options";
   const natureListId = "nature-options";
+  const damageCalculatorParams = selectedMember && selectedPokemon ? new URLSearchParams({
+    attacker: selectedPokemon.name,
+    ability: selectedMember.ability,
+    item: selectedMember.item,
+    nature: selectedMember.nature || "Serious",
+    ...Object.fromEntries(STAT_FIELDS.map(([key]) => [`sp-${key}`, String(selectedMember.statPoints[key])])),
+    ...(selectedMember.moves.find((move) => move.trim()) ? { move: selectedMember.moves.find((move) => move.trim()) } : {}),
+  }) : null;
 
   useEffect(() => {
     if (location.state?.pokemonSlug) navigate(location.pathname, { replace: true, state: null });
@@ -257,10 +265,14 @@ export function BuilderPage() {
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
                   <p className="form-hint builder-usage-hint">A consulta mostra tendências da fonte sem alterar este set.</p>
+                  <p className="form-hint builder-usage-hint">A calculadora abre em nível 50 com espécie, nature, habilidade, item e SP deste set; começa pelo primeiro golpe preenchido.</p>
                 </div>
                 <div className="set-heading-actions">
                   <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de ${selectedPokemon.name} em Usage`}>
                     Ver tendências de Usage
+                  </Link>
+                  <Link className="button button-outline button-small" to={`/calculator?${damageCalculatorParams}`} aria-label={`Simular dano com o set atual de ${selectedPokemon.name}`}>
+                    Simular dano
                   </Link>
                   <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
                   <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
