@@ -75,7 +75,7 @@ const sampleTeam = {
   format: "doubles",
   rulesetId: "champions-doubles-draft",
   members: [{
-    pokemonId: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: 445, formSlug: "garchomp",
+    pokemonId: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: "default", formSlug: "garchomp",
     ability: "Rough Skin", item: "Clear Amulet", nature: "Adamant", level: 50,
     moves: ["Earthquake", "", "", ""], statPoints: { hp: 0, atk: 14, def: 0, spa: 0, spd: 0, spe: 0 },
   }, null, null, null, null, null],

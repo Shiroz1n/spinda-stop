@@ -10,7 +10,7 @@ const sampleTeam = {
   rulesetId: "champions-doubles-draft",
   members: [
     {
-      pokemonId: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: 445, formSlug: "garchomp",
+      pokemonId: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: "default", formSlug: "garchomp",
       ability: "Rough Skin", item: "Clear Amulet", nature: "Adamant", level: 50,
       moves: ["Earthquake", "", "", ""], statPoints: { hp: 0, atk: 14, def: 0, spa: 0, spd: 0, spe: 0 },
     },
@@ -25,8 +25,10 @@ test("keeps a team payload intact, including unfinished sets and Stat Points", (
   assert.equal(result.value.members[0].item, "Clear Amulet");
   assert.equal(result.value.members[0].statPoints.atk, 14);
   assert.deepEqual(result.value.members[0].moves, ["Earthquake", "", "", ""]);
+  assert.equal(result.value.members[0].formId, "default");
   assert.equal(validateTeamPayload({ ...sampleTeam, members: [null] }).ok, false);
   assert.equal(validateTeamPayload({ ...sampleTeam, format: "singles" }).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], formId: 445 }, null, null, null, null, null] }).ok, false);
   assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { atk: -1 } }, null, null, null, null, null] }).ok, false);
 });
 

@@ -21,7 +21,8 @@ export function validateTeamPayload(payload) {
     if (
       typeof member.pokemonId !== "string" || !member.pokemonId
       || typeof member.speciesSlug !== "string" || member.formSlug !== member.pokemonId
-      || !Number.isInteger(member.speciesId) || !Number.isInteger(member.formId)
+      || !Number.isInteger(member.speciesId) || member.speciesId < 1
+      || typeof member.formId !== "string" || !member.formId || member.formId.length > 100
       || !Number.isInteger(member.level) || member.level < 1 || member.level > 100
     ) {
       return { ok: false, error: `A posição ${index + 1} precisa de espécie e nível válidos.` };
