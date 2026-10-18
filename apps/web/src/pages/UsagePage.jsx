@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import dexData from "@spinda-stop/data/pokedex";
+import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
+import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 import { usageProviders } from "../data/usage/registry.js";
+import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
@@ -29,6 +33,8 @@ const statPointLabels = [
   ["spDefense", "SpD"],
   ["speed", "Spe"],
 ];
+
+const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
 
 function normalizeSearch(value) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
@@ -80,6 +86,10 @@ function CategoryRow({ row, category }) {
             </div>
           ) : (
             <div className="usage-row-copy">
+              <span className="usage-row-asset">
+                {category.id === "held_item" ? <ItemSprite name={row.name} size={28} /> : null}
+                {category.id === "teammate" && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={38} decorative /> : null}
+              </span>
               <strong>{row.name || "Nome não informado"}</strong>
               {statAlignment && (row.statUp || row.statDown) ? (
                 <small>
@@ -146,6 +156,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   return (
     <section className="usage-detail-panel" aria-label={"Uso de " + selectedPokemon.name}>
       <div className="usage-detail-heading">
+        <PokemonSprite pokemon={resolveCompetitivePokemonSprite(findPokemonSprite, { id: selectedPokemon.showdownId, name: selectedPokemon.name })} name={selectedPokemon.name} size={120} priority decorative className="usage-detail-art" />
         <div>
           <p className="page-label">Visão da espécie</p>
           <h2>{selectedPokemon.name}</h2>
@@ -192,17 +203,20 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
                 {formatSnapshotDate(usage.date)}
               </strong>
             </div>
+            <div>
+              <span>Última consulta do app</span>
+              <strong>{formatTimestamp(usage.appFetchedAt)}</strong>
+            </div>
             {usage.sourceFile ? (
               <div className="usage-provenance-file">
                 <span>Arquivo de origem na fonte</span>
                 <code>{usage.sourceFile}</code>
               </div>
             ) : null}
-            <div className="usage-provenance-notes">
-              <span>A temporada é o rótulo da fonte; o regulamento oficial não foi confirmado.</span>
-              <span>Tamanho da amostra não informado.</span>
-              <span>Denominador não informado; percentual de partidas não confirmado.</span>
-            </div>
+            <details className="usage-source-help">
+              <summary>Como ler esta captura</summary>
+              <p>Temporada é o rótulo devolvido pela fonte. Amostra e denominador não foram publicados; os percentuais não devem ser lidos como taxa de partidas.</p>
+            </details>
           </div>
 
           {category.id === "profile" ? (
@@ -267,6 +281,33 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [usageRetry, setUsageRetry] = useState(0);
   const usageForceKey = useRef("");
 
+  function refreshIndex(force = false) {
+    const nextRetry = indexRetry + 1;
+    indexForceKey.current = force ? `index|${nextRetry}` : "";
+    setIndexStatus("loading");
+    setIndexError("");
+    setIndexRetry(nextRetry);
+  }
+
+  function refreshUsage(force = false) {
+    if (!selectedId) return;
+    const nextRetry = usageRetry + 1;
+    usageForceKey.current = force
+      ? [periodMode, historySeason, historyDays, selectedId, nextRetry].join("|")
+      : "";
+    setUsageStatus("loading");
+    setUsageError("");
+    setUsageRetry(nextRetry);
+  }
+
+  function refreshVisibleData() {
+    refreshIndex(true);
+    refreshUsage(true);
+  }
+
+  useCacheRevalidation(indexData?.cacheExpiresAt, () => refreshIndex(false), Boolean(indexData));
+  useCacheRevalidation(usage?.cacheExpiresAt, () => refreshUsage(false), Boolean(usage));
+
   useEffect(() => {
     initialPokemonNameRef.current = initialPokemonName;
   }, [initialPokemonName]);
@@ -294,7 +335,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
       });
     }).catch(() => {
       if (!active) return;
-      setIndexData(null);
       setIndexStatus("error");
       setIndexError("Confira sua conexão ou tente novamente mais tarde.");
     });
@@ -318,11 +358,12 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
     provider.loadPokemonUsage(request).then((result) => {
       if (!active) return;
       setUsage(result);
-      setSelectedSnapshotKey(result.daily[0] ? snapshotKey(result.daily[0]) : "");
+      setSelectedSnapshotKey((current) => result.daily.some((snapshot) => snapshotKey(snapshot) === current)
+        ? current
+        : result.daily[0] ? snapshotKey(result.daily[0]) : "");
       setUsageStatus("success");
     }).catch(() => {
       if (!active) return;
-      setUsage(null);
       setUsageStatus("error");
       setUsageError("A API pode estar temporariamente fora do ar. Nenhum dado local foi substituído.");
     });
@@ -394,11 +435,14 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
         </a>
       </div>
 
-      {indexStatus === "success" ? (
-        <p className="usage-index-note">
-          Índice gerado pela fonte em {formatTimestamp(indexData.generatedAt)} ·
-          {" "}{indexData.pokemon.length} entradas no índice.
-        </p>
+      {indexData ? (
+        <div className="usage-index-note" aria-label="Atualização do índice">
+          <span>Captura da fonte: {formatTimestamp(indexData.generatedAt)} · Consulta do app: {formatTimestamp(indexData.appFetchedAt)}</span>
+          <span>{indexData.pokemon.length} Pokémon no índice</span>
+          <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>
+            {indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
+          </button>
+        </div>
       ) : null}
 
       {indexStatus === "loading" ? (
@@ -407,6 +451,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           Carregando o índice público de Doubles…
         </div>
       ) : null}
+      {indexStatus === "loading" && indexData ? <p className="usage-refresh-status" role="status">Atualizando os dados em segundo plano…</p> : null}
 
       {indexStatus === "error" ? (
         <div className="usage-error usage-index-error" role="alert">
@@ -417,20 +462,14 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           <button
             className="button button-outline"
             type="button"
-            onClick={() => {
-              setIndexStatus("loading");
-              setIndexError("");
-              const nextRetry = indexRetry + 1;
-              indexForceKey.current = `index|${nextRetry}`;
-              setIndexRetry(nextRetry);
-            }}
+              onClick={() => refreshVisibleData()}
           >
             Tentar de novo
           </button>
         </div>
       ) : null}
 
-      {indexStatus === "success" ? (
+      {indexData ? (
         <div className="usage-layout">
           <aside className="usage-browser-panel" aria-label="Buscar espécies">
             <div className="usage-browser-heading">
@@ -590,6 +629,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                         }
                       }}
                     >
+                      <span className="usage-species-art"><PokemonSprite pokemon={resolveCompetitivePokemonSprite(findPokemonSprite, { id: entry.showdownId, name: entry.name })} name={entry.name} size={66} decorative /></span>
                       <span className="usage-species-name">
                         <strong>{entry.name}</strong>
                         <span className="type-list">
@@ -653,12 +693,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               status={usageStatus}
               error={usageError}
               onRetry={() => {
-                setUsage(null);
-                setUsageStatus("loading");
-                setUsageError("");
-                const nextRetry = usageRetry + 1;
-                usageForceKey.current = [periodMode, historySeason, historyDays, selectedId, nextRetry].join("|");
-                setUsageRetry(nextRetry);
+                refreshUsage(true);
               }}
             />
           </div>

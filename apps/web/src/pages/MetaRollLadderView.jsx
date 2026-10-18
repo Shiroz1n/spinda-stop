@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { usageProviders } from "../data/usage/registry.js";
 
 const metaRollProvider = usageProviders.metaroll;
@@ -153,7 +154,17 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
   const requestKey = `${season || "current"}|${ladderRetry}`;
   const currentLadderState = ladderState.key === requestKey
     ? ladderState
-    : { key: requestKey, status: "loading" };
+    : ladderState.key.startsWith(`${season || "current"}|`)
+      ? { ...ladderState, key: requestKey, status: "loading" }
+      : { key: requestKey, status: "loading" };
+
+  function refreshLadder(force = false) {
+    const nextRetry = ladderRetry + 1;
+    ladderForceKey.current = force ? `${season || "current"}|${nextRetry}` : "";
+    setLadderRetry(nextRetry);
+  }
+
+  useCacheRevalidation(currentLadderState.data?.cacheExpiresAt, () => refreshLadder(false), Boolean(currentLadderState.data));
 
   useEffect(() => {
     let active = true;
@@ -166,17 +177,18 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
     }).then((result) => {
       if (active) setLadderState({ key: requestKey, status: "success", data: result });
     }).catch(() => {
-      if (active) setLadderState({
+      if (active) setLadderState((previous) => ({
         key: requestKey,
         status: "error",
         error: "A ladder de jogadores da MetaRoll não está disponível agora.",
-      });
+        ...(previous.key.startsWith(`${season || "current"}|`) ? { data: previous.data } : {}),
+      }));
     });
 
     return () => { active = false; };
   }, [season, ladderRetry, requestKey]);
 
-  const ladderEntries = currentLadderState.status === "success" ? currentLadderState.data.entries : [];
+  const ladderEntries = currentLadderState.data?.entries || [];
   const ladderCountries = Array.from(new Set(ladderEntries.map((person) => person.country?.name).filter(Boolean)))
     .sort((left, right) => left.localeCompare(right, "pt-BR"));
   const ladderLanguages = Array.from(new Set(ladderEntries.map((person) => person.language?.name).filter(Boolean)))
@@ -215,29 +227,27 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
         </label>
       </div>
       {currentLadderState.status === "loading" ? (
-        <div className="usage-index-state" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando ladder de jogadores…</div>
+        <div className="usage-index-state" role="status"><span className="usage-spinner" aria-hidden="true" />{currentLadderState.data ? "Atualizando ladder de jogadores…" : "Carregando ladder de jogadores…"}</div>
       ) : null}
       {currentLadderState.status === "error" ? (
         <div className="usage-error usage-index-error" role="alert">
           <div><strong>Não foi possível carregar esta captura.</strong><p>{currentLadderState.error}</p></div>
-          <button className="button button-outline" type="button" onClick={() => {
-            const nextRetry = ladderRetry + 1;
-            ladderForceKey.current = `${season || "current"}|${nextRetry}`;
-            setLadderRetry(nextRetry);
-          }}>Tentar de novo</button>
+          <button className="button button-outline" type="button" onClick={() => refreshLadder(true)}>Tentar de novo</button>
         </div>
       ) : null}
-      {currentLadderState.status === "success" ? (
+      {currentLadderState.data ? (
         <>
           <div className="metaroll-ladder-capture">
             <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
             <div><span>Formato</span><strong>Doubles</strong></div>
             <div><span>Temporada consultada</span><strong>{currentLadderState.data.season || season || "não informada pela resposta"}</strong></div>
             <div><span>Captura da ladder</span><strong>{formatCapture(currentLadderState.data.capturedAt)}</strong></div>
+            <div><span>Última consulta do app</span><strong>{formatCapture(currentLadderState.data.appFetchedAt)}</strong></div>
             <div><span>Comparação de posição</span><strong>{formatCapture(currentLadderState.data.comparedTo)}</strong></div>
             <div><span>Entradas listadas</span><strong>{currentLadderState.data.count ?? "não informadas"}</strong></div>
-            <p>O arquivo documentado contém até 1.000 jogadores. `rating` já vem dividido pela fonte; taxa de vitória é `wins / battles`. Isto não é o ladder completo nem uma amostra de partidas do metagame.</p>
+            <p>O arquivo publicado contém até 1.000 jogadores. `rating` e a taxa de vitórias são os campos da fonte; isso não representa o ladder completo nem uma amostra do metagame.</p>
           </div>
+          <button className="button button-outline button-small metaroll-refresh" type="button" disabled={currentLadderState.status === "loading"} onClick={() => refreshLadder(true)}>{currentLadderState.status === "loading" ? "Atualizando…" : "Atualizar agora"}</button>
           {currentLadderState.data.ratingHistory.length > 0 ? (
             <RatingHistoryPanel key={season || "current"} history={currentLadderState.data.ratingHistory} season={currentLadderState.data.season} />
           ) : <p className="metaroll-empty">A fonte não publicou histórico de rating nesta captura.</p>}

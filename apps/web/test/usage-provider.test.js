@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   normalizeUsageBattleResponse,
   normalizeUsageIndexResponse,
+  pokemonChampionsBattleDataProvider,
   withRequestTimeout,
 } from "../src/data/usage/providers/pokemonChampionsBattleData.js";
 
@@ -197,4 +198,59 @@ test("rejects an index without a species list and a response without rows", () =
   assert.throws(() => normalizeUsageIndexResponse({}), /lista de espécies/);
   assert.throws(() => normalizeUsageBattleResponse({}), /não contém linhas/);
   assert.doesNotThrow(() => normalizeUsageBattleResponse({ daily: [] }));
+});
+
+test("Battle Data reports app capture time and refreshes an expired five-minute cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalNow = Date.now;
+  let now = originalNow();
+  let calls = 0;
+  Date.now = () => now;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return { ok: true, json: async () => ({ generatedAt: "2026-10-18T00:00:00.000Z", pokemon: [] }) };
+  };
+
+  try {
+    const first = await pokemonChampionsBattleDataProvider.loadIndex();
+    const cached = await pokemonChampionsBattleDataProvider.loadIndex();
+    assert.equal(calls, 1);
+    assert.equal(first.appFetchedAt, new Date(now).toISOString());
+    assert.equal(cached.appFetchedAt, first.appFetchedAt);
+    assert.equal(first.cacheExpiresAt, now + 5 * 60 * 1000);
+
+    now += 5 * 60 * 1000 + 1;
+    const refreshed = await pokemonChampionsBattleDataProvider.loadIndex();
+    assert.equal(calls, 2);
+    assert.equal(refreshed.appFetchedAt, new Date(now).toISOString());
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
+});
+
+test("accepts a changed published position after a forced index refresh", async () => {
+  const originalFetch = globalThis.fetch;
+  const responses = [7, 4];
+  let calls = 0;
+  globalThis.fetch = async () => {
+    const position = responses[calls++];
+    return {
+      ok: true,
+      json: async () => ({
+        defaultSeason: "M7",
+        pokemon: [{ name: "Examplemon", showdownId: "examplemon", summary: { battleSummary: { M7: { Doubles: { position } } } } }],
+      }),
+    };
+  };
+
+  try {
+    const initial = await pokemonChampionsBattleDataProvider.loadIndex({ force: true });
+    const refreshed = await pokemonChampionsBattleDataProvider.loadIndex({ force: true });
+    assert.equal(initial.pokemon[0].position, 7);
+    assert.equal(refreshed.pokemon[0].position, 4);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

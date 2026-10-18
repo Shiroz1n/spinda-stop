@@ -5,6 +5,7 @@ import {
   normalizeMetaRollIndexResponse,
   normalizeMetaRollMegasResponse,
   normalizeMetaRollPokemonResponse,
+  metaRollProvider,
 } from "../src/data/usage/providers/metaroll.js";
 
 test("normalizes MetaRoll all entries and uses their fields for filters", () => {
@@ -249,4 +250,29 @@ test("normalizes the announced MetaRoll mega-form endpoint without changing its 
   ]);
   assert.throws(() => normalizeMetaRollMegasResponse({ format: "singles", entries: [] }), /Doubles/);
   assert.throws(() => normalizeMetaRollMegasResponse({ format: "doubles" }), /lista de formas Mega/);
+});
+
+test("MetaRoll reports app capture time independently from the source timestamp", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalNow = Date.now;
+  const now = originalNow();
+  let calls = 0;
+  Date.now = () => now;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return { ok: true, json: async () => ({ format: "doubles", capturedAt: "2026-10-18T05:46:15.000Z", entries: [] }) };
+  };
+
+  try {
+    const first = await metaRollProvider.loadIndex();
+    const cached = await metaRollProvider.loadIndex();
+    assert.equal(calls, 1);
+    assert.equal(first.capturedAt, "2026-10-18T05:46:15.000Z");
+    assert.equal(first.appFetchedAt, new Date(now).toISOString());
+    assert.equal(first.cacheExpiresAt, now + 5 * 60 * 1000);
+    assert.equal(cached.appFetchedAt, first.appFetchedAt);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
 });
