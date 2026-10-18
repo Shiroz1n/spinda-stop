@@ -20,3 +20,11 @@ As capturas do PR #23 registram uma CI correta, mas uma interface que não serve
 - Capturar carregamento, falha, resultado vazio e dado ausente quando a tela tiver esses estados.
 - Conferir busca, filtros, troca de fonte, posição dos rankings após atualização, importação/exportação com o set preservado e navegação por teclado.
 - Ler as capturas manualmente antes de considerar a revisão visual concluída. Axe, build e ausência de overflow são verificações separadas.
+
+## Pente-fino acumulado dos PRs #24–#27
+
+Abri as capturas do artefato do workflow visual do #27 em 1440, 390, 320 e 720 px de largura. A tela de ficha, o builder, Usage das duas fontes, calculadora, sala e torneio foram inspecionados em imagem integral. O snapshot ainda não aprova a interface: encontrei texto claro quase invisível na navegação desktop e no rodapé, baixo contraste do botão coral, “Garchomp” quebrado em “Garcho / mp” na ficha mobile, link de ajuda indistinguível do parágrafo e listas de equipe com rótulos ARIA sem papel semântico. O teste de visibilidade também selecionava uma equipe e clicava no botão desabilitado de outra.
+
+Corrigi a cor da navegação e seu hover para a barra clara, restabeleci o rodapé azul-petróleo com texto legível, escureci o coral para contraste AA, removi a regra mobile antiga que recolocava a ficha em duas colunas e distingui links de ajuda com sublinhado. As equipes salvas agora usam listas e itens semânticos; os sprites da equipe são imagens nomeadas para leitores de tela. O teste de visibilidade atualiza e verifica a mesma linha. Em 320 px, os slots do builder agora mantêm a espécie legível ao lado do sprite.
+
+A inspeção da captura antiga mostrou Pokémon e conteúdo competitivo presentes; a altura de Usage vem da sequência real de distribuições, não de conteúdo de exemplo. A nova captura ainda precisa confirmar visualmente estas correções. O perfil `zoom200` do workflow é uma viewport de 720 px CSS, equivalente aproximado a zoom de 200% em 1440 px; não substitui um teste de zoom do navegador.
