@@ -182,6 +182,10 @@ test("normalizes the separate Doubles trainer ladder and keeps missing values un
       { rank: 2, id: "another-player", name: "Player Two", previousRank: null },
       { rank: 3, id: "new-player", name: "Player Three" },
     ],
+    ratingHistory: [
+      { at: "2026-10-18T09:46:20.000Z", avg: 1954.682, n: 1000, ranks: { "1": 2173.25, "100": 2022.356, "300": 1976.346, "500": 1943.765, "1000": 1892.51 } },
+      { at: "2026-10-17T09:46:15.000Z", avg: 1920.5, n: 1000, ranks: { "1": 2150, "100": 1990 } },
+    ],
   });
 
   assert.equal(result.format, "doubles");
@@ -197,4 +201,26 @@ test("normalizes the separate Doubles trainer ladder and keeps missing values un
   assert.equal(Object.hasOwn(result.entries[2], "previousRank"), false);
   assert.equal(result.entries[2].winRate, null);
   assert.throws(() => normalizeMetaRollLadderResponse({ format: "singles", ranks: "trainers", entries: [] }), /Doubles/);
+  assert.deepEqual(result.ratingHistory, [
+    { at: "2026-10-17T09:46:15.000Z", average: 1920.5, count: 1000, ratingsByRank: { "1": 2150, "100": 1990 } },
+    { at: "2026-10-18T09:46:20.000Z", average: 1954.682, count: 1000, ratingsByRank: { "1": 2173.25, "100": 2022.356, "300": 1976.346, "500": 1943.765, "1000": 1892.51 } },
+  ]);
+});
+
+test("preserves unknown MetaRoll rating history values instead of filling them", () => {
+  const result = normalizeMetaRollLadderResponse({
+    format: "doubles",
+    ranks: "trainers",
+    entries: [],
+    ratingHistory: [
+      { at: "2026-10-18T00:00:00.000Z", avg: null, n: null, ranks: { "1": null, "100": 2000 } },
+      { at: "invalid-date", avg: 1900, n: 1000, ranks: { "1": 2200 } },
+      null,
+    ],
+  });
+
+  assert.deepEqual(result.ratingHistory, [
+    { at: "2026-10-18T00:00:00.000Z", average: null, count: null, ratingsByRank: { "1": null, "100": 2000 } },
+  ]);
+  assert.deepEqual(normalizeMetaRollLadderResponse({ format: "doubles", ranks: "trainers", entries: [] }).ratingHistory, []);
 });
