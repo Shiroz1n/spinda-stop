@@ -66,6 +66,8 @@ const firstHitChangingAbilities = new Set([
 const repeatedDamageChangingAbilities = new Set([
   "angershell", "colorchange", "emergencyexit", "sandspit", "seedsower", "stamina", "weakarmor", "wimpout",
 ]);
+const speedChangingAbilities = new Set(["cottondown", "motordrive", "rattled", "slowstart", "speedboost", "steamengine", "weakarmor"]);
+const speedBasedDamageMoves = new Set(["payback", "electroball", "gyroball"]);
 const contactReactiveAbilities = new Set([
   "cursedbody", "effectspore", "flamebody", "gooey", "ironbarbs", "mummy", "perishbody",
   "pickpocket", "poisonpoint", "roughskin", "static", "tanglinghair", "wanderingspirit",
@@ -102,6 +104,16 @@ export function getDamageMove(value) {
   return findEntry(generation.moves, value);
 }
 
+export function isSpreadTargetMove(move) {
+  return Boolean(move && spreadTargets.has(move.target));
+}
+
+export function getSpreadTargetLimit(move) {
+  if (move?.target === "allAdjacentFoes") return 2;
+  if (move?.target === "allAdjacent") return 3;
+  return 1;
+}
+
 function resolveEntry(collection, value, label, required = false) {
   if (!value && !required) return undefined;
   const entry = findEntry(collection, value);
@@ -119,7 +131,7 @@ function normalizeStatPoints(values = {}) {
   }));
 }
 
-function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender) {
+function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender, { gameType, isSpreadTarget }) {
   const defenderAbility = toID(defender.ability || input.defender?.ability || "");
   const defenderItem = toID(defender.item || input.defender?.item || "");
   const attackerItem = toID(attacker.item || input.attacker?.item || "");
@@ -129,6 +141,11 @@ function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBon
     || Object.values(input.defenderSide || {}).some(Boolean);
   const changesFirstHit = firstHitChangingAbilities.has(defenderAbility);
   const changesAfterHit = repeatedDamageChangingAbilities.has(defenderAbility);
+  const speedBasedMove = speedBasedDamageMoves.has(toID(moveData.name));
+  const speedCanChangeBeforeNextHit = speedBasedMove && (
+    speedChangingAbilities.has(defenderAbility) || speedChangingAbilities.has(toID(attacker.ability || input.attacker?.ability || ""))
+  );
+  const spreadTargetCountCanChange = gameType === "Doubles" && isSpreadTarget;
   const contactAbilityChangesNextHit = Boolean(moveData.flags?.contact)
     && contactReactiveAbilities.has(defenderAbility);
   const offensiveStat = moveData.overrideOffensiveStat
@@ -142,6 +159,8 @@ function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBon
   if (defenderItem === "focussash") notes.push("OHKO omitido: Focus Sash pode deixar o alvo com 1 HP.");
   if (changesFirstHit) notes.push("Estimativas de KO omitidas: a habilidade do alvo altera ou impede o dano do primeiro golpe.");
   if (changesAfterHit) notes.push(`2HKO omitido: ${defender.ability} pode mudar o dano ou o campo após o primeiro golpe.`);
+  if (speedCanChangeBeforeNextHit) notes.push("2HKO omitido: uma habilidade pode alterar a ordem de velocidade usada pelo golpe antes do segundo turno.");
+  if (spreadTargetCountCanChange) notes.push("2HKO omitido: um golpe em área em Doubles pode atingir outra quantidade de alvos no próximo turno.");
   if (contactAbilityChangesNextHit) {
     notes.push(`2HKO omitido: ${defender.ability} pode afetar o atacante ou o próximo golpe após um contato.`);
   }
@@ -154,7 +173,7 @@ function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBon
   }
   return {
     ohko: simpleSingleHit && defenderAbility !== "sturdy" && defenderItem !== "focussash" && !changesFirstHit && !hasDefenderItem,
-    twoHit: simpleSingleHit && !changesFirstHit && !changesAfterHit && !contactAbilityChangesNextHit && !moveLowersOffense && !hasDefenderItem && !attackerItem
+    twoHit: simpleSingleHit && !changesFirstHit && !changesAfterHit && !speedCanChangeBeforeNextHit && !spreadTargetCountCanChange && !contactAbilityChangesNextHit && !moveLowersOffense && !hasDefenderItem && !attackerItem
       && !attackerStatus && !defenderStatus && !input.weather && !input.terrain && !hasFieldCondition,
     notes,
   };
@@ -272,6 +291,13 @@ export function calculateChampionsDamage(input) {
   if (!hitOptions.includes(hits)) throw new Error("O número de acertos não corresponde aos dados deste golpe.");
 
   const gameType = input.gameType === "Singles" ? "Singles" : "Doubles";
+  const isSpreadTarget = moveData.category !== "Status" && isSpreadTargetMove(moveData);
+  const maxTargets = getSpreadTargetLimit(moveData);
+  const targetsHit = isSpreadTarget && gameType === "Doubles" ? Number(input.targetsHit ?? 2) : 1;
+  if (isSpreadTarget && gameType === "Doubles" && (!Number.isInteger(targetsHit) || targetsHit < 1 || targetsHit > maxTargets)) {
+    throw new Error(`Informe de 1 a ${maxTargets} alvos válidos para este golpe.`);
+  }
+  const spreadModifierApplied = gameType === "Doubles" && isSpreadTarget && targetsHit > 1;
   const weather = input.weather
     ? damageCalculatorCatalog.weather.find((entry) => toID(entry) === toID(input.weather))
     : undefined;
@@ -289,7 +315,14 @@ export function calculateChampionsDamage(input) {
     attackerSide: new Side(attackerSide),
     defenderSide: new Side(defenderSide),
   });
-  const move = new Move(generation, moveData.name);
+  // @smogon/calc infers the spread penalty from the move's target class. The battle
+  // simulator applies it only when more than one valid target is present, so model
+  // the one-target case by overriding that class before the calculator clones it.
+  const move = new Move(generation, moveData.name, {
+    overrides: gameType === "Doubles" && isSpreadTarget && targetsHit === 1
+      ? { target: "normal" }
+      : undefined,
+  });
   move.hits = hits;
   move.isCrit = Boolean(input.critical);
 
@@ -304,7 +337,7 @@ export function calculateChampionsDamage(input) {
   const hitRanges = rollGroups.map((rolls) => Array.isArray(rolls)
     ? [rolls[0], rolls.at(-1)]
     : [min, max]);
-  const isSpread = gameType === "Doubles" && spreadTargets.has(moveData.target);
+  const isSpread = spreadModifierApplied;
   const hasParentalBondFollowUp = attacker.hasAbility("Parental Bond") && hits === 1 && !isSpread
     && rollGroups.length === 2;
   const rollGroupLabels = rollGroups.map((_, index) => hasParentalBondFollowUp
@@ -321,7 +354,10 @@ export function calculateChampionsDamage(input) {
   }
   const hasRollDistribution = moveData.category !== "Status" && rollGroups.length === 1 && Array.isArray(rollGroups[0]) && rollGroups[0].length === 16;
   const rolls = hasRollDistribution ? rollGroups[0] : null;
-  const koEligibility = getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender);
+  const koEligibility = getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender, {
+    gameType,
+    isSpreadTarget,
+  });
   const koProbabilities = hasRollDistribution && max > 0 && (koEligibility.ohko || koEligibility.twoHit) ? (() => {
     const hp = defender.stats.hp;
     const ohkoRolls = rolls.filter((roll) => roll >= hp).length;
@@ -347,8 +383,11 @@ export function calculateChampionsDamage(input) {
     min,
     minPercent: defender.stats.hp ? (min / defender.stats.hp) * 100 : 0,
     move: moveData,
+    originalMoveTarget: moveData.target,
     effectiveMoveType,
     typeEffectiveness,
+    isSpreadTarget,
+    targetsHit,
     rollGroups: rollGroups.map((group) => Array.isArray(group) ? group : [group]),
     rollGroupLabels,
     rolls,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { calculateChampionsDamage, cloneDamageScenario, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../data/damageCalculator.js";
+import { calculateChampionsDamage, cloneDamageScenario, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
 
 const statFields = [
   ["hp", "HP"], ["atk", "Atk"], ["def", "Def"],
@@ -37,6 +37,7 @@ function initialForm(search) {
     defender: readSide("defender", { species: "Garchomp", nature: "Serious" }),
     move,
     hits: getHitOptions(getDamageMove(move))[0],
+    targetsHit: 2,
     gameType: "Doubles",
     weather: "",
     terrain: "",
@@ -201,7 +202,13 @@ function DamageResultPanel({ calculation, form, label }) {
       ) : (
         <>
           <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
-          {result.isSpread && <p className="damage-spread-note">Redutor de golpe em área aplicado para Doubles. O valor representa dano a um alvo.</p>}
+          {result.isSpreadTarget && result.gameType === "Doubles" && (
+            <p className="damage-spread-note">
+              {result.isSpread
+                ? `Redutor de golpe em área aplicado: ${result.targetsHit} alvos válidos. A faixa mostra o dano por alvo.`
+                : "Golpe em área com 1 alvo válido: sem o redutor de 0,75×. A faixa mostra o dano ao alvo."}
+            </p>
+          )}
           {result.hitRanges.length > 1 && <p className="damage-spread-note">{result.hasParentalBondFollowUp ? "Faixas do golpe principal e do golpe adicional:" : "Faixa por acerto:"} {result.hitRanges.map(([min, max], index) => `${result.rollGroupLabels[index]} ${min}–${max}`).join(" · ")}</p>}
           {result.rolls?.length === 16 && <div className="damage-rolls"><h3>16 resultados de dano</h3><ol>{result.rolls.map((roll, index) => <li key={`${roll}-${index}`}>{roll}</li>)}</ol></div>}
           {result.rollGroups.length > 1 && result.rollGroups.every((group) => group.length === 16) && (
@@ -228,8 +235,8 @@ function DamageResultPanel({ calculation, form, label }) {
             <ul>
               <li><strong>Atacante:</strong> {form.attacker.nature || "Serious"}; habilidade {result.attacker.ability || "não definida"}; item {result.attacker.item || "nenhum"}; {formatStatus(result.attacker.status)}; estágios {Object.entries(form.attacker.boosts || {}).filter(([, value]) => Number(value) !== 0).map(([key, value]) => `${key.toUpperCase()} ${Number(value) > 0 ? "+" : ""}${value}`).join(", ") || "sem alterações"}.</li>
               <li><strong>Alvo:</strong> {form.defender.nature || "Serious"}; habilidade {result.defender.ability || "não definida"}; item {result.defender.item || "nenhum"}; {formatStatus(result.defender.status)}; estágios {Object.entries(form.defender.boosts || {}).filter(([, value]) => Number(value) !== 0).map(([key, value]) => `${key.toUpperCase()} ${Number(value) > 0 ? "+" : ""}${value}`).join(", ") || "sem alterações"}.</li>
-              <li><strong>Golpe:</strong> {result.move.name}; {result.move.category}; {result.move.type}; poder base {result.move.bp || "não definido"}; alvo {result.move.target}; crítico {form.critical ? "forçado" : "desligado"}; acertos {result.hits}.</li>
-              <li><strong>Campo:</strong> {result.gameType}; clima {form.weather || "nenhum"}; terreno {form.terrain || "nenhum"}; condições {formatConditions(form.attackerSide, form.defenderSide)}.</li>
+              <li><strong>Golpe:</strong> {result.move.name}; {result.move.category}; {result.effectiveMoveType}; poder base {result.move.bp || "não definido"}; classe de alvo {result.originalMoveTarget}; crítico {form.critical ? "forçado" : "desligado"}; acertos {result.hits}.</li>
+              <li><strong>Campo:</strong> {result.gameType}; alvos válidos {result.isSpreadTarget ? result.targetsHit : 1}; clima {form.weather || "nenhum"}; terreno {form.terrain || "nenhum"}; condições {formatConditions(form.attackerSide, form.defenderSide)}.</li>
             </ul>
             <h3>Modificadores identificados pelo motor</h3>
             <ul>{result.activeModifiers.map((modifier, index) => <li key={`${modifier.label}-${index}`}><strong>{modifier.label}:</strong> {modifier.factor}</li>)}</ul>
@@ -250,7 +257,9 @@ export function DamageCalculatorPage() {
   const comparisonForm = comparison.enabled ? comparison.form : null;
   const moveData = getDamageMove(form.move);
   const availableHits = moveData ? getHitOptions(moveData) : [1];
+  const showSpreadTargetCount = form.gameType === "Doubles" && moveData?.category !== "Status" && isSpreadTargetMove(moveData);
   const comparisonMoveData = getDamageMove(comparisonForm?.move);
+  const showComparisonTargetCount = comparisonForm?.gameType === "Doubles" && comparisonMoveData?.category !== "Status" && isSpreadTargetMove(comparisonMoveData);
   const comparisonAvailableHits = useMemo(
     () => comparisonMoveData ? getHitOptions(comparisonMoveData) : [1],
     [comparisonMoveData],
@@ -295,13 +304,23 @@ export function DamageCalculatorPage() {
   function handleMoveChange(value) {
     const move = getDamageMove(value);
     const hits = move ? getHitOptions(move)[0] : 1;
-    setForm((current) => ({ ...current, move: value, hits }));
+    setForm((current) => ({
+      ...current,
+      move: value,
+      hits,
+      targetsHit: isSpreadTargetMove(move) ? Math.max(2, Math.min(current.targetsHit || 2, getSpreadTargetLimit(move))) : 1,
+    }));
   }
   function handleComparisonMoveChange(value) {
     const move = getDamageMove(value);
     setComparison((current) => ({
       ...current,
-      form: current.form && { ...current.form, move: value, hits: move ? getHitOptions(move)[0] : 1 },
+      form: current.form && {
+        ...current.form,
+        move: value,
+        hits: move ? getHitOptions(move)[0] : 1,
+        targetsHit: isSpreadTargetMove(move) ? Math.max(2, Math.min(current.form.targetsHit || 2, getSpreadTargetLimit(move))) : 1,
+      },
     }));
   }
   function updateComparison(key, value) {
@@ -326,7 +345,7 @@ export function DamageCalculatorPage() {
 
       <div className="damage-rules-note" role="note">
         <strong>Nível 50 · motor de Pokémon Showdown</strong>
-        <p>Os SP entram na fórmula de Champions. Em Doubles, golpes em vários alvos recebem o redutor de área do motor. Nada é enviado para uma API.</p>
+        <p>Os SP entram na fórmula de Champions. Em Doubles, golpes em área só recebem o redutor quando atingem mais de um alvo válido; informe quantos estão no campo. Nada é enviado para uma API.</p>
       </div>
 
       <section className="damage-input-grid" aria-label="Pokémon e parâmetros do cálculo">
@@ -345,6 +364,15 @@ export function DamageCalculatorPage() {
               <option value="Singles">Singles</option>
             </select>
           </label>
+          {showSpreadTargetCount && (
+            <label className="damage-field">
+              <span>Alvos válidos no golpe</span>
+              <select className="text-input" value={Math.min(form.targetsHit, getSpreadTargetLimit(moveData))} onChange={(event) => update("targetsHit", Number(event.target.value))}>
+                {Array.from({ length: getSpreadTargetLimit(moveData) }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count}</option>)}
+              </select>
+              <span className="form-hint">Conte alvos válidos antes de Proteção; o resultado é por alvo.</span>
+            </label>
+          )}
           <label className="damage-field">
             <span>Acertos</span>
             <select className="text-input" value={availableHits.includes(form.hits) ? form.hits : availableHits[0]} onChange={(event) => update("hits", Number(event.target.value))}>
@@ -403,6 +431,15 @@ export function DamageCalculatorPage() {
                     <option value="Doubles">Doubles</option><option value="Singles">Singles</option>
                   </select>
                 </label>
+                {showComparisonTargetCount && (
+                  <label className="damage-field">
+                    <span>Alvos válidos no golpe B</span>
+                    <select className="text-input" value={Math.min(comparisonForm.targetsHit, getSpreadTargetLimit(comparisonMoveData))} onChange={(event) => updateComparison("targetsHit", Number(event.target.value))}>
+                      {Array.from({ length: getSpreadTargetLimit(comparisonMoveData) }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count}</option>)}
+                    </select>
+                    <span className="form-hint">Conte alvos válidos antes de Proteção; o resultado é por alvo.</span>
+                  </label>
+                )}
                 <label className="damage-field">
                   <span>Acertos no cenário B</span>
                   <select className="text-input" value={comparisonAvailableHits.includes(comparisonForm.hits) ? comparisonForm.hits : comparisonAvailableHits[0]} onChange={(event) => updateComparison("hits", Number(event.target.value))}>

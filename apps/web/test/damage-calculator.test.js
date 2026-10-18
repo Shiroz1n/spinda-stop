@@ -46,13 +46,56 @@ test("Doubles aplica o dano em área para Earthquake, Singles não", () => {
   assert.ok(doubles.activeModifiers.some(({ label, factor }) => label === "Golpe em área" && factor === "0,75× no dano base"));
 });
 
-test("o alvo único não recebe o redutor de golpe em área em Doubles", () => {
+test("Doubles só aplica o redutor de área quando o cenário tem mais de um alvo válido", () => {
+  const input = { attacker: side("Garchomp"), defender: side("Garchomp"), move: "Earthquake", gameType: "Doubles" };
+  const oneTarget = calculateChampionsDamage({ ...input, targetsHit: 1 });
+  const twoTargets = calculateChampionsDamage({ ...input, targetsHit: 2 });
+  const threeTargets = calculateChampionsDamage({ ...input, targetsHit: 3 });
+
+  assert.equal(oneTarget.isSpreadTarget, true);
+  assert.equal(oneTarget.isSpread, false);
+  assert.equal(oneTarget.targetsHit, 1);
+  assert.deepEqual([oneTarget.min, oneTarget.max], [75, 88]);
+  assert.equal(oneTarget.activeModifiers.some(({ label }) => label === "Golpe em área"), false);
+  assert.equal(twoTargets.isSpread, true);
+  assert.equal(threeTargets.isSpread, true);
+  assert.deepEqual([twoTargets.min, twoTargets.max], [55, 66]);
+  assert.deepEqual([threeTargets.min, threeTargets.max], [55, 66]);
+  assert.equal(twoTargets.rolls.length, 16);
+  assert.ok(twoTargets.activeModifiers.some(({ label, factor }) => label === "Golpe em área" && factor === "0,75× no dano base"));
+});
+
+test("o cenário de um alvo mantém os 16 rolls do simulador sem o redutor de área", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", { nature: "Jolly", ability: "Rough Skin", statPoints: { hp: 2, atk: 32, spe: 32 } }),
+    defender: side("Garchomp", { nature: "Jolly", ability: "Rough Skin", statPoints: { hp: 2 } }),
+    move: "Earthquake",
+    gameType: "Doubles",
+    targetsHit: 1,
+  });
+
+  assert.deepEqual(result.attacker.stats, { hp: 185, atk: 182, def: 115, spa: 90, spd: 105, spe: 169 });
+  assert.deepEqual(result.rolls, [90, 91, 91, 93, 94, 94, 96, 97, 99, 99, 100, 102, 102, 103, 105, 106]);
+});
+
+test("golpe de alvo único não recebe redutor de área em Doubles", () => {
   const input = { attacker: side("Garchomp"), defender: side("Garchomp"), move: "Shadow Claw" };
   const singles = calculateChampionsDamage({ ...input, gameType: "Singles" });
   const doubles = calculateChampionsDamage({ ...input, gameType: "Doubles" });
 
+  assert.equal(doubles.isSpreadTarget, false);
   assert.equal(doubles.isSpread, false);
   assert.deepEqual([doubles.min, doubles.max], [singles.min, singles.max]);
+});
+
+test("não aceita mais alvos do que o padrão do golpe permite", () => {
+  assert.throws(() => calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp"),
+    move: "Rock Slide",
+    gameType: "Doubles",
+    targetsHit: 3,
+  }), /1 a 2 alvos/);
 });
 
 test("converte Stat Points em stats de nível 50 no caso cruzado com OP.GG", () => {
@@ -306,6 +349,20 @@ test("a chance condicional de 2HKO reproduz 237/256 no caso cruzado com OP.GG", 
   assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: { successes: 237, total: 256 } });
 });
 
+test("omite 2HKO para golpe em área em Doubles porque o número de alvos pode mudar", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", { nature: "Jolly", ability: "Rough Skin", statPoints: { hp: 2, atk: 32, spe: 32 } }),
+    defender: side("Garchomp", { nature: "Jolly", ability: "Rough Skin", statPoints: { hp: 2 } }),
+    move: "Earthquake",
+    gameType: "Doubles",
+    targetsHit: 2,
+  });
+
+  assert.deepEqual([result.min, result.max], [67, 79]);
+  assert.equal(result.koProbabilities?.twoHit, null);
+  assert.ok(result.koProbabilityNotes.some((note) => note.includes("quantidade de alvos")));
+});
+
 test("omite probabilidades de KO quando o cenário muda entre os turnos", () => {
   const weather = calculateChampionsDamage({
     attacker: side("Garchomp"),
@@ -317,6 +374,7 @@ test("omite probabilidades de KO quando o cenário muda entre os turnos", () => 
     attacker: side("Garchomp"),
     defender: side("Garchomp", { ability: "Sturdy" }),
     move: "Earthquake",
+    gameType: "Singles",
   });
   const defaultDisguise = calculateChampionsDamage({
     attacker: side("Garchomp"),
@@ -486,17 +544,20 @@ test("copiar um cenário deixa os dois sets e condições independentes", () => 
     attackerSide: { isHelpingHand: true },
     defenderSide: { isReflect: true },
     move: "Earthquake",
+    targetsHit: 2,
     weather: "",
   };
   const comparison = cloneDamageScenario(original);
   comparison.attacker.statPoints.atk = 0;
   comparison.defender.species = "Garchomp";
   comparison.attackerSide.isHelpingHand = false;
+  comparison.targetsHit = 1;
 
   assert.equal(original.attacker.statPoints.atk, 32);
   assert.equal(original.defender.species, "Gardevoir-Mega");
   assert.equal(original.attackerSide.isHelpingHand, true);
   assert.equal(original.defenderSide.isReflect, true);
+  assert.equal(original.targetsHit, 2);
 });
 
 test("golpes sem dano direto não são apresentados como uma faixa de dano", () => {
