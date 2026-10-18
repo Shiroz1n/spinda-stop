@@ -391,6 +391,24 @@ test("omite 2HKO quando Seed Sower muda o terreno após Wood Hammer", () => {
   assert.ok(first.koProbabilityNotes.some((note) => note.includes("Seed Sower") && note.includes("campo")));
 });
 
+test("omite 2HKO quando o golpe reduz o atributo ofensivo do próximo uso", () => {
+  const attacker = side("Garchomp");
+  const defender = side("Glaceon");
+  const first = calculateChampionsDamage({ attacker, defender, move: "Draco Meteor", gameType: "Singles" });
+  const reducedAttacker = side("Garchomp");
+  reducedAttacker.boosts.spa = -2;
+  const second = calculateChampionsDamage({ attacker: reducedAttacker, defender, move: "Draco Meteor", gameType: "Singles" });
+  const pairsAfterDrop = first.rolls.reduce((total, firstRoll) => (
+    total + second.rolls.filter((secondRoll) => firstRoll + secondRoll >= first.defender.stats.hp).length
+  ), 0);
+
+  assert.deepEqual([first.min, first.max], [64, 76]);
+  assert.deepEqual([second.min, second.max], [33, 39]);
+  assert.equal(pairsAfterDrop, 0);
+  assert.equal(first.koProbabilities?.twoHit, null);
+  assert.ok(first.koProbabilityNotes.some((note) => note.includes("Draco Meteor") && note.includes("atributo ofensivo")));
+});
+
 test("valida espécie e Stat Points antes de calcular", () => {
   assert.throws(() => calculateChampionsDamage({
     attacker: side("nome inventado"),

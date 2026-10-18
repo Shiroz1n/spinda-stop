@@ -43,6 +43,7 @@ Os casos abaixo estão automatizados em `apps/web/test/damage-calculator.test.js
 | D-12 | Mega Garchomp Hardy, 2 HP / 32 Atk / 32 Spe, Sand Force + Garchompite, Earthquake sob Sand contra Garchomp Hardy com 2 HP SP | Doubles 106–126 (57,3–68,1%) | Coincide com a faixa da VGC Champions; ferramenta comunitária, sem linhagem do motor publicada |
 | D-13 | Mega Garchomp Sand Force, Earthquake em Singles contra Sandaconda com Sand Spit | 75–88; OHKO 0/16 disponível e 2HKO omitido porque a habilidade ativa Sand após o primeiro dano | Regressão local baseada no efeito de Sand Spit registrado no catálogo do motor; sem caso independente da batalha |
 | D-14 | Rillaboom Adamant com 32 Atk SP, Wood Hammer contra Arboliva com Seed Sower | 60–71 no primeiro golpe, 78–92 sob Grassy Terrain depois do efeito; a conta cruzada seria 83/256, então a tela omite o 2HKO | Regressão local do campo reativo; não é previsão independente nem validação dentro do jogo |
+| D-15 | Garchomp sem SP usa Draco Meteor contra Glaceon sem SP; SpA cai 2 estágios após o uso | Primeiro golpe 64–76, segundo 33–39; 0/256 pares alcançam 140 HP; a tela omite 2HKO | Regressão local com o estado de SpA alterado antes do segundo uso; sem comparação de batalha independente |
 
 ## Referências consultadas
 

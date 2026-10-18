@@ -131,6 +131,9 @@ function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBon
   const changesAfterHit = repeatedDamageChangingAbilities.has(defenderAbility);
   const contactAbilityChangesNextHit = Boolean(moveData.flags?.contact)
     && contactReactiveAbilities.has(defenderAbility);
+  const offensiveStat = moveData.overrideOffensiveStat
+    || (moveData.category === "Physical" ? "atk" : "spa");
+  const moveLowersOffense = Number(moveData.self?.boosts?.[offensiveStat] || 0) < 0;
   const hasDefenderItem = Boolean(defenderItem);
   const simpleSingleHit = hits === 1 && !hasParentalBondFollowUp && moveData.category !== "Status";
   const notes = [];
@@ -142,13 +145,16 @@ function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBon
   if (contactAbilityChangesNextHit) {
     notes.push(`2HKO omitido: ${defender.ability} pode afetar o atacante ou o próximo golpe após um contato.`);
   }
+  if (moveLowersOffense) {
+    notes.push(`2HKO omitido: ${moveData.name} reduz o atributo ofensivo do atacante após o uso.`);
+  }
   if (hasDefenderItem) notes.push("Estimativas de KO omitidas quando o alvo tem item, pois recuperação, berries e efeitos de sobrevivência alteram a sequência.");
   if (attackerStatus || defenderStatus || input.weather || input.terrain || hasFieldCondition || attackerItem) {
     notes.push("2HKO omitido: itens, status ou condições de campo podem mudar entre turnos ou alterar o HP antes do segundo golpe.");
   }
   return {
     ohko: simpleSingleHit && defenderAbility !== "sturdy" && defenderItem !== "focussash" && !changesFirstHit && !hasDefenderItem,
-    twoHit: simpleSingleHit && !changesFirstHit && !changesAfterHit && !contactAbilityChangesNextHit && !hasDefenderItem && !attackerItem
+    twoHit: simpleSingleHit && !changesFirstHit && !changesAfterHit && !contactAbilityChangesNextHit && !moveLowersOffense && !hasDefenderItem && !attackerItem
       && !attackerStatus && !defenderStatus && !input.weather && !input.terrain && !hasFieldCondition,
     notes,
   };
