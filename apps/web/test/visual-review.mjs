@@ -176,7 +176,7 @@ async function runViewport(viewportName, viewport) {
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeoutMs: 10_000 });
     await safeCapture(page, viewportName, "usage-empty");
     await usageSearch.fill("Garchomp");
-    await page.getByLabel("Período").selectOption("history");
+    await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
     await waitForEither(page, ".usage-snapshot-picker, .usage-no-snapshots, .usage-error", 35_000);
     await safeCapture(page, viewportName, "usage-history");
   }
@@ -225,8 +225,16 @@ let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
-  await runViewport("desktop", { width: 1440, height: 960 });
-  await runViewport("mobile", { width: 390, height: 844 });
+  for (const [name, viewport] of [
+    ["desktop", { width: 1440, height: 960 }],
+    ["mobile", { width: 390, height: 844 }],
+  ]) {
+    try {
+      await runViewport(name, viewport);
+    } catch (error) {
+      failures.push(`${name}: inspeção interrompida — ${error.message}`);
+    }
+  }
 
   const report = {
     generatedAt: new Date().toISOString(),
