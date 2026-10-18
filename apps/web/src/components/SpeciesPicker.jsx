@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchPokemon } from "@spinda-stop/domain";
+import { PokemonSprite } from "./PokemonSprite.jsx";
 import { TypeTag } from "./TypeTag.jsx";
 
 export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
@@ -67,6 +68,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
               key={entry.slug}
               onClick={() => { setQuery(""); onChoose(entry); }}
             >
+              <PokemonSprite pokemon={entry} name={entry.name} size={56} decorative />
               <span className="dex-number">#{String(entry.speciesId).padStart(4, "0")}</span>
               <span className="picker-name">{entry.name}</span>
               <span className="type-list">

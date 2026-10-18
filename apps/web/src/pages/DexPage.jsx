@@ -37,14 +37,14 @@ export function DexPage() {
     <div className="page-wrap dex-page">
       <div className="page-heading-row">
         <div>
-          <p className="page-label">Catálogo geral · PokéAPI</p>
+          <p className="page-label">PokéAPI · espécies e formas</p>
           <h1>Pokédex</h1>
-          <p className="page-intro">Espécies e formas em um só lugar. A presença no Pokémon Champions aparece como desconhecida até ser confirmada por regulamento.</p>
+          <p className="page-intro">Encontre uma espécie ou forma pelos tipos, nome ou número nacional.</p>
         </div>
         <Link className="button button-outline desktop-only" to="/builder">Levar ao construtor</Link>
       </div>
 
-      <section className="dex-toolbar" aria-label="Busca e filtros">
+      <section className="dex-toolbar" aria-label="Busca e filtros da Pokédex">
         <label className="search-field">
           <span className="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.6" /><path d="m16 16 4.2 4.2" /></svg></span>
           <span className="sr-only">Buscar espécie, forma ou número</span>
@@ -75,8 +75,8 @@ export function DexPage() {
       </section>
 
       <div className="results-line">
-        <p aria-live="polite"><strong>{results.length.toLocaleString("pt-BR")}</strong> resultados{filterCount > 0 ? ` · ${filterCount} filtro${filterCount > 1 ? "s" : ""}` : ""}</p>
-        <p>Filtros vazios mostram o catálogo completo.</p>
+        <p aria-live="polite"><strong>{results.length.toLocaleString("pt-BR")}</strong> entradas{filterCount > 0 ? ` · ${filterCount} filtro${filterCount > 1 ? "s" : ""}` : ""}</p>
+        {query || filterCount ? <p>Filtros ativos</p> : <p>Catálogo completo</p>}
       </div>
 
       {visible.length > 0 ? (
