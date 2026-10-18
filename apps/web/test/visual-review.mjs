@@ -429,6 +429,10 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "calculator", { audit: true });
   await page.getByLabel("Comparar com outro cenário").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByLabel("Golpe B").fill("Dragon Claw");
+  const comparisonResults = page.locator(".damage-comparison-results .damage-result");
+  await comparisonResults.nth(1).getByRole("heading", { name: "Garchomp usa Dragon Claw" }).waitFor({ state: "visible", timeout: 10_000 });
+  if (await comparisonResults.count() !== 2) failures.push(`${viewportName}: a comparação deve calcular A e B com a variação selecionada.`);
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true });
 
   if (process.env.DATABASE_URL) {
