@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { calculateChampionsDamage, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../data/damageCalculator.js";
 
@@ -19,15 +19,22 @@ const defaultSide = (species, nature) => ({
 
 function initialForm(search) {
   const params = new URLSearchParams(search);
-  const cameFromBuilder = params.has("attacker");
+  const cameFromBuilder = params.has("attacker") || params.has("defender");
   const move = params.get("move") || (cameFromBuilder ? "" : "Earthquake");
-  const attacker = defaultSide(params.get("attacker") || "Garchomp", params.get("nature") || "Adamant");
-  attacker.ability = params.get("ability") || "";
-  attacker.item = params.get("item") || "";
-  attacker.statPoints = Object.fromEntries(statFields.map(([key]) => [key, Math.max(0, Number(params.get(`sp-${key}`)) || 0)]));
+  const readSide = (sideName, defaults) => {
+    const prefix = sideName === "attacker" ? "" : "defender-";
+    const side = defaultSide(params.get(sideName) || defaults.species, params.get(`${prefix}nature`) || defaults.nature);
+    side.ability = params.get(`${prefix}ability`) || "";
+    side.item = params.get(`${prefix}item`) || "";
+    side.statPoints = Object.fromEntries(statFields.map(([key]) => [
+      key,
+      Math.max(0, Number(params.get(`${prefix}sp-${key}`)) || 0),
+    ]));
+    return side;
+  };
   return {
-    attacker,
-    defender: defaultSide("Garchomp", "Serious"),
+    attacker: readSide("attacker", { species: "Garchomp", nature: "Adamant" }),
+    defender: readSide("defender", { species: "Garchomp", nature: "Serious" }),
     move,
     hits: getHitOptions(getDamageMove(move))[0],
     gameType: "Doubles",
@@ -39,7 +46,7 @@ function initialForm(search) {
   };
 }
 
-function DataLists({ form }) {
+function DataLists({ form, comparisonMove }) {
   const renderSideOptions = (sideName) => {
     const side = form[sideName];
     return (
@@ -55,7 +62,7 @@ function DataLists({ form }) {
     <div className="damage-datalists">
       {renderSideOptions("attacker")}
       {renderSideOptions("defender")}
-      <datalist id="damage-move-options">{getDamageCatalogOptions("moves", form.move).map((name) => <option value={name} key={name} />)}</datalist>
+      <datalist id="damage-move-options">{[...new Set([...getDamageCatalogOptions("moves", form.move), ...getDamageCatalogOptions("moves", comparisonMove)])].slice(0, 100).map((name) => <option value={name} key={name} />)}</datalist>
     </div>
   );
 }
@@ -141,11 +148,83 @@ function formatStatLine(pokemon, side) {
   return statFields.map(([key, label]) => `${label} ${pokemon.stats[key]} (${side.statPoints[key]} SP)`).join(" · ");
 }
 
+function DamageResultPanel({ calculation, form, label }) {
+  if (!calculation?.result) {
+    return (
+      <section className="damage-result damage-result-error" role="alert">
+        <p className="page-label">Cenário incompleto</p>
+        <h2>Confira os dados do cálculo</h2>
+        <p>{calculation?.error || "Não foi possível calcular este cenário."}</p>
+      </section>
+    );
+  }
+
+  const { result } = calculation;
+  const isStatusMove = result.move.category === "Status";
+  const hitSummary = result.hasParentalBondFollowUp
+    ? "1 acerto + golpe adicional de Parental Bond"
+    : `${result.hits} ${result.hits === 1 ? "acerto" : "acertos"}`;
+
+  return (
+    <section className="damage-result panel-frame" aria-label={`${label} · ${result.gameType}`}>
+      <div className="damage-result-heading">
+        <div>
+          <p className="page-label">{label} · {result.gameType}</p>
+          <h2>{result.attacker.name} usa {result.move.name}</h2>
+          <p className="form-hint">Contra {result.defender.name} · nível 50 · {hitSummary}</p>
+        </div>
+        {!isStatusMove && <div className="damage-result-range"><strong>{result.min}–{result.max}</strong><span>de dano</span></div>}
+      </div>
+      {isStatusMove ? (
+        <p className="damage-status-note">Este golpe não causa dano direto.</p>
+      ) : (
+        <>
+          <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
+          {result.isSpread && <p className="damage-spread-note">Redutor de golpe em área aplicado para Doubles. O valor representa dano a um alvo.</p>}
+          {result.hitRanges.length > 1 && <p className="damage-spread-note">{result.hasParentalBondFollowUp ? "Faixas do golpe principal e do golpe adicional:" : "Faixa por acerto:"} {result.hitRanges.map(([min, max], index) => `${result.rollGroupLabels[index]} ${min}–${max}`).join(" · ")}</p>}
+          {result.rolls?.length === 16 && <div className="damage-rolls"><h3>16 resultados de dano</h3><ol>{result.rolls.map((roll, index) => <li key={`${roll}-${index}`}>{roll}</li>)}</ol></div>}
+          {result.rollGroups.length > 1 && result.rollGroups.every((group) => group.length === 16) && (
+            <details className="damage-multihit-rolls">
+              <summary>{result.hasParentalBondFollowUp ? "Ver 16 resultados de cada golpe de Parental Bond" : "Ver 16 resultados de cada acerto"}</summary>
+              {result.rollGroups.map((group, index) => <p key={index}><strong>{result.rollGroupLabels[index]}:</strong> {formatRolls(group)}</p>)}
+              <p className="form-hint">A faixa total soma as faixas de cada golpe/acerto. Este motor não enumera aqui todas as combinações possíveis.</p>
+            </details>
+          )}
+          {result.koProbabilities && <div className="damage-ko-note">
+            <h3>Probabilidade condicional de nocaute</h3>
+            <p>OHKO: {formatPercent((result.koProbabilities.ohko.successes / result.koProbabilities.ohko.total) * 100)} ({result.koProbabilities.ohko.successes}/16).</p>
+            <p>2HKO: {formatPercent((result.koProbabilities.twoHit.successes / result.koProbabilities.twoHit.total) * 100)} ({result.koProbabilities.twoHit.successes}/256).</p>
+            <small>Condicionada aos acertos, ao crítico selecionado e ao mesmo cenário em ambos os golpes. Ignora precisão e mudanças entre turnos; não representa a chance real de vencer a partida.</small>
+          </div>}
+          <details className="damage-breakdown" open>
+            <summary>O que entrou neste cálculo</summary>
+            <div className="damage-breakdown-stats">
+              <p><strong>Atacante:</strong> {formatStatLine(result.attacker, form.attacker)}</p>
+              <p><strong>Alvo:</strong> {formatStatLine(result.defender, form.defender)}</p>
+            </div>
+            <h3>Modificadores identificados pelo motor</h3>
+            <ul>{result.activeModifiers.map((modifier, index) => <li key={`${modifier.label}-${index}`}><strong>{modifier.label}:</strong> {modifier.factor}</li>)}</ul>
+            <p className="form-hint">Habilidades, itens e condições só aparecem quando o motor os registrou neste cenário. Quando o resultado não expõe o fator numérico, mostramos o efeito pelo nome sem estimá-lo.</p>
+          </details>
+          {result.max === 0 && <p className="damage-spread-note">Neste cenário, o golpe não causa dano. Pode haver imunidade, proteção ou um efeito especial.</p>}
+        </>
+      )}
+      <p className="damage-engine-note">Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
+    </section>
+  );
+}
+
 export function DamageCalculatorPage() {
   const location = useLocation();
   const [form, setForm] = useState(() => initialForm(location.search));
+  const [comparison, setComparison] = useState({ enabled: false, move: "", hits: 1, critical: false, weather: "", terrain: "" });
   const moveData = getDamageMove(form.move);
   const availableHits = moveData ? getHitOptions(moveData) : [1];
+  const comparisonMoveData = getDamageMove(comparison.move);
+  const comparisonAvailableHits = useMemo(
+    () => comparisonMoveData ? getHitOptions(comparisonMoveData) : [1],
+    [comparisonMoveData],
+  );
 
   const calculation = useMemo(() => {
     try {
@@ -155,6 +234,38 @@ export function DamageCalculatorPage() {
     }
   }, [form]);
 
+  const comparisonCalculation = useMemo(() => {
+    if (!comparison.enabled || !comparison.move.trim()) return null;
+    const hits = comparisonAvailableHits.includes(comparison.hits) ? comparison.hits : comparisonAvailableHits[0];
+    const scenario = {
+      ...form,
+      move: comparison.move,
+      hits,
+      critical: comparison.critical,
+      weather: comparison.weather,
+      terrain: comparison.terrain,
+    };
+    try {
+      return { result: calculateChampionsDamage(scenario), error: "" };
+    } catch (error) {
+      return { result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este cenário." };
+    }
+  }, [form, comparison, comparisonAvailableHits]);
+
+  const announcementText = comparison.enabled
+    ? [
+      resultAnnouncement("Cenário A", calculation),
+      comparison.move.trim()
+        ? resultAnnouncement("Cenário B", comparisonCalculation)
+        : "Cenário B: escolha um golpe para comparar.",
+    ].join(" ")
+    : resultAnnouncement("Resultado", calculation);
+  const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    const timeoutId = setTimeout(() => setAnnouncement(announcementText), 450);
+    return () => clearTimeout(timeoutId);
+  }, [announcementText]);
+
   function update(key, value) { setForm((current) => ({ ...current, [key]: value })); }
   function updateSide(key, value) { setForm((current) => ({ ...current, [key]: { ...current[key], ...value } })); }
   function updateFieldSide(key, value) { setForm((current) => ({ ...current, [key]: { ...current[key], ...value } })); }
@@ -163,12 +274,10 @@ export function DamageCalculatorPage() {
     const hits = move ? getHitOptions(move)[0] : 1;
     setForm((current) => ({ ...current, move: value, hits }));
   }
-
-  const result = calculation.result;
-  const isStatusMove = result?.move.category === "Status";
-  const hitSummary = result?.hasParentalBondFollowUp
-    ? "1 acerto + golpe adicional de Parental Bond"
-    : result ? `${result.hits} ${result.hits === 1 ? "acerto" : "acertos"}` : "";
+  function handleComparisonMoveChange(value) {
+    const move = getDamageMove(value);
+    setComparison((current) => ({ ...current, move: value, hits: move ? getHitOptions(move)[0] : 1 }));
+  }
   return (
     <div className="page-wrap damage-page">
       <div className="page-heading-row damage-heading">
@@ -240,63 +349,79 @@ export function DamageCalculatorPage() {
             </div>
           </div>
         </details>
-      </section>
-
-      {calculation.error ? (
-        <section className="damage-result damage-result-error" role="alert">
-          <p className="page-label">Cenário incompleto</p>
-          <h2>Confira os dados do cálculo</h2>
-          <p>{calculation.error}</p>
-        </section>
-      ) : (
-        <section className="damage-result panel-frame" aria-labelledby="damage-result-heading" aria-live="polite">
-          <div className="damage-result-heading">
-            <div>
-              <p className="page-label">Resultado · {result.gameType}</p>
-              <h2 id="damage-result-heading">{result.attacker.name} usa {result.move.name}</h2>
-                <p className="form-hint">Contra {result.defender.name} · nível 50 · {hitSummary}</p>
-            </div>
-            {!isStatusMove && <div className="damage-result-range"><strong>{result.min}–{result.max}</strong><span>de dano</span></div>}
-          </div>
-          {isStatusMove ? (
-            <p className="damage-status-note">Este golpe não causa dano direto.</p>
-          ) : (
+        <div className="damage-comparison-controls">
+          <FieldToggle
+            label="Comparar com outro cenário"
+            checked={comparison.enabled}
+            onChange={(enabled) => setComparison((current) => ({
+              ...current,
+              enabled,
+              critical: enabled ? form.critical : current.critical,
+              weather: enabled ? form.weather : current.weather,
+              terrain: enabled ? form.terrain : current.terrain,
+            }))}
+          />
+          {comparison.enabled && (
             <>
-              <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
-              {result.isSpread && <p className="damage-spread-note">Redutor de golpe em área aplicado para Doubles. O valor representa dano a um alvo.</p>}
-              {result.hitRanges.length > 1 && <p className="damage-spread-note">{result.hasParentalBondFollowUp ? "Faixas do golpe principal e do golpe adicional:" : "Faixa por acerto:"} {result.hitRanges.map(([min, max], index) => `${result.rollGroupLabels[index]} ${min}–${max}`).join(" · ")}</p>}
-              {result.rolls?.length === 16 && <div className="damage-rolls"><h3>16 resultados de dano</h3><ol>{result.rolls.map((roll, index) => <li key={`${roll}-${index}`}>{roll}</li>)}</ol></div>}
-              {result.rollGroups.length > 1 && result.rollGroups.every((group) => group.length === 16) && (
-                <details className="damage-multihit-rolls">
-                  <summary>{result.hasParentalBondFollowUp ? "Ver 16 resultados de cada golpe de Parental Bond" : "Ver 16 resultados de cada acerto"}</summary>
-                  {result.rollGroups.map((group, index) => <p key={index}><strong>{result.rollGroupLabels[index]}:</strong> {formatRolls(group)}</p>)}
-                  <p className="form-hint">A faixa total soma as faixas de cada golpe/acerto. Este motor não enumera aqui todas as combinações possíveis.</p>
-                </details>
-              )}
-              {result.koProbabilities && <div className="damage-ko-note">
-                <h3>Probabilidade condicional de nocaute</h3>
-                <p>OHKO: {formatPercent((result.koProbabilities.ohko.successes / result.koProbabilities.ohko.total) * 100)} ({result.koProbabilities.ohko.successes}/16).</p>
-                <p>2HKO: {formatPercent((result.koProbabilities.twoHit.successes / result.koProbabilities.twoHit.total) * 100)} ({result.koProbabilities.twoHit.successes}/256).</p>
-                <small>Condicionada aos acertos, ao crítico selecionado e ao mesmo cenário em ambos os golpes. Ignora precisão e mudanças entre turnos; não representa a chance real de vencer a partida.</small>
-              </div>}
-              <details className="damage-breakdown" open>
-                <summary>O que entrou neste cálculo</summary>
-                <div className="damage-breakdown-stats">
-                  <p><strong>Atacante:</strong> {formatStatLine(result.attacker, form.attacker)}</p>
-                  <p><strong>Alvo:</strong> {formatStatLine(result.defender, form.defender)}</p>
-                </div>
-                <h3>Modificadores identificados pelo motor</h3>
-                <ul>{result.activeModifiers.map((modifier, index) => <li key={`${modifier.label}-${index}`}><strong>{modifier.label}:</strong> {modifier.factor}</li>)}</ul>
-                <p className="form-hint">Habilidades, itens e condições só aparecem quando o motor os registrou neste cenário. Quando o resultado não expõe o fator numérico, mostramos o efeito pelo nome sem estimá-lo.</p>
-              </details>
-              {result.max === 0 && <p className="damage-spread-note">Neste cenário, o golpe não causa dano. Pode haver imunidade, proteção ou um efeito especial.</p>}
+              <p>O cenário B mantém os dois Pokémon, SP, habilidades, itens e condições avançadas. Você pode trocar golpe, clima, terreno e crítico.</p>
+              <div className="damage-comparison-fields">
+                <CatalogInput label="Golpe do cenário B" value={comparison.move} onChange={handleComparisonMoveChange} list="damage-move-options" placeholder="Escolha outro golpe" />
+                <label className="damage-field">
+                  <span>Acertos no cenário B</span>
+                  <select className="text-input" value={comparisonAvailableHits.includes(comparison.hits) ? comparison.hits : comparisonAvailableHits[0]} onChange={(event) => setComparison((current) => ({ ...current, hits: Number(event.target.value) }))}>
+                    {comparisonAvailableHits.map((count) => <option value={count} key={count}>{count}</option>)}
+                  </select>
+                </label>
+                <label className="damage-field">
+                  <span>Clima no cenário B</span>
+                  <select className="text-input" value={comparison.weather} onChange={(event) => setComparison((current) => ({ ...current, weather: event.target.value }))}>
+                    <option value="">Sem clima</option>
+                    {damageCalculatorCatalog.weather.map((weather) => <option value={weather} key={weather}>{weather}</option>)}
+                  </select>
+                </label>
+                <label className="damage-field">
+                  <span>Terreno no cenário B</span>
+                  <select className="text-input" value={comparison.terrain} onChange={(event) => setComparison((current) => ({ ...current, terrain: event.target.value }))}>
+                    <option value="">Sem terreno</option>
+                    {damageCalculatorCatalog.terrain.map((terrain) => <option value={terrain} key={terrain}>{terrain}</option>)}
+                  </select>
+                </label>
+                <FieldToggle label="Crítico no cenário B" checked={comparison.critical} onChange={(critical) => setComparison((current) => ({ ...current, critical }))} />
+              </div>
             </>
           )}
-          <p className="damage-engine-note">Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
-        </section>
+        </div>
+      </section>
+
+      {comparison.enabled ? (
+        <>
+          <p className="damage-comparison-note" role="note">Comparação lado a lado. Cada cenário mostra seus rolls e modificadores; não compartilha probabilidades entre golpes.</p>
+          <div className="damage-comparison-results" aria-label="Comparação dos cenários">
+            <DamageResultPanel calculation={calculation} form={form} label="Cenário A · atual" />
+            {comparison.move.trim() ? (
+              <DamageResultPanel calculation={comparisonCalculation} form={{ ...form, move: comparison.move }} label="Cenário B · comparação" />
+            ) : (
+              <section className="damage-comparison-empty panel-frame" role="status">
+                <p className="page-label">Cenário B</p>
+                <h2>Escolha um golpe</h2>
+                <p>O resultado aparecerá aqui quando o golpe do segundo cenário estiver no catálogo.</p>
+              </section>
+            )}
+          </div>
+        </>
+      ) : (
+        <DamageResultPanel calculation={calculation} form={form} label="Resultado" />
       )}
-      <DataLists form={form} />
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
+      <DataLists form={form} comparisonMove={comparison.move} />
     </div>
   );
+}
+
+function resultAnnouncement(label, calculation) {
+  if (!calculation?.result) return `${label}: ${calculation?.error || "o cálculo está incompleto."}`;
+  const { result } = calculation;
+  if (result.move.category === "Status") return `${label}: ${result.attacker.name} usa ${result.move.name}; o golpe não causa dano direto.`;
+  return `${label}: ${result.attacker.name} usa ${result.move.name} contra ${result.defender.name}, ${result.min} a ${result.max} de dano.`;
 }
 

@@ -7,6 +7,7 @@ import moveData from "@spinda-stop/data/moves";
 import natureData from "@spinda-stop/data/natures";
 import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
+import { buildDamageCalculatorSearch } from "../data/damageCalculator.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
 const STAT_FIELDS = [
@@ -65,6 +66,7 @@ export function BuilderPage() {
   const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug));
   const [team, setTeam] = useState(initialDraft.team);
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
+  const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(0);
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
@@ -76,14 +78,32 @@ export function BuilderPage() {
   );
   const moveListId = "move-options";
   const natureListId = "nature-options";
-  const damageCalculatorParams = selectedMember && selectedPokemon ? new URLSearchParams({
-    attacker: selectedPokemon.name,
-    ability: selectedMember.ability,
-    item: selectedMember.item,
-    nature: selectedMember.nature || "Serious",
-    ...Object.fromEntries(STAT_FIELDS.map(([key]) => [`sp-${key}`, String(selectedMember.statPoints[key])])),
-    ...(selectedMember.moves.find((move) => move.trim()) ? { move: selectedMember.moves.find((move) => move.trim()) } : {}),
-  }) : null;
+  const damageOpponents = team.members
+    .map((member, index) => ({ member, index, pokemon: member ? pokemonWithDetails(member.pokemonId) : null }))
+    .filter(({ member, index, pokemon }) => member && pokemon && index !== selectedSlot);
+  const selectedDamageOpponent = damageOpponents.find(({ index }) => index === damageOpponentSlot) || damageOpponents[0] || null;
+
+  function toDamageSide(member, pokemon) {
+    return {
+      species: pokemon.name,
+      nature: member.nature || "Serious",
+      ability: member.ability,
+      item: member.item,
+      statPoints: member.statPoints,
+      moves: member.moves,
+    };
+  }
+
+  function calculatorUrl(selectedRole) {
+    const selectedSide = toDamageSide(selectedMember, selectedPokemon);
+    const otherSide = selectedDamageOpponent
+      ? toDamageSide(selectedDamageOpponent.member, selectedDamageOpponent.pokemon)
+      : { species: "Garchomp", nature: "Serious", statPoints: Object.fromEntries(STAT_FIELDS.map(([key]) => [key, 0])) };
+    const attacker = selectedRole === "attacker" ? selectedSide : otherSide;
+    const defender = selectedRole === "defender" ? selectedSide : otherSide;
+    const move = attacker.moves?.find((entry) => entry.trim()) || "";
+    return `/calculator?${buildDamageCalculatorSearch(attacker, defender, move)}`;
+  }
 
   useEffect(() => {
     if (location.state?.pokemonSlug) navigate(location.pathname, { replace: true, state: null });
@@ -265,14 +285,24 @@ export function BuilderPage() {
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
                   <p className="form-hint builder-usage-hint">A consulta mostra tendências da fonte sem alterar este set.</p>
-                  <p className="form-hint builder-usage-hint">A calculadora abre em nível 50 com espécie, nature, habilidade, item e SP deste set; começa pelo primeiro golpe preenchido.</p>
+                  <p className="form-hint builder-usage-hint">A calculadora abre em nível 50 e pode levar os sets dos dois lados. O cálculo começa pelo primeiro golpe preenchido do atacante.</p>
                 </div>
                 <div className="set-heading-actions">
                   <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de ${selectedPokemon.name} em Usage`}>
                     Ver tendências de Usage
                   </Link>
-                  <Link className="button button-outline button-small" to={`/calculator?${damageCalculatorParams}`} aria-label={`Simular dano com o set atual de ${selectedPokemon.name}`}>
-                    Simular dano
+                  <label className="builder-damage-opponent">
+                    <span>Outro lado da simulação</span>
+                    <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
+                      {selectedDamageOpponent ? null : <option value="">Garchomp padrão</option>}
+                      {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
+                    </select>
+                  </label>
+                  <Link className="button button-outline button-small" to={calculatorUrl("attacker")} aria-label={`Usar ${selectedPokemon.name} como atacante na calculadora`}>
+                    Como atacante
+                  </Link>
+                  <Link className="button button-outline button-small" to={calculatorUrl("defender")} aria-label={`Usar ${selectedPokemon.name} como alvo na calculadora`}>
+                    Como alvo
                   </Link>
                   <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
                   <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>

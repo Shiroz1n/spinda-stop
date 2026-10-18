@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateChampionsDamage, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -297,6 +297,56 @@ test("sugestões do catálogo são filtradas e limitadas para não renderizar a 
   assert.deepEqual(getDamageCatalogOptions("species", "garchomp"), ["Garchomp", "Garchomp-Mega", "Garchomp-Mega-Z"]);
   assert.deepEqual(getDamageCatalogOptions("species", ""), []);
   assert.equal(getDamageCatalogOptions("moves", "a").length, 50);
+});
+
+test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
+  const attacker = side("Garchomp", {
+    nature: "Jolly",
+    ability: "Rough Skin",
+    item: "Life Orb",
+    statPoints: { hp: 2, atk: 32, spe: 32 },
+  });
+  const defender = side("Gardevoir-Mega", {
+    nature: "Modest",
+    ability: "Pixilate",
+    item: "Gardevoirite",
+    statPoints: { hp: 4, def: 12, spd: 16 },
+  });
+  const params = new URLSearchParams(buildDamageCalculatorSearch(attacker, defender, "Earthquake"));
+
+  assert.deepEqual({
+    attacker: params.get("attacker"),
+    nature: params.get("nature"),
+    ability: params.get("ability"),
+    item: params.get("item"),
+    hp: params.get("sp-hp"),
+    atk: params.get("sp-atk"),
+    spe: params.get("sp-spe"),
+    defender: params.get("defender"),
+    defenderNature: params.get("defender-nature"),
+    defenderAbility: params.get("defender-ability"),
+    defenderItem: params.get("defender-item"),
+    defenderHp: params.get("defender-sp-hp"),
+    defenderDef: params.get("defender-sp-def"),
+    defenderSpd: params.get("defender-sp-spd"),
+    move: params.get("move"),
+  }, {
+    attacker: "Garchomp",
+    nature: "Jolly",
+    ability: "Rough Skin",
+    item: "Life Orb",
+    hp: "2",
+    atk: "32",
+    spe: "32",
+    defender: "Gardevoir-Mega",
+    defenderNature: "Modest",
+    defenderAbility: "Pixilate",
+    defenderItem: "Gardevoirite",
+    defenderHp: "4",
+    defenderDef: "12",
+    defenderSpd: "16",
+    move: "Earthquake",
+  });
 });
 
 test("golpes sem dano direto não são apresentados como uma faixa de dano", () => {

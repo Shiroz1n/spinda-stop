@@ -10,6 +10,8 @@ A tela `/calculator` usa `@smogon/calc` 0.12.0 no navegador. Os sets ficam no di
 - Em Doubles, golpes cujo alvo é `allAdjacent` ou `allAdjacentFoes` recebem o redutor de área do motor; a faixa mostrada é contra um alvo. Golpes de alvo único não recebem esse redutor.
 - OHKO e 2HKO são contagens condicionais dos rolls: exigem acerto, mantêm o crítico selecionado e repetem o mesmo cenário. Não incluem precisão, chance de crítico, mudança de clima/tela, recuperação, itens consumidos ou outros eventos entre turnos. Multi-hit e golpes de Parental Bond não exibem essas probabilidades.
 - O painel lista os fatores e efeitos que o resultado do motor expõe. Para alguns itens e habilidades, o motor só informa que o efeito foi aplicado, sem fator numérico; a tela mostra o nome e não inventa um multiplicador.
+- A comparação coloca dois cenários lado a lado. O segundo reutiliza ambos os Pokémon, seus SP, itens, habilidades e condições avançadas; permite variar golpe, número de acertos disponível, clima, terreno e crítico. Cada resultado mantém seus rolls e modificadores separados.
+- No construtor, escolha outro integrante da equipe e abra o Pokémon atual como atacante ou como alvo. Os dois sets e o primeiro golpe preenchido do atacante vão para a calculadora; isso é um ponto de partida editável, não uma recomendação de set.
 
 O motor contempla stats, tipos, formas, muitos efeitos de golpes, habilidades, itens, clima, terreno, telas, crítico, spread e múltiplos acertos. A cobertura varia por mecânica e versão. A matriz em [CALC_VALIDATION.md](CALC_VALIDATION.md) diz o que foi cruzado, o que depende apenas do motor e o que continua sem confirmação.
 
