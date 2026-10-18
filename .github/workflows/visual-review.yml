@@ -1,0 +1,28 @@
+name: Visual review
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'fix/visual-review-captures' || github.event.pull_request.head.ref == 'feat/spinda-gba-identity'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run visual:review
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: visual-review-${{ github.sha }}
+          path: artifacts/visual-review/
+          retention-days: 14

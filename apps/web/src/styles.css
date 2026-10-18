@@ -704,6 +704,7 @@ p { max-width: 72ch; }
 .damage-multihit-rolls { margin-top: 12px; }
 .damage-status-note { margin: 14px 0 0; font-weight: 750; }
 .damage-engine-note { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.81rem; overflow-wrap: anywhere; }
+.damage-engine-note a { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 0.16em; }
 .damage-result-error { border: 1px solid #973b34; background: #fff8f4; color: #6c2924; }
 .damage-result-error .page-label { color: #7a302a; }
 .damage-result-error h2 { margin-bottom: 8px; color: #54231e; }
