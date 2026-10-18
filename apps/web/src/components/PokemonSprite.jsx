@@ -3,6 +3,7 @@ import { itemSpriteUrl, resolvePokemonSpriteUrl } from "../data/pokemonSprites.j
 
 export function PokemonSprite({ pokemon, name, size = 72, priority = false, decorative = false, className = "" }) {
   const label = name || pokemon?.name || pokemon?.speciesName || "Pokémon";
+  const fallbackLabel = pokemon?.speciesName || pokemon?.baseSpecies || pokemon?.name || label;
   const src = resolvePokemonSpriteUrl(pokemon);
   const [failedSrc, setFailedSrc] = useState("");
   const [loadedSrc, setLoadedSrc] = useState("");
@@ -32,7 +33,7 @@ export function PokemonSprite({ pokemon, name, size = 72, priority = false, deco
           onError={() => setFailedSrc(src)}
         />
       ) : null}
-      {(failed || loading) && <span className="pokemon-art-fallback" aria-hidden="true">{label.slice(0, 2).toLocaleUpperCase("pt-BR")}</span>}
+      {(failed || loading) && <span className="pokemon-art-fallback" aria-hidden="true">{fallbackLabel.slice(0, 2).toLocaleUpperCase("pt-BR")}</span>}
     </span>
   );
 }

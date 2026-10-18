@@ -471,6 +471,15 @@ async function runViewport(viewportName, viewport) {
   if (slotNames.length !== 6 || slotNames.some((name) => name === "Vazio")) {
     failures.push(`${viewportName}: a revisão mobile/desktop não conseguiu preencher e reconhecer os seis Pokémon do builder.`);
   }
+  const slotLayoutMetrics = await page.locator(".team-slot .slot-copy b").evaluateAll((elements) => elements.map((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return { text: element.textContent?.trim(), lineCount: range.getClientRects().length };
+  }));
+  observations.push({ viewport: viewportName, name: "builder-six-member-name-lines", slots: slotLayoutMetrics });
+  if (viewport.width <= 420 && slotLayoutMetrics.some((slot) => slot.lineCount > 1)) {
+    failures.push(`${viewportName}: os nomes dos seis Pokémon devem permanecer legíveis em uma linha nos slots mobile.`);
+  }
   await safeCapture(page, viewportName, "builder-six-members", { audit: true });
   await page.evaluate(() => window.scrollTo(0, 0));
   const firstFoldSlots = await page.locator(".team-slot").evaluateAll((elements) => elements.filter((element) => {
@@ -496,6 +505,38 @@ async function runViewport(viewportName, viewport) {
     await usageCategory.click();
     if ((await usageCategory.getAttribute("aria-pressed")) !== "true") failures.push(`${viewportName}: a aba de golpes do Usage não ficou selecionada.`);
     await safeCapture(page, viewportName, "usage-battle-data-moves", { audit: true, fullPage: false });
+    const usageRow = page.locator(".usage-species-button").first();
+    if (await usageRow.count()) {
+      const usageRowMetrics = await usageRow.evaluate((button) => {
+        const rect = (selector) => {
+          const element = button.querySelector(selector);
+          if (!element) return null;
+          const bounds = element.getBoundingClientRect();
+          return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, centerY: (bounds.top + bounds.bottom) / 2 };
+        };
+        const name = button.querySelector(".usage-species-name > strong");
+        const nameRange = document.createRange();
+        if (name) nameRange.selectNodeContents(name);
+        const artRect = rect(".usage-species-art");
+        const positionRect = rect(".usage-position");
+        const typeList = button.querySelector(".usage-species-name .type-list");
+        const typeListRect = typeList?.getBoundingClientRect();
+        const typeTagsFit = !typeList || Array.from(typeList.children).every((tag) => {
+          const tagRect = tag.getBoundingClientRect();
+          return tagRect.left >= typeListRect.left - 1 && tagRect.right <= typeListRect.right + 1;
+        });
+        return {
+          name: name?.textContent?.trim(),
+          nameLineCount: nameRange.getClientRects().length,
+          rankAlignedWithArt: Boolean(artRect && positionRect && Math.abs(artRect.centerY - positionRect.centerY) <= 8),
+          typeTagsFit,
+        };
+      });
+      observations.push({ viewport: viewportName, name: "usage-species-row-layout", ...usageRowMetrics });
+      if (viewport.width <= 420 && (!usageRowMetrics.rankAlignedWithArt || !usageRowMetrics.typeTagsFit || (usageRowMetrics.name === "Garchomp" && usageRowMetrics.nameLineCount > 1))) {
+        failures.push(`${viewportName}: a linha compacta de Usage deve manter Pokémon, nome, tipos e posição alinhados e legíveis.`);
+      }
+    }
     const usageSearch = page.locator(".usage-browser-panel input[type=search]");
     await usageSearch.fill("spindastop-no-match-457");
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });

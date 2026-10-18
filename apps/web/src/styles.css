@@ -2106,3 +2106,13 @@ select,
   .damage-quickbar-side strong { overflow-wrap: normal; word-break: normal; font-size: 0.72rem; }
   .site-footer { padding-bottom: 86px; }
 }
+
+
+/* Prevent compact mobile lists from splitting identity labels across grid rows. */
+@media (max-width: 420px) {
+  .team-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .slot-copy b { overflow-wrap: normal; word-break: normal; }
+  .usage-species-button { grid-template-columns: 54px minmax(0, 1fr) 40px; }
+  .usage-species-name > strong { overflow-wrap: normal; word-break: normal; }
+  .usage-species-name .type-list { min-width: 0; flex-wrap: wrap; }
+}
