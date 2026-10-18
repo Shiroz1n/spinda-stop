@@ -18,7 +18,7 @@ O modo é **Operate**: quem usa está procurando uma espécie ou ajustando um ti
 | `green` | `#286B4B` | Confirmação. |
 | `gold` | `#8A6410` | Aviso e dado provisório. |
 
-Os textos mantêm contraste WCAG AA; tipo também aparece por nome. A tipografia de títulos pode usar uma face pixel local se vier licenciada; corpo e formulários usam sans legível. Números de catálogo usam largura tabular. Uma sombra curta e uma borda dupla marcam a moldura do produto; o restante usa elevação por borda.
+Tipo também aparece por nome. Press Start 2P é usada só na marca; corpo e formulários usam sans do sistema. Números de catálogo usam largura tabular. Uma sombra curta e uma borda dupla marcam a moldura do produto; o restante usa elevação por borda.
 
 ## Telas de referência
 

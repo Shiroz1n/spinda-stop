@@ -7,8 +7,16 @@ O frontend usa React, Vite, JavaScript e Tailwind. O domínio fica em funções 
 - Node.js 22.12 ou mais recente; Node 24 é a versão usada no desenvolvimento inicial.
 - npm incluído com Node.
 
-Os comandos de execução serão documentados junto da primeira entrega funcional. A sincronização do catálogo usa uma revisão fixa da PokéAPI e gera arquivos locais ignorados pelo Git.
+O catálogo é gerado uma vez a partir da revisão fixa da PokéAPI `6fd69dfe90465ba96534f6816fc817737d1f97f6`. O JSON final fica em `packages/data/generated/` e é ignorado pelo Git.
 
 ## Fluxo de trabalho
 
-Use uma branch por mudança. Rode `npm ci` a partir do lockfile; depois lint, testes e build. Se mudar interface, confira uma largura mobile e uma desktop, navegação por teclado, foco visível e zoom. Não publique o site nem conecte serviços externos sem uma decisão registrada.
+```sh
+npm ci
+npm run dev
+npm run lint
+npm test
+npm run build
+```
+
+Use uma branch por mudança. Se mudar interface, confira uma largura mobile e uma desktop, navegação por teclado, foco visível e zoom. O primeiro `dev` ou `build` baixa os CSVs fixados em `packages/data/scripts/sync-pokedex.mjs`. Não publique o site nem conecte serviços externos sem uma decisão registrada.
