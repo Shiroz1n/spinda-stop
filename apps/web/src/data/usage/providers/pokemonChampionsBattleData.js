@@ -42,11 +42,21 @@ export const pokemonChampionsBattleDataSource = Object.freeze({
 
 function rememberResponse(path, data) {
   responseCache.delete(path);
-  responseCache.set(path, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  const fetchedAt = Date.now();
+  responseCache.set(path, { data, fetchedAt, expiresAt: fetchedAt + CACHE_TTL_MS });
 
   while (responseCache.size > MAX_CACHE_ENTRIES) {
     responseCache.delete(responseCache.keys().next().value);
   }
+}
+
+function withCacheMetadata(path, result) {
+  const cached = responseCache.get(path);
+  return {
+    ...result,
+    appFetchedAt: cached ? new Date(cached.fetchedAt).toISOString() : null,
+    cacheExpiresAt: cached ? cached.expiresAt : null,
+  };
 }
 
 function namesFromSummary(value) {
@@ -211,7 +221,8 @@ export const pokemonChampionsBattleDataProvider = Object.freeze({
   source: pokemonChampionsBattleDataSource,
 
   async loadIndex({ force = false } = {}) {
-    return normalizeUsageIndexResponse(await requestJson("/api", force));
+    const path = "/api";
+    return withCacheMetadata(path, normalizeUsageIndexResponse(await requestJson(path, force)));
   },
 
   async loadPokemonUsage({ showdownId, season, days, force = false }) {
@@ -222,9 +233,8 @@ export const pokemonChampionsBattleDataProvider = Object.freeze({
     if (Number.isInteger(days)) query.set("days", String(Math.max(1, Math.min(31, days))));
     const suffix = query.size ? "?" + query.toString() : "";
 
-    const response = normalizeUsageBattleResponse(
-      await requestJson("/api/battle/Doubles/" + encodeURIComponent(showdownId) + suffix, force),
-    );
+    const path = "/api/battle/Doubles/" + encodeURIComponent(showdownId) + suffix;
+    const response = withCacheMetadata(path, normalizeUsageBattleResponse(await requestJson(path, force)));
 
     if (response.format !== "Doubles") {
       throw new Error("A fonte não retornou o formato Doubles.");

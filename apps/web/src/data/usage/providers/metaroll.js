@@ -14,11 +14,21 @@ export const metaRollSource = Object.freeze({
 
 function rememberResponse(path, data) {
   responseCache.delete(path);
-  responseCache.set(path, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  const fetchedAt = Date.now();
+  responseCache.set(path, { data, fetchedAt, expiresAt: fetchedAt + CACHE_TTL_MS });
 
   while (responseCache.size > MAX_CACHE_ENTRIES) {
     responseCache.delete(responseCache.keys().next().value);
   }
+}
+
+function withCacheMetadata(path, result) {
+  const cached = responseCache.get(path);
+  return {
+    ...result,
+    appFetchedAt: cached ? new Date(cached.fetchedAt).toISOString() : null,
+    cacheExpiresAt: cached ? cached.expiresAt : null,
+  };
 }
 
 async function requestJson(path, force = false) {
@@ -323,7 +333,7 @@ export const metaRollProvider = Object.freeze({
 
   async loadIndex({ season, force = false } = {}) {
     const path = apiPath(season, "all.json");
-    const result = normalizeMetaRollIndexResponse(await requestJson(path, force));
+    const result = withCacheMetadata(path, normalizeMetaRollIndexResponse(await requestJson(path, force)));
     if (result.format !== "doubles") {
       throw new Error("A fonte não retornou o arquivo de Doubles.");
     }
@@ -333,7 +343,7 @@ export const metaRollProvider = Object.freeze({
   async loadPokemonUsage({ id, season, force = false }) {
     if (!id) throw new Error("Falta o identificador da espécie.");
     const path = apiPath(season, "pokemon/" + encodeURIComponent(id) + ".json");
-    const result = normalizeMetaRollPokemonResponse(await requestJson(path, force));
+    const result = withCacheMetadata(path, normalizeMetaRollPokemonResponse(await requestJson(path, force)));
     if (result.format !== "doubles") {
       throw new Error("A fonte não retornou o ladder Doubles.");
     }
@@ -345,11 +355,11 @@ export const metaRollProvider = Object.freeze({
 
   async loadLadder({ season, force = false } = {}) {
     const path = apiPath(season, "ladder.json");
-    return normalizeMetaRollLadderResponse(await requestJson(path, force));
+    return withCacheMetadata(path, normalizeMetaRollLadderResponse(await requestJson(path, force)));
   },
 
   async loadMegas({ season, force = false } = {}) {
     const path = apiPath(season, "megas.json");
-    return normalizeMetaRollMegasResponse(await requestJson(path, force));
+    return withCacheMetadata(path, normalizeMetaRollMegasResponse(await requestJson(path, force)));
   },
 });

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import dexData from "@spinda-stop/data/pokedex";
+import { PokemonSprite } from "../components/PokemonSprite.jsx";
+import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 import { usageProviders } from "../data/usage/registry.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
+import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { MetaRollLadderView } from "./MetaRollLadderView.jsx";
 
 const distributionSections = [
@@ -20,6 +24,7 @@ const filters = [
 
 const metaRollProvider = usageProviders.metaroll;
 const metaRollSource = metaRollProvider.source;
+const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
 
 const statLabels = [
   ["hp", "HP"],
@@ -47,7 +52,7 @@ function displayPercent(value) {
   return Number.isFinite(value) ? value + "%" : "não informado";
 }
 
-function DistributionCard({ title, rows, spread = false, note = "" }) {
+function DistributionCard({ title, rows, spread = false, note = "", pokemonRows = false }) {
   return (
     <section className="metaroll-card">
       <div className="metaroll-card-heading">
@@ -76,7 +81,10 @@ function DistributionCard({ title, rows, spread = false, note = "" }) {
                       ))}
                     </div>
                   ) : (
-                    <strong>{row.name || "Nome não informado"}</strong>
+                    <span className="metaroll-row-identity">
+                      {pokemonRows && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={44} decorative /> : null}
+                      <strong>{row.name || "Nome não informado"}</strong>
+                    </span>
                   )}
                   <b className="metaroll-row-percent">{displayPercent(row.percentageValue)}</b>
                 </div>
@@ -115,17 +123,19 @@ function MegaFormsCard({ state, rows, onRetry }) {
       {state.status === "error" ? (
         <div className="usage-error" role="alert"><div><strong>Não foi possível consultar as formas Mega.</strong><p>{state.error}</p></div><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar de novo</button></div>
       ) : null}
-      {state.status === "success" ? (
+          {state.status === "success" || rows.length > 0 ? (
         <>
           <div className="metaroll-mega-provenance">
             <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
             <div><span>Temporada da resposta</span><strong>{state.data.season || "não informada"}</strong></div>
             <div><span>Captura própria</span><strong>{formatCapture(state.data.capturedAt)}</strong></div>
+            <div><span>Última consulta do app</span><strong>{formatCapture(state.data.appFetchedAt)}</strong></div>
           </div>
           {rows.length > 0 ? (
             <ol className="metaroll-mega-list">
               {rows.map((row) => (
                 <li key={`${row.formName}-${row.stone}`}>
+                  {findPokemonSprite(row.formName) ? <PokemonSprite pokemon={findPokemonSprite(row.formName)} name={row.formName} size={48} decorative /> : <span className="pokemon-art pokemon-art-fallback" aria-hidden="true">MEGA</span>}
                   <div><strong>{row.formName || "Forma não informada"}</strong><span>{row.stone || "Pedra não informada"}</span></div>
                   <b>{displayPercent(row.percent)}</b>
                 </li>
@@ -148,6 +158,7 @@ function MatchupSpeciesCard({ title, rows, outcomeLabel }) {
           {rows.map((row, index) => (
             <li className="metaroll-list-row matchup-row" key={row.name + "-" + index}>
               <span className="metaroll-row-rank">#{index + 1}</span>
+              {findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={42} decorative /> : null}
               <strong>{row.name}</strong>
               <span>{row.games === null ? "contagem não informada" : `${row.games} ${outcomeLabel}`}</span>
             </li>
@@ -204,14 +215,45 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   const megaRequestKey = `${season || "current"}|${selectedId || ""}|${megaRetry}`;
   const currentEntryState = entryState.key === entryRequestKey
     ? entryState
-    : { key: entryRequestKey, status: selectedId ? "loading" : "idle" };
-  const entry = currentEntryState.status === "success" ? currentEntryState.entry : null;
-  const entryCapture = currentEntryState.status === "success" ? currentEntryState.capture : null;
+    : entryState.key.startsWith(`${season || "current"}|${selectedId || ""}|`)
+      ? { ...entryState, key: entryRequestKey, status: selectedId ? "loading" : "idle" }
+      : { key: entryRequestKey, status: selectedId ? "loading" : "idle" };
+  const entry = currentEntryState.entry || null;
+  const entryCapture = currentEntryState.capture || null;
   const entryStatus = currentEntryState.status;
   const entryError = currentEntryState.error || "";
   const currentMegaState = megaState.key === megaRequestKey
     ? megaState
-    : { key: megaRequestKey, status: selectedId ? "loading" : "idle" };
+    : megaState.key.startsWith(`${season || "current"}|${selectedId || ""}|`)
+      ? { ...megaState, key: megaRequestKey, status: selectedId ? "loading" : "idle" }
+      : { key: megaRequestKey, status: selectedId ? "loading" : "idle" };
+
+  function refreshIndex(force = false) {
+    const nextRetry = indexRetry + 1;
+    indexForceKey.current = force ? `${season || "current"}|${nextRetry}` : "";
+    setIndexStatus("loading");
+    setIndexError("");
+    setIndexRetry(nextRetry);
+  }
+
+  function refreshSelected(force = false) {
+    if (!selectedId) return;
+    const nextEntryRetry = entryRetry + 1;
+    const nextMegaRetry = megaRetry + 1;
+    const key = `${season || "current"}|${selectedId}|`;
+    entryForceKey.current = force ? `${key}${nextEntryRetry}` : "";
+    megaForceKey.current = force ? `${key}${nextMegaRetry}` : "";
+    setEntryRetry(nextEntryRetry);
+    setMegaRetry(nextMegaRetry);
+  }
+
+  function refreshVisibleData() {
+    refreshIndex(true);
+    refreshSelected(true);
+  }
+
+  useCacheRevalidation(indexData?.cacheExpiresAt, () => refreshIndex(false), Boolean(indexData) && view === "species");
+  useCacheRevalidation(entryCapture?.cacheExpiresAt, () => refreshSelected(false), Boolean(entry) && view === "species");
 
   useEffect(() => {
     initialPokemonNameRef.current = initialPokemonName;
@@ -240,7 +282,6 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
       });
     }).catch(() => {
       if (!active) return;
-      setIndexData(null);
       setIndexStatus("error");
       setIndexError("MetaRoll não respondeu. Tente novamente mais tarde.");
     });
@@ -270,16 +311,21 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
           capturedAt: result.capturedAt,
           comparedTo: result.comparedTo,
           format: result.format,
+          appFetchedAt: result.appFetchedAt,
+          cacheExpiresAt: result.cacheExpiresAt,
         },
       });
-      setSelectedUsageDate(result.entry.usageHistory.at(-1)?.date || "");
+      setSelectedUsageDate((current) => result.entry.usageHistory.some((snapshot) => snapshot.date === current)
+        ? current
+        : result.entry.usageHistory.at(-1)?.date || "");
     }).catch(() => {
       if (!active) return;
-      setEntryState({
+      setEntryState((previous) => ({
         key: requestKey,
         status: "error",
         error: "MetaRoll pode estar temporariamente indisponível para esta espécie.",
-      });
+        ...(previous.key.startsWith(`${season || "current"}|${selectedId}|`) ? { entry: previous.entry, capture: previous.capture } : {}),
+      }));
     });
 
     return () => { active = false; };
@@ -294,11 +340,12 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
     metaRollProvider.loadMegas({ season: season || undefined, force }).then((data) => {
       if (active) setMegaState({ key: megaRequestKey, status: "success", data });
     }).catch(() => {
-      if (active) setMegaState({
+      if (active) setMegaState((previous) => ({
         key: megaRequestKey,
         status: "error",
         error: "MetaRoll pode estar temporariamente indisponível para esta captura.",
-      });
+        ...(previous.key.startsWith(`${season || "current"}|${selectedId}|`) ? { data: previous.data } : {}),
+      }));
     });
 
     return () => { active = false; };
@@ -325,7 +372,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   });
   const selectedEntry = entries.find((item) => item.id === selectedId) || null;
   const selectedHistory = entry?.usageHistory.find((item) => item.date === selectedUsageDate) || null;
-  const selectedMegaRows = currentMegaState.status === "success"
+  const selectedMegaRows = currentMegaState.data
     ? currentMegaState.data.entries.filter((item) => item.id === selectedId)
     : [];
 
@@ -351,15 +398,17 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
         </a>
       </div>
 
-      {view === "species" && indexStatus === "success" ? (
+      {view === "species" && indexData ? (
         <div className="metaroll-capture-note" aria-label="Captura e período da fonte">
           <span><b>Formato</b> Doubles</span>
           <span><b>Temporada</b> {indexData.season || "não informada"}</span>
           <span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span>
+          <span><b>Última consulta do app</b> {formatCapture(indexData.appFetchedAt)}</span>
           <span><b>Pokémon no ranking</b> {indexData.count}</span>
           <p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p>
         </div>
       ) : null}
+      {view === "species" && indexData ? <button className="button button-outline button-small metaroll-refresh" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>{indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}</button> : null}
 
       <div className="metaroll-view-switch" role="group" aria-label="Seção da fonte MetaRoll">
         <button className={view === "species" ? "is-active" : ""} type="button" aria-pressed={view === "species"} onClick={() => {
@@ -409,7 +458,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
         />
       ) : null}
 
-      {view === "species" && indexStatus === "success" ? (
+      {view === "species" && indexData ? (
         <div className="usage-layout metaroll-layout">
           <aside className="usage-browser-panel" aria-label="Buscar e filtrar Pokémon">
             <div className="usage-browser-heading">
@@ -468,6 +517,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                       onPokemonSelect?.(item.name);
                       setEntryRetry(0);
                     }}>
+                      <span className="usage-species-art"><PokemonSprite pokemon={resolveCompetitivePokemonSprite(findPokemonSprite, { id: item.id, name: item.name })} name={item.name} size={54} decorative /></span>
                       <span className="usage-species-name"><strong>{item.name}</strong></span>
                       <span className="usage-position">{item.rank === null ? "—" : "#" + item.rank}</span>
                     </button>
@@ -481,6 +531,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
             {!selectedEntry ? <div className="usage-empty"><p>{initialPokemonName ? `A MetaRoll não listou ${initialPokemonName} nesta captura. Limpe a busca ou escolha uma espécie disponível.` : "Escolha uma espécie para abrir a ficha."}</p></div> : (
               <>
                 <div className="usage-detail-heading">
+                  <PokemonSprite pokemon={resolveCompetitivePokemonSprite(findPokemonSprite, { id: selectedEntry.id, name: selectedEntry.name })} name={selectedEntry.name} size={104} priority decorative className="usage-detail-art" />
                   <div><p className="page-label">Ficha de Doubles</p><h2>{selectedEntry.name}</h2></div>
                   <span className="usage-format-stamp">#{entry?.rank ?? selectedEntry.rank ?? "—"} · Doubles</span>
                 </div>
@@ -499,6 +550,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                     <div className="usage-provenance metaroll-provenance">
                       <div className="usage-provenance-source"><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
                       <div><span>Período devolvido pela fonte</span><strong>Temporada {entryCapture?.season || "não informada"} · captura {formatCapture(entryCapture?.capturedAt)}</strong></div>
+                      <div><span>Última consulta do app</span><strong>{formatCapture(entryCapture?.appFetchedAt)}</strong></div>
                       <div className="usage-provenance-notes"><span>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon.</span><span>Parceiros não têm percentual publicado.</span><span>Tamanho da amostra não informado.</span><span>Stat Points não são EVs e a fonte não pareia spread com natureza.</span>{entryCapture?.comparedTo ? <span>Posição anterior comparada com a captura de {formatCapture(entryCapture.comparedTo)}.</span> : null}</div>
                     </div>
                     <div className="metaroll-rank-summary">
@@ -519,6 +571,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                           title={label}
                           rows={entry.distributions[key]}
                           spread={key === "spreads"}
+                          pokemonRows={key === "teammates"}
                           note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Distribuição de Stat Points, sem natureza associada." : ""}
                         />
                       ))}
