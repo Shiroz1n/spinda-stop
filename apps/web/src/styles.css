@@ -359,6 +359,8 @@ p { max-width: 72ch; }
 .usage-no-results { padding: 22px 10px; color: var(--muted); }
 .usage-no-results strong { color: var(--ink); }
 .usage-no-results p { margin: 5px 0 0; font-size: 0.86rem; }
+.usage-filter-note { margin: 10px 2px 0; color: var(--muted); font-size: 0.76rem; line-height: 1.45; }
+.usage-clear-filters { justify-self: start; }
 .usage-results-column { min-width: 0; }
 .usage-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .usage-category-tab { min-height: 42px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px 8px 4px 4px; background: var(--surface-alt); color: var(--muted); font-size: 0.86rem; font-weight: 750; }
@@ -376,11 +378,17 @@ p { max-width: 72ch; }
 .usage-provenance > div:not(.usage-provenance-notes) > strong { font-size: 0.9rem; line-height: 1.35; }
 .usage-provenance-source a { width: fit-content; color: #533d0b; font-size: 0.87rem; font-weight: 850; }
 .usage-provenance-notes { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; color: #614609; }
+.usage-provenance-file { min-width: 0; }
+.usage-provenance-file code { display: block; overflow-wrap: anywhere; color: #533d0b; font-size: 0.72rem; }
 .usage-provenance-separator { font-weight: 500; }
 .usage-category-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 9px; }
 .usage-category-heading .page-label { margin-bottom: 3px; }
 .usage-category-heading h3 { font-size: 1.18rem; }
 .usage-category-heading > span { color: var(--muted); font-size: 0.8rem; }
+.usage-profile-section + .usage-profile-section { margin-top: 24px; padding-top: 21px; border-top: 2px solid var(--line); }
+.usage-snapshot-picker { display: grid; gap: 5px; margin: 0 0 10px; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+.usage-snapshot-picker select { width: 100%; min-height: 42px; padding: 7px 10px; border: 1px solid #858a91; border-radius: 8px; background: var(--surface); color: var(--ink); }
+.usage-no-snapshots { margin-bottom: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .usage-row-list { margin: 0; padding: 0; list-style: none; }
 .usage-data-row { padding: 11px 0; border-top: 1px solid #dedac8; }
 .usage-row-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, 0.8fr); align-items: center; gap: 12px 20px; }

@@ -7,7 +7,7 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
-- Explorar Usage de Doubles por espécie, tipo e categoria, com dados da API Pokémon Champions Battle Data.
+- Explorar Usage de Doubles por espécie, tipo, golpe, item e habilidade, abrir a ficha completa e consultar snapshots da API Pokémon Champions Battle Data.
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
