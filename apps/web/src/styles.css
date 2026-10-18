@@ -1810,13 +1810,14 @@ select,
   .team-status-summary { font-size: 0.77rem; }
   .slot-column { padding: 8px; }
   .slot-column > .section-heading { padding-bottom: 6px; }
-  .team-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 7px; }
-  .team-slot { min-height: 88px; grid-template-columns: 19px minmax(0, 1fr); grid-template-rows: 39px auto auto; gap: 1px 3px; padding: 4px; }
-  .team-slot-art { grid-column: 1 / -1; grid-row: 1; min-height: 37px; }
-  .team-slot-art .pokemon-art { --sprite-size: 38px !important; }
-  .slot-number { grid-column: 1; grid-row: 2; font-size: 0.57rem; }
-  .slot-copy { grid-column: 2; grid-row: 2; }
-  .slot-copy b { font-size: 0.62rem; line-height: 1.15; }
+  .team-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+  .team-slot { min-height: 100px; grid-template-columns: 42px minmax(0, 1fr); grid-template-rows: minmax(36px, auto) auto 18px; gap: 2px 5px; padding: 5px; }
+  .team-slot-art { grid-column: 1; grid-row: 1 / 3; min-height: 56px; }
+  .team-slot-art .pokemon-art { --sprite-size: 46px !important; }
+  .slot-number { grid-column: 2; grid-row: 1; align-self: start; font-size: 0.57rem; }
+  .slot-copy { grid-column: 2; grid-row: 2; min-width: 0; }
+  .slot-copy b { overflow: visible; font-size: 0.7rem; line-height: 1.12; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+  .slot-copy small { display: block; font-size: 0.56rem; line-height: 1.1; overflow-wrap: anywhere; }
   .slot-types, .slot-add { grid-column: 1 / -1; grid-row: 3; }
   .slot-types { gap: 2px; }
   .slot-types .type-tag { min-height: 15px; padding-inline: 2px; font-size: 0.49rem; }

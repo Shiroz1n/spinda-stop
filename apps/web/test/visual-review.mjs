@@ -257,6 +257,16 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("Nome ou número").fill("Garchomp");
   await page.locator(".species-dialog .picker-result").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  const slotNameMetrics = await page.locator(".team-slot.is-selected .slot-copy b").evaluate((element) => ({
+    text: element.textContent?.trim(),
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    whiteSpace: getComputedStyle(element).whiteSpace,
+  }));
+  observations.push({ viewport: viewportName, name: "builder-slot-name-fit", ...slotNameMetrics });
+  if (slotNameMetrics.scrollWidth > slotNameMetrics.clientWidth || slotNameMetrics.whiteSpace === "nowrap") {
+    failures.push(`${viewportName}: o nome do Pokémon selecionado está cortado no slot do builder.`);
+  }
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await page.getByLabel("Nature", { exact: true }).fill("Adamant");
   await page.locator("#move-0").fill("Earthquake");
