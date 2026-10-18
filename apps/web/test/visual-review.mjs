@@ -264,7 +264,7 @@ async function captureCommunityState(context, viewport, viewportName, kind) {
 }
 
 async function runViewport(viewportName, viewport) {
-  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600, reducedMotion: "reduce" });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -522,10 +522,17 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
   await page.getByRole("link", { name: "Comparar Speed" }).click();
   await page.locator("#builder-speed-title").waitFor({ state: "visible", timeout: 10_000 });
-  const speedPanelInView = await page.locator("#builder-speed-title").evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.top >= 0 && rect.top < window.innerHeight;
-  });
+  const speedShortcutState = await page.waitForFunction(() => {
+    const title = document.querySelector("#builder-speed-title");
+    const mobileNav = document.querySelector(".mobile-primary-nav");
+    const rect = title?.getBoundingClientRect();
+    const visibleBottom = mobileNav?.getBoundingClientRect().top ?? window.innerHeight;
+    return location.hash === "#builder-speed-title" && rect && rect.top >= 0 && rect.bottom <= visibleBottom
+      ? { hash: location.hash, titleTop: rect.top, visibleBottom }
+      : false;
+  }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue()).catch(() => null);
+  observations.push({ viewport: viewportName, name: "builder-speed-shortcut", ...speedShortcutState });
+  const speedPanelInView = Boolean(speedShortcutState);
   if (!speedPanelInView) failures.push(`${viewportName}: o atalho para comparar Speed não levou ao comparador do time.`);
   await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
   await page.locator("#speed-target-search").fill("Garchomp-Mega-Z");
@@ -537,6 +544,9 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("SP do alvo").fill("32");
   const updatedTeamRows = await page.locator(".builder-speed-row").evaluateAll((rows) => rows.map((row) => ({ speed: row.dataset.speed, target: row.dataset.targetSpeed, relation: row.dataset.relation })));
   if (updatedTeamRows.length !== 6 || updatedTeamRows.some((row) => row.target !== "203" || !row.speed || !row.relation)) failures.push(`${viewportName}: alterar o SP do alvo não atualizou os seis resultados de Speed.`);
+  const speedGridColumns = await page.locator(".builder-speed-grid").evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length);
+  observations.push({ viewport: viewportName, name: "builder-speed-grid-columns", count: speedGridColumns });
+  if (viewport.width <= 360 && speedGridColumns !== 1) failures.push(`${viewportName}: os controles de Speed devem ter largura de toque legível em 320 px.`);
   await page.locator(".builder-speed-row").first().locator('input[type="number"]').fill("17");
   await page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" }).click();
   await page.locator(".team-slot").first().click();
@@ -581,11 +591,10 @@ async function runViewport(viewportName, viewport) {
     selected: document.querySelector(".usage-species-button.is-selected .usage-species-name strong")?.textContent?.trim(),
     pokemonQuery: new URLSearchParams(location.search).get("pokemon"),
   }));
-  observations.push({ viewport: viewportName, name: "usage-dynamic-source-leader", ...dynamicLeaderState });
+  observations.push({ viewport: viewportName, name: "usage-dynamic-source-leader", dataMode: "API-shaped visual fixture", ...dynamicLeaderState });
   if (dynamicLeaderState.selected !== "Mega Lucario Z" || dynamicLeaderState.pokemonQuery) {
     failures.push(`${viewportName}: Usage não selecionou o líder atual da fonte sem inserir uma espécie fixa na URL.`);
   }
-  await safeCapture(dynamicLeaderPage, viewportName, "usage-dynamic-source-leader", { audit: true, fullPage: false });
   await dynamicLeaderPage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });

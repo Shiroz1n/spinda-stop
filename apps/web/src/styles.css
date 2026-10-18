@@ -897,7 +897,7 @@ a:hover { color: var(--coral-dark); }
 .pokemon-art img { position: relative; z-index: 1; display: block; max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
 .pokemon-art img.is-loading { opacity: 0; }
 .pokemon-art.is-fallback, .pokemon-art.is-loading { border: 1px dashed #94aaa4; background: #eef4eb; }
-.pokemon-art-fallback { position: absolute; inset: 0; z-index: 0; display: grid; place-items: center; color: #587377; font-size: 0.7rem; font-weight: 850; letter-spacing: 0.04em; }
+.pokemon-art-fallback { position: absolute; inset: 0; z-index: 0; display: grid; place-items: center; color: #4d6669; font-size: 0.7rem; font-weight: 850; letter-spacing: 0.04em; }
 .item-sprite { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; }
 .mobile-primary-nav { display: none; }
 .usage-index-note { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 7px 0 15px; color: #506970; font-size: 0.78rem; }
@@ -1231,7 +1231,7 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 .builder-speed-panel { margin-top: 16px; padding: 12px 0; border-block: 2px solid var(--blue-dark); background: rgb(239 244 231 / 70%); }
 .builder-speed-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 12px; }
 .builder-speed-heading .page-label { margin-bottom: 2px; }
-.builder-speed-heading h2 { margin: 0; font-size: 1.12rem; }
+.builder-speed-heading h2 { margin: 0; font-size: 1.12rem; scroll-margin-top: 88px; }
 .builder-speed-target { display: grid; grid-template-columns: 54px minmax(0, 1fr) minmax(110px, 0.45fr) minmax(160px, 0.7fr) auto; align-items: center; gap: 9px; margin: 9px 12px; padding: 7px 9px; border-left: 4px solid #d8ad36; background: #fffdf1; }
 .builder-speed-target.is-empty { grid-template-columns: minmax(0, 1fr) auto; }
 .builder-speed-target > label { display: grid; gap: 2px; color: var(--muted); font-size: 0.68rem; font-weight: 800; }
@@ -1359,6 +1359,7 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
   .speed-target-value strong { font-size: 1.25rem; }
   .builder-speed-heading { align-items: flex-start; padding-inline: 7px; }
   .builder-speed-heading .button { min-height: 34px; padding: 4px 5px; font-size: 0.62rem; }
+  .builder-speed-grid { grid-template-columns: 1fr; }
   .builder-speed-target { grid-template-columns: 38px minmax(0, 1fr) 62px; gap: 5px; margin-inline: 6px; padding: 5px; }
   .builder-speed-target > .pokemon-art { width: 36px; height: 36px; }
   .builder-speed-target > label { font-size: 0.58rem; }
