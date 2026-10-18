@@ -2116,3 +2116,26 @@ select,
   .usage-species-name > strong { overflow-wrap: normal; word-break: normal; }
   .usage-species-name .type-list { min-width: 0; flex-wrap: wrap; }
 }
+
+/* Fit the six compact roster tiles above the fold without breaking names. */
+@media (max-width: 420px) {
+  .brand { min-width: max-content; }
+  .brand > span { font-size: 8px; white-space: nowrap; }
+  .team-slots { gap: 4px; }
+  .team-slot {
+    min-height: 68px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: 16px 20px 17px;
+    gap: 1px 4px;
+    padding: 4px;
+  }
+  .team-slot-art { grid-column: 1; grid-row: 1 / 3; min-height: 40px; }
+  .team-slot-art .pokemon-art { --sprite-size: 40px !important; }
+  .slot-number { grid-column: 2; grid-row: 1; align-self: end; font-size: 0.55rem; }
+  .slot-copy { grid-column: 2; grid-row: 2; }
+  .slot-copy b { display: block; font-size: 0.65rem; line-height: 1; overflow-wrap: normal; word-break: normal; }
+  .slot-copy small { display: none; }
+  .slot-types, .slot-add { grid-column: 1 / -1; grid-row: 3; justify-content: flex-start; gap: 2px; margin: 0; }
+  .slot-types .type-tag { min-height: 16px; padding-inline: 2px; font-size: 0.47rem; }
+  .slot-types .type-tag img { width: 10px; height: 10px; }
+}
