@@ -88,7 +88,7 @@ async function capture(page, viewport, name, { audit = false } = {}) {
   if (audit) {
     const contrast = await page.evaluate(() => {
       const luminance = (value) => {
-        const [red, green, blue] = value.match(/[\\d.]+/g).slice(0, 3).map(Number).map((channel) => {
+        const [red, green, blue] = value.match(/[0-9.]+/g).slice(0, 3).map(Number).map((channel) => {
           const normalized = channel / 255;
           return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
         });
@@ -105,7 +105,7 @@ async function capture(page, viewport, name, { audit = false } = {}) {
       const opaqueBackground = (element) => {
         for (let current = element; current; current = current.parentElement) {
           const color = getComputedStyle(current).backgroundColor;
-          const channels = color.match(/[\\d.]+/g) || [];
+          const channels = color.match(/[0-9.]+/g) || [];
           const alpha = channels.length > 3 ? Number(channels[3]) : 1;
           if (alpha >= 0.99) return color;
         }
