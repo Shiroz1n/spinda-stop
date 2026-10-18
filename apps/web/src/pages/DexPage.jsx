@@ -57,12 +57,26 @@ export function DexPage() {
     const saved = restoreRef.current;
     if (!saved) return;
     setVisibleCount((current) => Math.min(results.length, Math.max(current, saved.visibleCount || BATCH_SIZE)));
-    const frame = window.requestAnimationFrame(() => {
-      window.scrollTo({ top: saved.scrollY || 0, behavior: "instant" });
-      window.sessionStorage.removeItem(RESTORE_KEY);
-      restoreRef.current = null;
+    let secondFrame;
+    let settleFrame;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        const root = document.documentElement;
+        const previousScrollBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = "auto";
+        window.scrollTo(0, saved.scrollY || 0);
+        settleFrame = window.requestAnimationFrame(() => {
+          root.style.scrollBehavior = previousScrollBehavior;
+          window.sessionStorage.removeItem(RESTORE_KEY);
+          restoreRef.current = null;
+        });
+      });
     });
-    return () => window.cancelAnimationFrame(frame);
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+      if (settleFrame) window.cancelAnimationFrame(settleFrame);
+    };
   }, [results.length]);
 
   function clearFilters() {

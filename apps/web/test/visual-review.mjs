@@ -360,6 +360,19 @@ async function runViewport(viewportName, viewport) {
   if (filteredCount < 1 || filteredNames.length !== filteredCount || filteredNames.some((name) => !name.includes("Garchomp"))) {
     failures.push(`${viewportName}: busca e filtros não consultaram o catálogo completo para Garchomp.`);
   }
+  await page.locator(".pokemon-card-title").last().scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => [...document.querySelectorAll(".pokemon-card-art .pokemon-art")].every((art) => {
+    if (art.classList.contains("is-fallback")) return Boolean(art.querySelector(".pokemon-art-fallback")?.textContent?.trim());
+    const image = art.querySelector("img");
+    return Boolean(image?.complete && image.naturalWidth > 0);
+  }), null, { timeout: 10_000 });
+  const formSpriteStates = await page.locator(".pokemon-card-art .pokemon-art").evaluateAll((elements) => elements.map((art) => ({
+    state: art.classList.contains("is-fallback") ? "fallback" : "image",
+    label: art.querySelector(".pokemon-art-fallback")?.textContent || "",
+    src: art.querySelector("img")?.getAttribute("src") || "",
+  })));
+  observations.push({ viewport: viewportName, name: "pokedex-form-sprites-ready", sprites: formSpriteStates });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "pokedex-filtered");
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
@@ -389,6 +402,10 @@ async function runViewport(viewportName, viewport) {
   const savedScrollY = await page.evaluate(() => JSON.parse(window.sessionStorage.getItem("spinda-dex-view") || "null")?.scrollY);
   await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForFunction((expectedScrollY) => {
+    const restorePending = Boolean(window.sessionStorage.getItem("spinda-dex-view"));
+    return !restorePending && Math.abs(window.scrollY - expectedScrollY) <= 100;
+  }, savedScrollY, { timeout: 10_000 });
   const restoredScrollState = await page.evaluate(() => ({
     type: document.querySelector('.dex-toolbar .filter-field select')?.value,
     scrollY: window.scrollY,
@@ -397,7 +414,7 @@ async function runViewport(viewportName, viewport) {
   if (restoredScrollState.type !== "water" || Math.abs(restoredScrollState.scrollY - savedScrollY) > 100) {
     failures.push(`${viewportName}: a Pokédex não restaurou o filtro e a posição após abrir e voltar da ficha.`);
   }
-  await safeCapture(page, viewportName, "pokedex-restored");
+  await safeCapture(page, viewportName, "pokedex-restored", { fullPage: false });
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
