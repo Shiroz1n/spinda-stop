@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { TypeTag } from "../components/TypeTag.jsx";
-import { activeUsageProvider } from "../data/usage/activeProvider.js";
+import { usageProviders } from "../data/usage/registry.js";
+import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
   { id: "profile", label: "Ficha completa" },
@@ -238,8 +239,8 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   );
 }
 
-export function UsagePage() {
-  const provider = activeUsageProvider;
+function BattleDataUsagePage() {
+  const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
   const [indexError, setIndexError] = useState("");
@@ -635,5 +636,39 @@ export function UsagePage() {
         </div>
       ) : null}
     </section>
+  );
+}
+
+export function UsagePage() {
+  const [sourceId, setSourceId] = useState("pokemon-champions-battle-data");
+
+  return (
+    <>
+      <div className="page-wrap usage-page usage-source-switcher">
+        <div className="usage-source-switch-copy">
+          <p className="page-label">Fonte de dados</p>
+          <p>Veja uma fonte por vez. Períodos e percentuais não são combinados.</p>
+        </div>
+        <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
+          <button
+            aria-pressed={sourceId === "pokemon-champions-battle-data"}
+            className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
+            type="button"
+            onClick={() => setSourceId("pokemon-champions-battle-data")}
+          >
+            Battle Data
+          </button>
+          <button
+            aria-pressed={sourceId === "metaroll"}
+            className={sourceId === "metaroll" ? "is-active" : ""}
+            type="button"
+            onClick={() => setSourceId("metaroll")}
+          >
+            MetaRoll
+          </button>
+        </div>
+      </div>
+      {sourceId === "metaroll" ? <MetaRollUsagePage /> : <BattleDataUsagePage />}
+    </>
   );
 }

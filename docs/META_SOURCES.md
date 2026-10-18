@@ -1,14 +1,12 @@
 # APIs de dados competitivos
 
-Revisão feita em 18/10/2026. O piloto de Usage usa Pokémon Champions Battle Data em Doubles; MetaRoll continua como alternativa separada. Percentuais ficam ligados à sua fonte: não somar, tirar média nem tratar respostas diferentes como uma única amostra.
+Revisão feita em 18/10/2026. Usage começa em Doubles e permite consultar Battle Data ou MetaRoll, uma fonte por vez. Percentuais ficam ligados à sua captura: não somar, tirar média nem tratar respostas diferentes como uma única amostra.
 
 Para o inventário campo a campo das respostas consultadas, o que já aparece no Spinda Stop e a sequência de PRs proposta, veja [Matriz de cobertura competitiva](COMPETITIVE_COVERAGE.md).
 
 ## Decisão
 
-O primeiro piloto usa Pokémon Champions Battle Data porque a API responde às rotas públicas de Doubles e suas regras permitem projetos comunitários com atribuição. A tela mostra a origem e o período devolvido pela API. Os dados passam pelo navegador e por um adaptador que pode ser substituído.
-
-MetaRoll permanece documentada como fonte alternativa. Seus dados não entram nesta tela e nunca serão combinados com Pokémon Champions Battle Data.
+Pokémon Champions Battle Data e MetaRoll têm adaptadores separados. A tela de Usage deixa escolher uma fonte; cada ficha conserva a captura, temporada e atribuição daquela fonte. Nada passa por uma API pública do Spinda Stop.
 
 ## Pokémon Champions Battle Data
 
@@ -58,9 +56,9 @@ Cada observação futura deve carregar, no mínimo, `sourceId`, `sourceUrl`, for
 
 Uma tela pode comparar fontes lado a lado, com seus rótulos e períodos, mas não deve juntá-las num único percentual. Não associar nature e spread do MetaRoll, nem derivar uma taxa de vitória de percentuais de uso.
 
-## O que falta para ampliar o piloto
+## O que falta
 
-- Confirmar a chamada CORS em uma prévia visual acessível, pois o navegador local deste ambiente não conseguiu alcançar o servidor Vite.
-- Confirmar se a fonte passa a fornecer data, tamanho de amostra ou um vínculo verificável entre temporada e regulamento. Até lá, os campos seguem ausentes.
-- Testar snapshots diários e temporadas encerradas em uma etapa separada, sem chamar os rótulos M1–M7 de regulamentos.
-- Revisar atribuição e cache se os termos da API mudarem. Manter MetaRoll em uma fonte distinta caso seja integrada no futuro.
+- Conferir a interface em navegador. O servidor Vite iniciou, mas o navegador de conferência não conseguiu alcançar `127.0.0.1`; lint, testes e build passaram.
+- Validar a resposta de `/all.json` do MetaRoll numa sessão de prévia acessível. O contrato documentado e o endpoint anunciado no índice sustentam o adaptador, que valida a lista antes de renderizar; esta captura não enumerou o arquivo de 1,3 MB.
+- Não há tamanho de amostra nem ligação verificada entre temporada e regulamento em nenhuma das fontes. Esses campos ficam ausentes.
+- Rever atribuição e cache se os termos publicados mudarem.

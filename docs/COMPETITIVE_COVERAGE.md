@@ -109,26 +109,26 @@ Docs: [Champions Usage API](https://metaroll.app/api/v1/docs) · base `https://m
 
 | Rota/campo | O que a fonte entrega | No Spinda Stop | Lacuna ou cuidado |
 |---|---|---|---|
-| `index.json`: `version`, `game`, `source`, `format`, `season` | Contrato, jogo, origem, formato e temporada | Nada ainda | O formato de uso é Doubles; temporada é o nome do jogo, não um regulamento oficial |
-| `capturedAt`, `comparedTo` | Hora desta captura e captura usada na comparação | Nada ainda | Cada número deve ficar ligado à sua própria captura |
-| `count`, `pastSeasons`, `endpoints` | Entradas na captura, temporadas arquivadas e rotas anunciadas | Nada ainda | `count` mede Pokémon ranqueados, não partidas |
-| `attribution` | `required`, nome, URL, texto e termos publicados no índice atual | Nada ainda | Incluir crédito/link sem sugerir parceria ou endosso |
-| `ranking.json`: `entries[]` | Ranking de espécies | Nada ainda | Resposta real trouxe `rank`, `previousRank`, `id`, `name`, além de `forme`, `nat`, `spe`, `weekRank`; os quatro últimos não têm semântica documentada |
-| `pokemon/{id}.json`: `entry.rank`, `previousRank` | Posição atual e anterior da espécie | Nada ainda | `null` significa que não constava na captura anterior |
-| `rankHistory[]: d, r` | Posição diária na temporada, em UTC | Nada ainda | Só no arquivo individual; dias não ranqueados não aparecem |
-| `usageHistory[]: d, m, i, a` | Histórico diário de golpes, itens e habilidades | Nada ainda | Guarda apenas 8 golpes, 6 itens e 3 habilidades por dia; nature e spread não têm histórico |
-| `all.json` | Todas as fichas atuais num arquivo | Nada ainda | A documentação informa que omite `rankHistory` e `usageHistory` |
-| `/seasons/{season}/…` | Cópia final de uma temporada encerrada | Nada ainda | Capturas de temporadas diferentes não devem ser tratadas como a mesma amostra |
+| `index.json`: `version`, `game`, `source`, `format`, `season` | Contrato, jogo, origem, formato e temporada | Exibidos na tela MetaRoll | O formato é Doubles; temporada é o nome do jogo, não um regulamento oficial |
+| `capturedAt`, `comparedTo` | Hora desta captura e captura usada na comparação | Captura atual exibida; comparação fica disponível no adaptador | Cada número segue ligado à sua própria captura |
+| `count`, `pastSeasons`, `endpoints` | Entradas na captura, temporadas arquivadas e rotas anunciadas | Contagem e temporadas usadas na tela | `count` mede Pokémon ranqueados, não partidas |
+| `attribution` | `required`, nome, URL, texto e termos publicados no índice atual | Crédito e link MetaRoll aparecem na tela | Não sugerir parceria ou endosso |
+| `ranking.json`: `entries[]` | Ranking de espécies | Posição vem do mesmo campo `rank` incluído em `all.json` | `forme`, `nat`, `spe` e `weekRank` observados no ranking não têm semântica documentada |
+| `pokemon/{id}.json`: `entry.rank`, `previousRank` | Posição atual e anterior da espécie | Sim | `null` significa que não constava na captura anterior; ausência significa que não havia captura anterior |
+| `rankHistory[]: d, r` | Posição diária na temporada, em UTC | Sim, lista diária | Só no arquivo individual; dias não ranqueados não aparecem |
+| `usageHistory[]: d, m, i, a` | Histórico diário de golpes, itens e habilidades | Sim, com seletor de dia | Guarda apenas 8 golpes, 6 itens e 3 habilidades por dia; nature e spread não têm histórico |
+| `all.json` | Todas as fichas atuais num arquivo | Usado para lista, filtros e ranking | O guia diz que omite `rankHistory` e `usageHistory`; a UI busca a ficha individual ao selecionar espécie |
+| `/seasons/{season}/…` | Cópia final de uma temporada encerrada | Temporadas arquivadas têm seletor próprio | Capturas de temporadas diferentes não são tratadas como a mesma amostra |
 
 ### Ficha por Pokémon
 
 | Campo | O que a fonte entrega | No Spinda Stop | Lacuna ou cuidado |
 |---|---|---|---|
-| `id`, `name`, `rank`, `previousRank` | Identidade e posição de uso | Nada ainda | Formas alternativas têm IDs próprios |
-| `abilities[]`, `items[]`, `moves[]`, `natures[]` | Distribuições ordenadas com `name` e `percent` | Nada ainda | Percentual é parcela das aparições daquele Pokémon, não das partidas |
-| `teammates[]: name, percent` | Parceiros frequentes | Nada ainda | `percent` é sempre `null`; exibir apenas a ordem/nome |
-| `spreads[]: statPoints, percent` | Distribuição de Stat Points | Nada ainda | `hp`, `atk`, `def`, `spa`, `spd`, `spe`; não são EVs e não vêm pareados com natureza |
-| `confidence.formGuessed`, `identifiedByElimination` | Sinalizadores de confiança | Nada ainda | As leituras atuais do jogo trazem `false`; manter campo sem apresentá-lo como métrica de batalha |
+| `id`, `name`, `rank`, `previousRank` | Identidade e posição de uso | Sim | Formas alternativas têm IDs próprios |
+| `abilities[]`, `items[]`, `moves[]`, `natures[]` | Distribuições ordenadas com `name` e `percent` | Sim | Percentual é parcela das aparições daquele Pokémon, não das partidas |
+| `teammates[]: name, percent` | Parceiros frequentes | Sim | `percent` é sempre `null`; interface mostra apenas ordem/nome |
+| `spreads[]: statPoints, percent` | Distribuição de Stat Points | Sim | `hp`, `atk`, `def`, `spa`, `spd`, `spe`; não são EVs e não vêm pareados com natureza |
+| `confidence.formGuessed`, `identifiedByElimination` | Sinalizadores de confiança | Sim, sem tratar como métrica competitiva | As leituras atuais do jogo trazem `false` |
 
 ### Matchups
 
@@ -160,11 +160,11 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | Recurso da referência | O que temos nas fontes | Estado do Spinda Stop |
 |---|---|---|
 | Busca por Pokémon e filtro por tipo | Battle Data e MetaRoll identificam espécies; Battle Data informa tipos | Busca e tipo já existem |
-| Filtro por golpe, item e habilidade | Há distribuições por espécie; o índice Battle Data publica resumo por categoria | PR #4 adiciona facetas com valores presentes no índice e desativa a faceta sem dados |
-| Parceiros, nature e spreads | As duas fontes fornecem parte ou todos esses campos, com definições diferentes | PR #4 reúne o perfil Battle Data; MetaRoll ainda não está integrado |
-| Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 adiciona snapshots Battle Data; histórico MetaRoll fica para PR #5 |
-| Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #5, separado e rotulado como MetaRoll |
-| Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #5; não usar esse `count` para estatística de Pokémon |
+| Filtro por golpe, item e habilidade | Há distribuições por espécie; o índice Battle Data e o arquivo `all.json` MetaRoll publicam esses valores | PR #4 e PR #5 usam apenas valores presentes na fonte selecionada |
+| Parceiros, nature e spreads | As duas fontes fornecem parte ou todos esses campos, com definições diferentes | PR #4 e PR #5 mostram cada fonte em separado |
+| Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 e PR #5 mantêm períodos separados |
+| Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #6, separado e rotulado como MetaRoll |
+| Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #6; não usar esse `count` para estatística de Pokémon |
 | Aluguel de times/rentals | Nenhuma das duas APIs avaliadas fornece times de aluguel | Sem fonte; fora do escopo competitivo desta integração |
 | Contas, salas e pareamento | Nenhuma das APIs oferece identidade ou salas do Spinda Stop | Etapa comunitária própria |
 | Calculadora de dano | Nenhuma API substitui regras oficiais e um modelo de dano validado | Etapa própria; fontes de uso não serão usadas como fórmula |
@@ -184,7 +184,8 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 |---|---|---|
 | #3 — Matriz de cobertura competitiva | Este inventário de campos, decisão e lacunas do Silph Scope | Documentação; sem dados novos na interface |
 | #4 — Perfil e histórico Battle Data | Facetas de tipo/golpe/item/habilidade, ficha completa por Pokémon, consultas por temporada e snapshots diários | Battle Data; Doubles; dados limitados às respostas disponíveis |
-| #5 — MetaRoll por recurso | Adaptador próprio; ficha, ranking de espécies, histórico, ladder top 1000 e matchups publicados | MetaRoll aparece separada, com captura própria e significados documentados |
-| #6 — Tendências a partir do time | Acesso do builder à ficha de cada integrante, sem escolher ou preencher um set automaticamente | Navegação contextual para a fonte ativa e seu período |
-| #7 — Calculadora completa | Regras, fórmulas e casos de dano verificados | Não depende de percentuais de usage |
-| #8 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |
+| #5 — MetaRoll: fichas e histórico | Adaptador próprio; perfil, ranking de espécies, histórico diário e temporadas arquivadas | Captura e atribuição próprias; sem tipo no arquivo |
+| #6 — MetaRoll: matchups e ladder | Matchups publicados e até mil jogadores no ladder Doubles | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
+| #7 — Tendências a partir do time | Acesso do builder à ficha de cada integrante, sem escolher ou preencher um set automaticamente | Navegação contextual para a fonte ativa e seu período |
+| #8 — Calculadora completa | Regras, fórmulas e casos de dano verificados | Não depende de percentuais de usage |
+| #9 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |
