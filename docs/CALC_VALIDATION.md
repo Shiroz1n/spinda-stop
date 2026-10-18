@@ -1,28 +1,13 @@
 # Validação da calculadora
 
-O candidato atual é `@smogon/calc` `0.12.0`, licença MIT. O repositório contém `calculateChampions`; isso confirma uma implementação candidata, não a paridade com cada regra do jogo. A calculadora fica bloqueada até que casos de referência sejam reproduzidos e cada lacuna seja mostrada.
+O projeto fixa `@smogon/calc` em 0.12.0 e verifica regras do adaptador, faixa de referência e dano spread. Os limites do motor estão em [DAMAGE_CALCULATOR.md](DAMAGE_CALCULATOR.md).
 
-| ID | Caso a verificar | Estado |
+| ID | Caso conferido | Evidência |
 |---|---|---|
-| D-01 | Dano físico sem modificadores de campo | Planejado |
-| D-02 | Dano especial sem modificadores de campo | Planejado |
-| D-03 | STAB em golpe do mesmo tipo | Planejado |
-| D-04 | Fraqueza simples | Planejado |
-| D-05 | Fraqueza dupla | Planejado |
-| D-06 | Resistência simples | Planejado |
-| D-07 | Resistência dupla | Planejado |
-| D-08 | Imunidade por tipo | Planejado |
-| D-09 | Imunidade por habilidade | Planejado |
-| D-10 | Aumento de Attack por estágio | Planejado |
-| D-11 | Crítico e estágios negativos | Planejado |
-| D-12 | Burn em ataque físico | Planejado |
-| D-13 | Efeito de clima no golpe | Planejado |
-| D-14 | Habilidade que altera o clima | Planejado |
-| D-15 | Tela de proteção em Single | Planejado |
-| D-16 | Redução de dano em golpe spread de Doubles | Planejado |
-| D-17 | Item que modifica dano | Planejado |
-| D-18 | Golpe de dano fixo | Planejado |
-| D-19 | Golpe de múltiplos hits | Planejado |
-| D-20 | Probabilidade de KO com HP atual e distribuição de rolls | Planejado |
+| D-01 | Shadow Claw, Absol-Mega-Z contra Absol-Mega-Z | 99–117, igual ao resultado visível no Pokémon Showdown em 18/10/2026; teste automatizado. |
+| D-02 | Earthquake em Singles e Doubles | 75–88 e 55–66, respectivamente; teste automatizado para validar o modificador spread. |
+| D-03 | Double Kick com 2 acertos | O motor informa dois acertos; resultado preserva uma faixa por acerto. |
+| D-04 | Espécie inválida e Stat Points negativos | A entrada é rejeitada sem produzir resultado. |
+| D-05 | Protect | É classificado como movimento sem dano direto. |
 
-Para cada caso será salvo o input completo, versão do motor, rolls e resultado de referência. Os resultados esperados ainda não foram preenchidos; não há números inventados neste documento.
+Os cenários D-02 a D-05 testam o motor e o tratamento da interface; ainda não são medições independentes dentro do jogo. Não há teste de chance de KO, precisão ou simulação de turno completo.

@@ -6,6 +6,7 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
+- Simular dano em nível 50 para Singles ou Doubles, com condições de campo, natureza e Stat Points, usando o motor do Pokémon Showdown.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
 
@@ -15,7 +16,7 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 
 ## Próximas partes
 
-- Calculadora de dano com regras e limites documentados; ainda não substitui a conferência no jogo.
+- Ampliar os cenários de referência da calculadora e conferir atualizações do motor contra regras de jogo.
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 
@@ -41,6 +42,8 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
+- [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)
+- [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md)
 - [Segurança e privacidade](docs/SECURITY.md)
 - [Próximas etapas](docs/ROADMAP.md)
 

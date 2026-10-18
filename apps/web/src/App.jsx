@@ -3,6 +3,7 @@ import { Link, Route, Routes } from "react-router";
 import { AppShell } from "./components/AppShell.jsx";
 
 const BuilderPage = lazy(() => import("./pages/BuilderPage.jsx").then((module) => ({ default: module.BuilderPage })));
+const DamageCalculatorPage = lazy(() => import("./pages/DamageCalculatorPage.jsx").then((module) => ({ default: module.DamageCalculatorPage })));
 const DexDetailPage = lazy(() => import("./pages/DexDetailPage.jsx").then((module) => ({ default: module.DexDetailPage })));
 const DexPage = lazy(() => import("./pages/DexPage.jsx").then((module) => ({ default: module.DexPage })));
 const HomePage = lazy(() => import("./pages/HomePage.jsx").then((module) => ({ default: module.HomePage })));
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/dex/:slug" element={<DexDetailPage />} />
           <Route path="/usage" element={<UsagePage />} />
           <Route path="/builder" element={<BuilderPage />} />
+          <Route path="/calculator" element={<DamageCalculatorPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

@@ -84,7 +84,7 @@ p { max-width: 72ch; }
 .brand:hover { color: var(--ink); }
 .brand > span { font-family: "Press Start 2P", ui-monospace, monospace; font-size: 12px; line-height: 1.65; }
 .brand-mark { width: 32px; height: 32px; flex: 0 0 auto; color: var(--blue-dark); }
-.primary-nav { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.primary-nav { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; }
 .nav-link { min-height: 44px; display: inline-flex; align-items: center; padding: 8px 14px; border: 1px solid transparent; border-radius: 8px; color: var(--ink); font-weight: 650; text-decoration: none; }
 .nav-link:hover { background: var(--surface-alt); color: var(--ink); }
 .nav-link.is-active { border-color: var(--ink); background: #e7eef5; color: var(--blue-dark); }
@@ -628,4 +628,71 @@ p { max-width: 72ch; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+.damage-page { max-width: 1380px; }
+.damage-heading { align-items: flex-end; }
+.damage-heading .page-intro { max-width: 68ch; }
+.damage-rules-note { margin: -4px 0 20px; padding: 14px 17px; border: 1px solid #8b6c2a; border-left: 5px solid var(--gold); border-radius: 10px; background: #f5e9bd; color: #44350f; }
+.damage-rules-note strong { display: block; margin-bottom: 3px; }
+.damage-rules-note p { margin: 0; font-size: 0.91rem; }
+.damage-input-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 18px; }
+.damage-side { min-width: 0; padding: clamp(16px, 2vw, 24px); box-shadow: none; }
+.damage-side-heading { margin-bottom: 16px; }
+.damage-side-heading .page-label { margin-bottom: 4px; }
+.damage-side-heading h2 { margin: 0; font-size: 1.25rem; }
+.damage-side-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 12px; }
+.damage-field { min-width: 0; display: grid; align-content: start; gap: 4px; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+.damage-field .text-input { min-height: 44px; padding: 8px 10px; font-size: 0.92rem; font-weight: 500; }
+.damage-stat-fieldset { min-width: 0; margin: 17px 0 0; padding: 13px 0 0; border: 0; border-top: 1px solid var(--line); }
+.damage-stat-fieldset legend { padding: 0 8px 0 0; color: var(--ink); font-weight: 800; }
+.damage-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.damage-stat-fieldset .form-hint { margin: 8px 0 0; font-size: 0.8rem; }
+.damage-advanced, .damage-field-advanced { margin-top: 13px; border-top: 1px solid #dedac8; }
+.damage-advanced summary, .damage-field-advanced summary { min-height: 44px; display: flex; align-items: center; color: var(--blue-dark); font-weight: 800; cursor: pointer; }
+.damage-boost-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; padding-bottom: 4px; }
+.damage-move-panel { margin-top: 19px; padding: clamp(16px, 2vw, 24px); box-shadow: none; }
+.damage-move-panel .section-heading { margin-bottom: 15px; }
+.damage-move-fields { display: grid; grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(130px, 0.7fr)); align-items: end; gap: 12px; }
+.damage-move-fields > .damage-field:first-child { grid-column: span 2; }
+.damage-toggle { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-size: 0.88rem; font-weight: 700; }
+.damage-toggle input { width: 18px; height: 18px; accent-color: var(--blue-dark); }
+.damage-field-conditions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 4px 0 8px; }
+.damage-field-conditions h3 { margin-bottom: 5px; }
+.damage-field-conditions > div { display: grid; align-content: start; gap: 4px; }
+.damage-result { margin-top: 20px; padding: clamp(18px, 3vw, 28px); box-shadow: var(--pixel-edge); }
+.damage-result-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.damage-result-heading .page-label { margin-bottom: 4px; }
+.damage-result-heading h2 { margin-bottom: 4px; font-size: clamp(1.25rem, 2.4vw, 1.7rem); overflow-wrap: anywhere; }
+.damage-result-heading .form-hint { margin: 0; }
+.damage-result-range { flex: 0 0 auto; display: grid; justify-items: end; line-height: 1.15; }
+.damage-result-range strong { color: var(--blue-dark); font-size: clamp(1.75rem, 4vw, 2.8rem); font-variant-numeric: tabular-nums; }
+.damage-result-range span { color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+.damage-percent { margin: 12px 0 0; color: var(--ink); font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.damage-spread-note { margin: 10px 0 0; padding: 9px 11px; border-radius: 8px; background: #e7eef5; color: var(--blue-dark); font-size: 0.9rem; font-weight: 700; }
+.damage-rolls-label { margin: 10px 0 0; color: var(--muted); font-size: 0.86rem; overflow-wrap: anywhere; }
+.damage-status-note { margin: 14px 0 0; font-weight: 750; }
+.damage-engine-note { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.81rem; overflow-wrap: anywhere; }
+.damage-result-error { border: 1px solid #973b34; background: #fff8f4; color: #6c2924; }
+.damage-result-error .page-label { color: #7a302a; }
+.damage-result-error h2 { margin-bottom: 8px; color: #54231e; }
+.damage-result-error p:last-child { margin-bottom: 0; }
+.damage-datalists { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+@media (max-width: 720px) {
+  .damage-heading { align-items: flex-start; }
+  .damage-input-grid { grid-template-columns: 1fr; gap: 13px; }
+  .damage-move-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .damage-move-fields > .damage-field:first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 420px) {
+  .primary-nav { justify-content: start; }
+  .nav-link { padding-inline: 9px; font-size: 0.86rem; }
+  .damage-side-fields { grid-template-columns: 1fr; }
+  .damage-stat-grid, .damage-boost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .damage-move-fields, .damage-field-conditions { grid-template-columns: 1fr; }
+  .damage-move-fields > .damage-field:first-child { grid-column: 1; }
+  .damage-result-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .damage-result-range { justify-items: start; }
 }
