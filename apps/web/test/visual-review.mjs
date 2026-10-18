@@ -387,13 +387,29 @@ async function runViewport(viewportName, viewport) {
 
       await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
+      await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeoutMs: 10_000 });
+      const teamSaveResponses = [];
+      page.on("response", (response) => {
+        if (response.url().includes("/api/teams") && response.request().method() === "POST") {
+          teamSaveResponses.push(response.status());
+        }
+      });
       await page.getByRole("button", { name: "Salvar cópia na conta" }).click();
-      await page.locator(".account-team-row").first().waitFor({ state: "visible", timeoutMs: 10_000 });
-      await safeCapture(page, viewportName, "builder-account-team", { audit: true });
-      await page.locator(".account-team-visibility").first().selectOption("public");
-      await page.getByRole("button", { name: "Atualizar" }).last().click();
-      await page.getByText("Pública", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
-      await safeCapture(page, viewportName, "builder-account-public", { audit: true });
+      await waitForEither(page, ".account-team-row, .community-inline-error", 10_000);
+      if (!(await page.locator(".account-team-row").count())) {
+        const accountText = await page.locator(".team-account-panel").innerText();
+        failures.push(`${viewportName}: não foi possível salvar uma cópia do time (POST ${teamSaveResponses.join(",") || "sem resposta"}): ${accountText.slice(0, 180)}`);
+        await safeCapture(page, viewportName, "builder-account-save-error", { audit: true });
+      }
+      if (await page.locator(".account-team-row").count()) {
+        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeoutMs: 10_000 });
+        await safeCapture(page, viewportName, "builder-account-team", { audit: true });
+        await page.locator(".account-team-visibility").first().selectOption("public");
+        await page.getByRole("button", { name: "Atualizar" }).last().click();
+        await page.getByText("Pública", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+        await safeCapture(page, viewportName, "builder-account-public", { audit: true });
+      }
     }
   }
 
