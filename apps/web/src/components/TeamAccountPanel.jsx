@@ -94,10 +94,16 @@ export function TeamAccountPanel({ onLoad, onSave }) {
             {state.teams.length ? state.teams.map((saved) => (
               <div className="account-team-row" key={saved.id}>
                 <div className="account-team-summary"><strong>{saved.name}</strong><span>{saved.visibility === "public" ? "Pública" : "Privada"}</span></div>
-                <div className="account-team-sprites" aria-label={`Integrantes de ${saved.name}`}>
+                <div className="account-team-sprites" role="list" aria-label={`Integrantes de ${saved.name}`}>
                   {(saved.data?.members || []).slice(0, 6).map((member, index) => {
                     const pokemon = dexData.pokemon.find((entry) => entry.slug === member?.pokemonId);
-                    return pokemon ? <PokemonSprite key={`${saved.id}-${index}`} pokemon={pokemon} name={pokemon.name} size={44} decorative /> : <span className="account-team-empty" key={`${saved.id}-${index}`} aria-hidden="true" />;
+                    return (
+                      <span className="account-team-member" role="listitem" key={`${saved.id}-${index}`}>
+                        {pokemon
+                          ? <PokemonSprite pokemon={pokemon} name={pokemon.name} size={44} />
+                          : <span className="account-team-empty" role="img" aria-label={`Posição ${index + 1} vazia`} />}
+                      </span>
+                    );
                   })}
                 </div>
                 <button className="button button-outline button-small" type="button" disabled={busy} onClick={() => onLoad(saved.data)}>Carregar</button>
