@@ -21,6 +21,32 @@ export function getDamageCatalogOptions(catalogName, query) {
     .slice(0, 50);
 }
 
+export function buildDamageCalculatorSearch(attacker, defender, move = "") {
+  const params = new URLSearchParams();
+  const sideValues = [
+    ["attacker", attacker],
+    ["defender", defender],
+  ];
+
+  for (const [sideName, side] of sideValues) {
+    if (!side?.species) continue;
+    const prefix = sideName === "attacker" ? "" : "defender-";
+    params.set(sideName, side.species);
+    if (side.nature) params.set(`${prefix}nature`, side.nature);
+    if (side.ability) params.set(`${prefix}ability`, side.ability);
+    if (side.item) params.set(`${prefix}item`, side.item);
+    for (const stat of statKeys) {
+      const value = Number(side.statPoints?.[stat] ?? 0);
+      if (Number.isSafeInteger(value) && value >= 0) {
+        params.set(`${prefix}sp-${stat}`, String(value));
+      }
+    }
+  }
+
+  if (move) params.set("move", move);
+  return params.toString();
+}
+
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
 const boostKeys = ["atk", "def", "spa", "spd", "spe"];
 const spreadTargets = new Set(["allAdjacent", "allAdjacentFoes"]);
