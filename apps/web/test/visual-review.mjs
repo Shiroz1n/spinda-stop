@@ -419,8 +419,29 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-empty", { audit: true });
+  const emptySpeedTarget = page.locator(".builder-speed-target.is-empty");
+  await emptySpeedTarget.scrollIntoViewIfNeeded();
+  const emptySpeedTargetLayout = await emptySpeedTarget.evaluate((element) => {
+    const placeholder = element.querySelector(".builder-speed-target-placeholder").getBoundingClientRect();
+    const action = element.querySelector(".button").getBoundingClientRect();
+    const container = element.getBoundingClientRect();
+    return {
+      placeholderRight: placeholder.right,
+      actionLeft: action.left,
+      actionRight: action.right,
+      containerLeft: container.left,
+      containerRight: container.right,
+    };
+  });
+  observations.push({ viewport: viewportName, name: "builder-empty-speed-target-layout", ...emptySpeedTargetLayout });
+  if (emptySpeedTargetLayout.placeholderRight > emptySpeedTargetLayout.actionLeft + 1
+    || emptySpeedTargetLayout.actionLeft < emptySpeedTargetLayout.containerLeft - 1
+    || emptySpeedTargetLayout.actionRight > emptySpeedTargetLayout.containerRight + 1) {
+    failures.push(`${viewportName}: o seletor do alvo de Speed colide com a instrução ou sai do painel.`);
+  }
+  await safeCapture(page, viewportName, "builder-empty-speed-target", { audit: true, fullPage: false });
   await page.getByRole("button", { name: "Escolher espécie" }).first().click();
-  await page.getByLabel("Nome ou número").fill("Garchomp");
+  await page.locator("#species-search").fill("Garchomp");
   await page.locator(".species-dialog .picker-result").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".builder-secondary-actions > summary").click();
@@ -464,7 +485,7 @@ async function runViewport(viewportName, viewport) {
   await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-preserved-set", { audit: true });
   await page.locator(".team-slot").nth(1).click();
-  const pickerSearch = page.getByLabel("Nome ou número");
+  const pickerSearch = page.locator("#species-search");
   if (await pickerSearch.count()) {
     await pickerSearch.fill("Arboliva");
     await page.locator(".species-dialog .picker-result").first().click();
@@ -472,7 +493,7 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "builder-two-sides");
   for (const [slotIndex, species] of [[2, "Incineroar"], [3, "Rillaboom"], [4, "Charizard"], [5, "Pelipper"]]) {
     await page.locator(".team-slot").nth(slotIndex).click();
-    await page.getByLabel("Nome ou número").fill(species);
+    await page.locator("#species-search").fill(species);
     await page.locator(".species-dialog .picker-result").first().click();
     await page.getByRole("heading", { name: species, exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   }
@@ -527,6 +548,45 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   await safeCapture(page, viewportName, "calculator-from-builder", { audit: true });
+
+  const dynamicLeaderPage = await context.newPage();
+  await dynamicLeaderPage.route("**/api", (route) => fulfillJson(route, {
+    defaultSeason: "M8",
+    pokemon: [
+      {
+        name: "Garchomp",
+        showdownId: "garchomp",
+        summary: { types: ["Dragon", "Ground"], battleSummary: { M8: { Doubles: { position: 2 } } } },
+      },
+      {
+        name: "Mega Lucario Z",
+        showdownId: "lucario-megaz",
+        summary: { types: ["Fighting", "Steel"], battleSummary: { M8: { Doubles: { position: 1 } } } },
+      },
+    ],
+  }));
+  await dynamicLeaderPage.route("**/api/battle/Doubles/**", (route) => fulfillJson(route, {
+    pokemon: "Mega Lucario Z",
+    showdownId: "lucario-megaz",
+    format: "Doubles",
+    season: "M8",
+    date: "2026-10-18",
+    source: "visual-fixture.csv",
+    rows: [],
+    daily: [],
+  }));
+  await dynamicLeaderPage.goto(`${baseUrl}/usage`, { waitUntil: "domcontentloaded" });
+  await dynamicLeaderPage.getByRole("heading", { name: "Mega Lucario Z", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  const dynamicLeaderState = await dynamicLeaderPage.evaluate(() => ({
+    selected: document.querySelector(".usage-species-button.is-selected .usage-species-name strong")?.textContent?.trim(),
+    pokemonQuery: new URLSearchParams(location.search).get("pokemon"),
+  }));
+  observations.push({ viewport: viewportName, name: "usage-dynamic-source-leader", ...dynamicLeaderState });
+  if (dynamicLeaderState.selected !== "Mega Lucario Z" || dynamicLeaderState.pokemonQuery) {
+    failures.push(`${viewportName}: Usage não selecionou o líder atual da fonte sem inserir uma espécie fixa na URL.`);
+  }
+  await safeCapture(dynamicLeaderPage, viewportName, "usage-dynamic-source-leader", { audit: true, fullPage: false });
+  await dynamicLeaderPage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   await waitForUsage(page);
