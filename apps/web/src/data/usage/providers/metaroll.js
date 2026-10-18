@@ -97,6 +97,33 @@ function normalizeHistoryMap(value) {
   });
 }
 
+function normalizeMatchupNames(names, games) {
+  if (!Array.isArray(names)) return [];
+  return names.filter((name) => typeof name === "string").map((name, index) => ({
+    name,
+    games: Array.isArray(games) && Number.isFinite(games[index]) ? games[index] : null,
+  }));
+}
+
+function normalizeMatchupMoves(moves) {
+  if (!Array.isArray(moves)) return [];
+  return moves.filter((move) => move && typeof move.name === "string").map((move) => ({
+    name: move.name,
+    percent: Number.isFinite(move.percent) ? move.percent : null,
+    percentageValue: Number.isFinite(move.percent) ? move.percent : null,
+  }));
+}
+
+function normalizeMatchups(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return {
+    beats: normalizeMatchupNames(value.beats, value.beatsGames),
+    losesTo: normalizeMatchupNames(value.losesTo, value.losesToGames),
+    beatsWith: normalizeMatchupMoves(value.beatsWith),
+    beatenBy: normalizeMatchupMoves(value.beatenBy),
+  };
+}
+
 function normalizeSpeciesEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
 
@@ -135,13 +162,59 @@ function normalizeSpeciesEntry(entry) {
       : [],
     distributions,
     filterValues,
-    matchups: entry.matchups && typeof entry.matchups === "object" ? entry.matchups : null,
+    matchups: normalizeMatchups(entry.matchups),
     confidence: entry.confidence && typeof entry.confidence === "object" ? {
       formGuessed: typeof entry.confidence.formGuessed === "boolean" ? entry.confidence.formGuessed : null,
       identifiedByElimination: typeof entry.confidence.identifiedByElimination === "boolean"
         ? entry.confidence.identifiedByElimination
         : null,
     } : null,
+  };
+}
+
+function normalizeLadderPerson(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const normalizeLocale = (value) => value && typeof value === "object" ? {
+    code: Number.isFinite(value.code) ? value.code : null,
+    name: typeof value.name === "string" ? value.name : null,
+    flag: typeof value.flag === "string" ? value.flag : null,
+    iso: typeof value.iso === "string" ? value.iso : null,
+  } : null;
+  const numeric = (key) => Number.isFinite(entry[key]) ? entry[key] : null;
+
+  return {
+    id: typeof entry.id === "string" ? entry.id : "",
+    name: typeof entry.name === "string" ? entry.name : "",
+    rank: numeric("rank"),
+    ...(Object.hasOwn(entry, "previousRank") ? { previousRank: numeric("previousRank") } : {}),
+    rating: numeric("rating"),
+    wins: numeric("wins"),
+    losses: numeric("losses"),
+    draws: numeric("draws"),
+    battles: numeric("battles"),
+    winRate: numeric("winRate"),
+    country: normalizeLocale(entry.country),
+    language: normalizeLocale(entry.language),
+    avatar: numeric("avatar"),
+  };
+}
+
+export function normalizeMetaRollLadderResponse(payload) {
+  if (!payload || !Array.isArray(payload.entries)) {
+    throw new Error("A resposta MetaRoll não contém a ladder de jogadores.");
+  }
+  if (payload.format !== "doubles" || payload.ranks !== "trainers") {
+    throw new Error("A fonte não retornou a ladder de treinadores de Doubles.");
+  }
+
+  return {
+    format: payload.format,
+    ranks: payload.ranks,
+    season: typeof payload.season === "string" ? payload.season : null,
+    capturedAt: typeof payload.capturedAt === "string" ? payload.capturedAt : null,
+    comparedTo: typeof payload.comparedTo === "string" ? payload.comparedTo : null,
+    count: Number.isFinite(payload.count) ? payload.count : null,
+    entries: payload.entries.map(normalizeLadderPerson).filter((entry) => entry && entry.id),
   };
 }
 
@@ -220,5 +293,10 @@ export const metaRollProvider = Object.freeze({
       throw new Error("A fonte não retornou o ladder Doubles.");
     }
     return result;
+  },
+
+  async loadLadder({ season, force = false } = {}) {
+    const path = apiPath(season, "ladder.json");
+    return normalizeMetaRollLadderResponse(await requestJson(path, force));
   },
 });
