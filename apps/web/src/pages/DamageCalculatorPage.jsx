@@ -187,7 +187,7 @@ function formatStatus(status) {
   return ({ brn: "queimado", par: "paralisado", psn: "envenenado", tox: "muito envenenado", slp: "adormecido", frz: "congelado" })[status] || "sem status";
 }
 
-function DamageResultPanel({ calculation, form, label }) {
+function DamageResultPanel({ calculation, form, label, compactMatchup = false }) {
   if (!calculation?.result) {
     return (
       <section className="damage-result damage-result-error" role="alert">
@@ -207,15 +207,17 @@ function DamageResultPanel({ calculation, form, label }) {
   return (
     <section className="damage-result panel-frame" aria-label={`${label} · ${result.gameType}`}>
       <div className="damage-result-heading">
-        <div className="damage-result-matchup">
-          <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={result.attacker.name} size={82} decorative />
-          <span className="damage-versus" aria-hidden="true">VS</span>
-          <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={result.defender.name} size={82} decorative />
-        </div>
+        {!compactMatchup ? (
+          <div className="damage-result-matchup">
+            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={result.attacker.name} size={82} decorative />
+            <span className="damage-versus" aria-hidden="true">VS</span>
+            <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={result.defender.name} size={82} decorative />
+          </div>
+        ) : null}
         <div className="damage-result-copy">
           <p className="page-label">{label} · {result.gameType}</p>
           <h2>{result.attacker.name} usa {result.move.name}</h2>
-          <p className="form-hint">Contra {result.defender.name} · nível 50 · {hitSummary}</p>
+          <p className="form-hint">{compactMatchup ? `Nível 50 · ${hitSummary}` : `Contra ${result.defender.name} · nível 50 · ${hitSummary}`}</p>
         </div>
         {!isStatusMove && <div className="damage-result-range"><strong>{result.min}–{result.max}</strong><span>de dano</span></div>}
       </div>
@@ -270,7 +272,6 @@ function DamageResultPanel({ calculation, form, label }) {
           </details>
         </>
       )}
-      <p className="damage-engine-note">Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
     </section>
   );
 }
@@ -375,8 +376,20 @@ export function DamageCalculatorPage() {
         <Link className="button button-outline" to="/builder">Voltar ao construtor</Link>
       </div>
 
-      <div className="damage-quickbar">
-        <p><strong>{form.attacker.species}</strong> × <strong>{form.defender.species}</strong><span> · {form.move || "Escolha um golpe"}</span></p>
+      <div className={comparison.enabled ? "damage-quickbar damage-quickbar-comparison" : "damage-quickbar"}>
+        {comparison.enabled ? (
+          <div className="damage-quickbar-matchup" role="group" aria-label={`Atacante ${form.attacker.species}; alvo ${form.defender.species}`}>
+            <div className="damage-quickbar-side">
+              <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species} size={46} decorative />
+              <span><small>Atacante</small><strong>{form.attacker.species}</strong></span>
+            </div>
+            <span className="damage-versus" aria-hidden="true">VS</span>
+            <div className="damage-quickbar-side">
+              <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={form.defender.species} size={46} decorative />
+              <span><small>Alvo</small><strong>{form.defender.species}</strong></span>
+            </div>
+          </div>
+        ) : <p><strong>{form.attacker.species}</strong> × <strong>{form.defender.species}</strong><span> · {form.move || "Escolha um golpe"}</span></p>}
         <FieldToggle
           label="Comparar com outro cenário"
           checked={comparison.enabled}
@@ -388,9 +401,9 @@ export function DamageCalculatorPage() {
 
       {comparison.enabled ? (
         <div className="damage-comparison-results" aria-label="Comparação dos cenários">
-          <DamageResultPanel calculation={calculation} form={form} label="A · atual" />
+          <DamageResultPanel calculation={calculation} form={form} label="A · atual" compactMatchup />
           {Object.keys(comparison.overrides).length > 0 && comparisonForm?.move.trim() ? (
-            <DamageResultPanel calculation={comparisonCalculation} form={comparisonForm} label="B · variação" />
+            <DamageResultPanel calculation={comparisonCalculation} form={comparisonForm} label="B · variação" compactMatchup />
           ) : (
             <section className="damage-comparison-empty panel-frame" role="status">
               <p className="page-label">Cenário B</p>
@@ -400,6 +413,11 @@ export function DamageCalculatorPage() {
           )}
         </div>
       ) : <DamageResultPanel calculation={calculation} form={form} label="Resultado" />}
+
+      <details className="damage-engine-details">
+        <summary>Sobre o motor e os limites do cálculo</summary>
+        <p>Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
+      </details>
 
       <details className="damage-editor-disclosure">
         <summary>Editar atacante, alvo, golpe e campo</summary>

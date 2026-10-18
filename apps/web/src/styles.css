@@ -1902,6 +1902,12 @@ select,
 .usage-provenance > div { padding: 3px 5px; }
 .usage-provenance > div > span { font-size: 0.64rem; }
 .usage-provenance > div > strong, .usage-provenance > div > a { font-size: 0.72rem; }
+.usage-provenance { align-items: center; gap: 4px 12px; margin-block: 6px 10px; padding: 6px 0; border: 0; border-block: 1px solid #cadbd2; border-radius: 0; background: transparent; color: var(--ink); }
+.usage-provenance > div:not(.usage-provenance-notes) { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 5px; min-width: 0; padding: 0; border: 0; background: transparent; }
+.usage-provenance > div > span { color: var(--muted); font-size: 0.67rem; }
+.usage-provenance > div > strong, .usage-provenance > div > a { font-size: 0.73rem; line-height: 1.25; overflow-wrap: anywhere; }
+.usage-provenance > .usage-source-help, .usage-provenance > .usage-provenance-notes { grid-column: 1 / -1; margin: 0; }
+.usage-provenance > .usage-source-help > summary { min-height: 30px; }
 .usage-source-help > summary { width: fit-content; min-height: 36px; display: flex; align-items: center; color: var(--blue-dark); cursor: pointer; font-size: 0.76rem; font-weight: 750; }
 .usage-source-help > p { margin: 5px 0 0; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
 .usage-profile-sections { gap: 7px; }
@@ -1950,6 +1956,17 @@ select,
 .damage-quickbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 10px; padding: 9px 12px; border: 1px solid var(--line); background: var(--surface-alt); }
 .damage-quickbar > p { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--blue-dark); font-size: 0.86rem; }
 .damage-quickbar .damage-toggle { flex: 0 0 auto; }
+.damage-quickbar-comparison { align-items: center; }
+.damage-quickbar-matchup { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.damage-quickbar-side { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.damage-quickbar-side > .pokemon-art { width: 46px; height: 46px; min-width: 46px; }
+.damage-quickbar-side > span { display: grid; min-width: 0; }
+.damage-quickbar-side small { color: var(--muted); font-size: 0.66rem; }
+.damage-quickbar-side strong { overflow-wrap: anywhere; font-size: 0.83rem; }
+.damage-engine-details { margin: 8px 0 0; color: var(--muted); font-size: 0.78rem; }
+.damage-engine-details > summary { min-height: 38px; display: flex; align-items: center; width: fit-content; padding: 5px 8px; border: 1px solid var(--line); color: var(--blue-dark); cursor: pointer; font-weight: 750; }
+.damage-engine-details > p { margin: 7px 0; line-height: 1.45; }
+.damage-engine-details a { color: var(--ink); font-weight: 750; text-underline-offset: 0.15em; }
 .damage-result { margin-top: 0; }
 .damage-result-more { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
 .damage-result-more > summary { min-height: 38px; display: flex; align-items: center; width: fit-content; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--blue-dark); cursor: pointer; font-size: 0.76rem; font-weight: 800; }
@@ -1990,6 +2007,7 @@ select,
   .metaroll-capture-note { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-provenance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .damage-quickbar { align-items: flex-start; flex-direction: column; gap: 7px; padding: 8px 10px; }
+  .damage-quickbar-matchup { width: 100%; justify-content: space-between; }
   .damage-comparison-results .damage-result-heading { display: flex; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
   .damage-comparison-results .damage-result-matchup { order: 0; }
   .damage-comparison-results .damage-result-copy { flex: 1 1 125px; }

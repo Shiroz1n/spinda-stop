@@ -612,6 +612,7 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+  await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   await page.getByLabel("Comparar com outro cenário").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
@@ -620,10 +621,12 @@ async function runViewport(viewportName, viewport) {
   const comparisonResults = page.locator(".damage-comparison-results .damage-result");
   await comparisonResults.nth(1).getByRole("heading", { name: "Garchomp usa Dragon Claw" }).waitFor({ state: "visible", timeout: 10_000 });
   if (await comparisonResults.count() !== 2) failures.push(`${viewportName}: a comparação deve calcular A e B com a variação selecionada.`);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
   const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
   if (compactDetailState.some(Boolean)) failures.push(`${viewportName}: os rolls e modificadores secundários devem começar recolhidos.`);
-  await page.locator(".damage-result-more").first().locator("summary").click();
+  if (await page.locator(".damage-engine-note").count() !== 0 || await page.locator(".damage-engine-details").count() !== 1) failures.push(`${viewportName}: a nota do motor deve aparecer uma vez, em detalhes recolhidos.`);
+  await page.locator(".damage-result-more > summary").first().click();
   const visibleRollCount = await page.locator(".damage-result-more[open] .damage-rolls li").count();
   if (visibleRollCount !== 16) failures.push(`${viewportName}: a variação da calculadora não expôs exatamente os 16 rolls ao abrir detalhes.`);
   await safeCapture(page, viewportName, "calculator-comparison-rolls", { audit: true, fullPage: false });
@@ -661,6 +664,7 @@ async function runViewport(viewportName, viewport) {
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
       const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral PostgreSQL integration fixture");
       if (!roomHierarchy.inviteAfterGrid) failures.push(`${viewportName}/room: painel de convite aparece antes de participantes e resultado.`);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "room-live-first-fold", { audit: true, fullPage: false });
       if (sharedTeamId) {
         await page.locator(".event-team-sharing-controls select").selectOption(sharedTeamId);
@@ -726,6 +730,7 @@ async function runViewport(viewportName, viewport) {
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
       const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral PostgreSQL integration fixture");
       if (!tournamentHierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: painel de convite aparece antes de participantes e chaveamento.`);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "tournament-live-first-fold", { audit: true, fullPage: false });
       const tournamentInviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       const tournamentId = page.url().split("/").at(-1);
