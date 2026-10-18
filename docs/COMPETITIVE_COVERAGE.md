@@ -188,6 +188,6 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | #5 — MetaRoll: fichas e histórico | Adaptador próprio; perfil, ranking de espécies, histórico diário e temporadas arquivadas | Captura e atribuição próprias; sem tipo no arquivo |
 | #6 — MetaRoll: matchups e ladder | Matchups publicados, top de jogadores e filtros por país/idioma/posição/rating/partidas/taxa | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
 | #7 — Tendências a partir do time | Link de cada integrante para a ficha correspondente, com busca contextual e troca de fonte | Navegação contextual para a fonte ativa e seu período; nenhum campo do set é alterado |
-| #8 — Fechar lacunas de contrato | Confirmar com as fontes se `ratingHistory`, `megas` e `ladder-cutoffs` têm semântica útil e validar o arquivo grande | Só integrar campos documentados ou confirmados; `all.json` segue baseado no contrato público |
-| #9 — Calculadora completa | Regras, fórmulas e casos de dano verificados | Não depende de percentuais de usage |
+| #8 — Calculadora de dano | Regras cobertas, cálculo e casos de referência verificáveis | Não depende de percentuais de Usage; lacunas do motor devem aparecer na tela |
+| #9 — Fechar lacunas de contrato | Confirmar com as fontes se `ratingHistory`, `megas` e `ladder-cutoffs` têm semântica útil e validar o arquivo grande | Só integrar campos documentados ou confirmados; `all.json` segue baseado no contrato público |
 | #10 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |

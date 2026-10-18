@@ -85,6 +85,56 @@ test("keeps missing period and percentage values unknown", () => {
   assert.equal(Object.hasOwn(result, "regulation"), false);
 });
 
+test("normalizes published Doubles rows and keeps malformed stat points absent", () => {
+  const result = normalizeUsageBattleResponse({
+    pokemon: "Examplemon",
+    showdownId: "examplemon",
+    format: "Doubles",
+    season: "Current",
+    date: "17_10_2026",
+    source: "battle_data/Current/17_10_2026/Doubles/Examplemon.csv",
+    rows: [
+      {
+        pokemon: "Examplemon",
+        column_position: 2,
+        category: "move",
+        rank: 1,
+        name: "Protect",
+        percentage: "77.2%",
+        percentage_value: 77.2,
+      },
+      {
+        pokemon: "Examplemon",
+        column_position: 2,
+        category: "stat_points",
+        rank: 1,
+        name: "spread",
+        percentage: "25%",
+        percentage_value: 25,
+        hp_points: 12,
+        attack_points: 0,
+        defense_points: "invalid",
+        sp_atk_points: 18,
+        sp_def_points: 20,
+        speed_points: 8,
+      },
+      null,
+    ],
+  });
+
+  assert.equal(result.format, "Doubles");
+  assert.equal(result.rows.length, 2);
+  assert.equal(result.rows[0].name, "Protect");
+  assert.equal(result.rows[0].percentageValue, 77.2);
+  assert.equal(result.rows[1].statPoints.hp, 12);
+  assert.equal(result.rows[1].statPoints.attack, 0);
+  assert.equal(result.rows[1].statPoints.defense, null);
+  assert.equal(result.rows[1].statPoints.spAttack, 18);
+  assert.equal(result.rows[1].statPoints.spDefense, 20);
+  assert.equal(result.rows[1].statPoints.speed, 8);
+  assert.equal(result.sourceFile, "battle_data/Current/17_10_2026/Doubles/Examplemon.csv");
+});
+
 test("normalizes dated snapshots without merging them into current rows", () => {
   const result = normalizeUsageBattleResponse({
     pokemon: "Examplemon",

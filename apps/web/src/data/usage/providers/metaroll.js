@@ -22,9 +22,9 @@ function rememberResponse(path, data) {
 }
 
 async function requestJson(path, force = false) {
+  if (inFlightRequests.has(path)) return inFlightRequests.get(path);
   const cached = responseCache.get(path);
   if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
-  if (inFlightRequests.has(path)) return inFlightRequests.get(path);
 
   const request = (async () => {
     const controller = new AbortController();
@@ -33,7 +33,7 @@ async function requestJson(path, force = false) {
     try {
       const response = await fetch(API_BASE_URL + path, {
         headers: { Accept: "application/json" },
-        cache: "default",
+        cache: "no-store",
         signal: controller.signal,
       });
 
@@ -59,16 +59,16 @@ async function requestJson(path, force = false) {
 function normalizeDistribution(value, { spread = false } = {}) {
   if (!Array.isArray(value)) return [];
 
-  return value.map((entry, index) => {
+  return value.filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry)).map((entry, index) => {
     const percent = Number.isFinite(entry?.percent) ? entry.percent : null;
     const statPoints = spread && entry?.statPoints && typeof entry.statPoints === "object"
       ? {
-        hp: entry.statPoints.hp ?? null,
-        attack: entry.statPoints.atk ?? null,
-        defense: entry.statPoints.def ?? null,
-        spAttack: entry.statPoints.spa ?? null,
-        spDefense: entry.statPoints.spd ?? null,
-        speed: entry.statPoints.spe ?? null,
+          hp: Number.isFinite(entry.statPoints.hp) ? entry.statPoints.hp : null,
+          attack: Number.isFinite(entry.statPoints.atk) ? entry.statPoints.atk : null,
+          defense: Number.isFinite(entry.statPoints.def) ? entry.statPoints.def : null,
+          spAttack: Number.isFinite(entry.statPoints.spa) ? entry.statPoints.spa : null,
+          spDefense: Number.isFinite(entry.statPoints.spd) ? entry.statPoints.spd : null,
+          speed: Number.isFinite(entry.statPoints.spe) ? entry.statPoints.spe : null,
       }
       : null;
 
@@ -225,7 +225,9 @@ function asEntries(payload) {
       ? payload.pokemon
       : null;
   if (!entries) throw new Error("A resposta MetaRoll não contém uma lista de espécies.");
-  return entries.map((entry) => normalizeSpeciesEntry(entry.entry || entry)).filter(Boolean);
+  return entries.map((entry) => normalizeSpeciesEntry(
+    entry?.entry && typeof entry.entry === "object" ? { ...entry, ...entry.entry } : entry,
+  )).filter((entry) => entry && entry.id);
 }
 
 export function normalizeMetaRollIndexResponse(payload) {
@@ -265,6 +267,7 @@ export function normalizeMetaRollPokemonResponse(payload) {
     ...payload,
     entries: [payload.entry],
   });
+  if (!header.entries[0]) throw new Error("A resposta MetaRoll não contém o identificador da espécie.");
   return { ...header, entry: header.entries[0] };
 }
 
@@ -291,6 +294,9 @@ export const metaRollProvider = Object.freeze({
     const result = normalizeMetaRollPokemonResponse(await requestJson(path, force));
     if (result.format !== "doubles") {
       throw new Error("A fonte não retornou o ladder Doubles.");
+    }
+    if (result.entry.id !== id) {
+      throw new Error("A fonte retornou uma ficha diferente da espécie solicitada.");
     }
     return result;
   },

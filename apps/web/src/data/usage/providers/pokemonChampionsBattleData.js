@@ -72,7 +72,7 @@ function collectBattleDataSeasons(value, seasons) {
 }
 
 function normalizeRows(rows) {
-  return rows.map((row) => ({
+  return rows.filter((row) => row && typeof row === "object" && !Array.isArray(row)).map((row) => ({
     category: typeof row.category === "string" ? row.category : null,
     rank: Number.isFinite(row.rank) ? row.rank : null,
     name: typeof row.name === "string" ? row.name : "",
@@ -81,7 +81,7 @@ function normalizeRows(rows) {
     statUp: typeof row.stat_up === "string" && row.stat_up ? row.stat_up : null,
     statDown: typeof row.stat_down === "string" && row.stat_down ? row.stat_down : null,
     statPoints: Object.fromEntries(
-      STAT_POINT_FIELDS.map(([key, field]) => [key, row[field] ?? null]),
+      STAT_POINT_FIELDS.map(([key, field]) => [key, Number.isFinite(row[field]) ? row[field] : null]),
     ),
   }));
 }
@@ -100,9 +100,9 @@ function normalizeSnapshot(payload) {
 }
 
 async function requestJson(path, force = false) {
+  if (inFlightRequests.has(path)) return inFlightRequests.get(path);
   const cached = responseCache.get(path);
   if (!force && cached && cached.expiresAt > Date.now()) return cached.data;
-  if (inFlightRequests.has(path)) return inFlightRequests.get(path);
 
   const request = (async () => {
     const controller = new AbortController();

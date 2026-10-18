@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usageProviders } from "../data/usage/registry.js";
 
 const metaRollProvider = usageProviders.metaroll;
@@ -31,6 +31,7 @@ function formatPreviousRank(person) {
 export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSeasonChange }) {
   const [ladderState, setLadderState] = useState({ key: "", status: "idle" });
   const [ladderRetry, setLadderRetry] = useState(0);
+  const ladderForceKey = useRef("");
   const [ladderQuery, setLadderQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [languageFilter, setLanguageFilter] = useState("all");
@@ -44,10 +45,12 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
 
   useEffect(() => {
     let active = true;
+    const force = ladderForceKey.current === requestKey;
+    if (force) ladderForceKey.current = "";
 
     metaRollProvider.loadLadder({
       season: season || undefined,
-      force: ladderRetry > 0,
+      force,
     }).then((result) => {
       if (active) setLadderState({ key: requestKey, status: "success", data: result });
     }).catch(() => {
@@ -105,7 +108,11 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
       {currentLadderState.status === "error" ? (
         <div className="usage-error usage-index-error" role="alert">
           <div><strong>Não foi possível carregar esta captura.</strong><p>{currentLadderState.error}</p></div>
-          <button className="button button-outline" type="button" onClick={() => setLadderRetry((value) => value + 1)}>Tentar de novo</button>
+          <button className="button button-outline" type="button" onClick={() => {
+            const nextRetry = ladderRetry + 1;
+            ladderForceKey.current = `${season || "current"}|${nextRetry}`;
+            setLadderRetry(nextRetry);
+          }}>Tentar de novo</button>
         </div>
       ) : null}
       {currentLadderState.status === "success" ? (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usageProviders } from "../data/usage/registry.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
 import { MetaRollLadderView } from "./MetaRollLadderView.jsx";
@@ -145,15 +145,16 @@ function MatchupMoveCard({ title, rows, outcomeLabel }) {
   );
 }
 
-export function MetaRollUsagePage({ initialPokemonName = "" }) {
+export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [indexData, setIndexData] = useState(null);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [season, setSeason] = useState("");
   const [indexStatus, setIndexStatus] = useState("loading");
   const [indexError, setIndexError] = useState("");
   const [indexRetry, setIndexRetry] = useState(0);
+  const indexForceKey = useRef("");
   const [query, setQuery] = useState(initialPokemonName);
-  const [requestedPokemonName, setRequestedPokemonName] = useState(initialPokemonName);
+  const initialPokemonNameRef = useRef(initialPokemonName);
   const [moveFilter, setMoveFilter] = useState("all");
   const [itemFilter, setItemFilter] = useState("all");
   const [abilityFilter, setAbilityFilter] = useState("all");
@@ -161,6 +162,7 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
   const [selectedId, setSelectedId] = useState(null);
   const [entryState, setEntryState] = useState({ key: "", status: "idle" });
   const [entryRetry, setEntryRetry] = useState(0);
+  const entryForceKey = useRef("");
   const [selectedUsageDate, setSelectedUsageDate] = useState("");
   const [view, setView] = useState("species");
   const entryRequestKey = `${season || "current"}|${selectedId || ""}|${entryRetry}`;
@@ -173,15 +175,24 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
   const entryError = currentEntryState.error || "";
 
   useEffect(() => {
+    initialPokemonNameRef.current = initialPokemonName;
+  }, [initialPokemonName]);
+
+  useEffect(() => {
     let active = true;
-    metaRollProvider.loadIndex({ season: season || undefined, force: indexRetry > 0 }).then((result) => {
+    const requestKey = `${season || "current"}|${indexRetry}`;
+    const force = indexForceKey.current === requestKey;
+    if (force) indexForceKey.current = "";
+    metaRollProvider.loadIndex({ season: season || undefined, force }).then((result) => {
       if (!active) return;
       setIndexData(result);
       setIndexStatus("success");
       setSeasonOptions((current) => current.length > 0 ? current : result.pastSeasons);
       setSelectedId((current) => {
         if (result.entries.some((item) => item.id === current)) return current;
-        if (requestedPokemonName) return findUsagePokemonByReference(result.entries, requestedPokemonName)?.id || null;
+        if (initialPokemonNameRef.current) {
+          return findUsagePokemonByReference(result.entries, initialPokemonNameRef.current)?.id || null;
+        }
         return [...result.entries].sort((left, right) => {
           const leftRank = left.rank ?? Number.POSITIVE_INFINITY;
           const rightRank = right.rank ?? Number.POSITIVE_INFINITY;
@@ -196,17 +207,19 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
     });
 
     return () => { active = false; };
-  }, [season, indexRetry, requestedPokemonName]);
+  }, [season, indexRetry]);
 
   useEffect(() => {
     if (view !== "species" || !selectedId) return undefined;
     let active = true;
     const requestKey = `${season || "current"}|${selectedId}|${entryRetry}`;
+    const force = entryForceKey.current === requestKey;
+    if (force) entryForceKey.current = "";
 
     metaRollProvider.loadPokemonUsage({
       id: selectedId,
       season: season || undefined,
-      force: entryRetry > 0,
+      force,
     }).then((result) => {
       if (!active) return;
       setEntryState({
@@ -311,7 +324,9 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
           <div><strong>O índice da MetaRoll não está disponível agora.</strong><p>{indexError}</p></div>
           <button className="button button-outline" type="button" onClick={() => {
             setIndexStatus("loading");
-            setIndexRetry((value) => value + 1);
+            const nextRetry = indexRetry + 1;
+            indexForceKey.current = `${season || "current"}|${nextRetry}`;
+            setIndexRetry(nextRetry);
           }}>Tentar de novo</button>
         </div>
       ) : null}
@@ -326,6 +341,7 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
             setSeason(nextSeason);
             setIndexData(null);
             setIndexStatus("loading");
+            indexForceKey.current = "";
             setIndexRetry(0);
             setEntryRetry(0);
           }}
@@ -363,6 +379,7 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
                   setSeason(event.target.value);
                   setIndexData(null);
                   setIndexStatus("loading");
+                  indexForceKey.current = "";
                   setIndexRetry(0);
                   setEntryRetry(0);
                 }}>
@@ -387,7 +404,7 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
                     <button className={"usage-species-button" + (item.id === selectedId ? " is-selected" : "")} type="button" aria-pressed={item.id === selectedId} onClick={() => {
                       if (item.id === selectedId) return;
                       setSelectedId(item.id);
-                      setRequestedPokemonName("");
+                      onPokemonSelect?.(item.name);
                       setEntryRetry(0);
                     }}>
                       <span className="usage-species-name"><strong>{item.name}</strong></span>
@@ -411,7 +428,9 @@ export function MetaRollUsagePage({ initialPokemonName = "" }) {
                 ) : null}
                 {entryStatus === "error" ? (
                   <div className="usage-error" role="alert"><div><strong>Não foi possível carregar esta espécie.</strong><p>{entryError}</p></div><button className="button button-outline button-small" type="button" onClick={() => {
-                    setEntryRetry((value) => value + 1);
+                    const nextRetry = entryRetry + 1;
+                    entryForceKey.current = `${season || "current"}|${selectedId}|${nextRetry}`;
+                    setEntryRetry(nextRetry);
                   }}>Tentar de novo</button></div>
                 ) : null}
                 {entry ? (

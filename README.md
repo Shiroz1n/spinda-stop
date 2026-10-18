@@ -15,9 +15,8 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 
 ## Próximas partes
 
-- Análise de tipos e legalidade por regulamento.
-- Mais fontes competitivas, quando seus campos, cobertura e condições estiverem confirmados.
-- Matchups e calculadora de dano com casos de referência.
+- Calculadora de dano com regras e limites documentados; ainda não substitui a conferência no jogo.
+- Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 
 As partidas continuam acontecendo dentro do jogo. O site organiza equipes e eventos; não cria partidas ou serviços oficiais do Pokémon Champions.

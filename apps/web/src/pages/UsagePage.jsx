@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { usageProviders } from "../data/usage/registry.js";
@@ -241,13 +241,15 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   );
 }
 
-function BattleDataUsagePage({ initialPokemonName = "" }) {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
   const [indexError, setIndexError] = useState("");
   const [indexRetry, setIndexRetry] = useState(0);
+  const indexForceKey = useRef("");
   const [query, setQuery] = useState(initialPokemonName);
+  const initialPokemonNameRef = useRef(initialPokemonName);
   const [typeFilter, setTypeFilter] = useState("all");
   const [moveFilter, setMoveFilter] = useState("all");
   const [itemFilter, setItemFilter] = useState("all");
@@ -263,18 +265,26 @@ function BattleDataUsagePage({ initialPokemonName = "" }) {
   const [usageStatus, setUsageStatus] = useState("idle");
   const [usageError, setUsageError] = useState("");
   const [usageRetry, setUsageRetry] = useState(0);
+  const usageForceKey = useRef("");
+
+  useEffect(() => {
+    initialPokemonNameRef.current = initialPokemonName;
+  }, [initialPokemonName]);
 
   useEffect(() => {
     let active = true;
+    const requestKey = `index|${indexRetry}`;
+    const force = indexForceKey.current === requestKey;
+    if (force) indexForceKey.current = "";
 
-    provider.loadIndex({ force: indexRetry > 0 }).then((result) => {
+    provider.loadIndex({ force }).then((result) => {
       if (!active) return;
       setIndexData(result);
       setIndexStatus("success");
       setSelectedId((current) => {
         if (current && result.pokemon.some((entry) => entry.showdownId === current)) return current;
-        if (initialPokemonName) {
-          return findUsagePokemonByReference(result.pokemon, initialPokemonName)?.showdownId || null;
+        if (initialPokemonNameRef.current) {
+          return findUsagePokemonByReference(result.pokemon, initialPokemonNameRef.current)?.showdownId || null;
         }
         return [...result.pokemon].sort((left, right) => {
           const leftPosition = left.position ?? Number.POSITIVE_INFINITY;
@@ -290,13 +300,16 @@ function BattleDataUsagePage({ initialPokemonName = "" }) {
     });
 
     return () => { active = false; };
-  }, [provider, indexRetry, initialPokemonName]);
+  }, [provider, indexRetry]);
 
   useEffect(() => {
     if (!selectedId) return undefined;
 
     let active = true;
-    const request = { showdownId: selectedId, force: usageRetry > 0 };
+    const requestKey = [periodMode, historySeason, historyDays, selectedId, usageRetry].join("|");
+    const force = usageForceKey.current === requestKey;
+    if (force) usageForceKey.current = "";
+    const request = { showdownId: selectedId, force };
     if (periodMode === "history") {
       request.days = historyDays;
       if (historySeason !== "all") request.season = historySeason;
@@ -407,7 +420,9 @@ function BattleDataUsagePage({ initialPokemonName = "" }) {
             onClick={() => {
               setIndexStatus("loading");
               setIndexError("");
-              setIndexRetry((value) => value + 1);
+              const nextRetry = indexRetry + 1;
+              indexForceKey.current = `index|${nextRetry}`;
+              setIndexRetry(nextRetry);
             }}
           >
             Tentar de novo
@@ -567,6 +582,7 @@ function BattleDataUsagePage({ initialPokemonName = "" }) {
                       onClick={() => {
                         if (entry.showdownId !== selectedId) {
                           setSelectedId(entry.showdownId);
+                          onPokemonSelect?.(entry.name);
                           setUsageRetry(0);
                           setUsage(null);
                           setUsageStatus("loading");
@@ -640,7 +656,9 @@ function BattleDataUsagePage({ initialPokemonName = "" }) {
                 setUsage(null);
                 setUsageStatus("loading");
                 setUsageError("");
-                setUsageRetry((value) => value + 1);
+                const nextRetry = usageRetry + 1;
+                usageForceKey.current = [periodMode, historySeason, historyDays, selectedId, nextRetry].join("|");
+                setUsageRetry(nextRetry);
               }}
             />
           </div>
@@ -657,6 +675,12 @@ export function UsagePage() {
   const selectSource = (nextSource) => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("source", nextSource);
+    setSearchParams(nextParams, { replace: true });
+  };
+  const selectPokemon = (pokemonName) => {
+    if (!pokemonName) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("pokemon", pokemonName);
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -687,8 +711,8 @@ export function UsagePage() {
         </div>
       </div>
       {sourceId === "metaroll"
-        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} />
-        : <BattleDataUsagePage initialPokemonName={initialPokemonName} />}
+        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
+        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
     </>
   );
 }
