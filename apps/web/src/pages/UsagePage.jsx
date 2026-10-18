@@ -3,12 +3,19 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { activeUsageProvider } from "../data/usage/activeProvider.js";
 
 const categories = [
+  { id: "profile", label: "Ficha completa" },
   { id: "move", label: "Golpes" },
   { id: "held_item", label: "Itens" },
   { id: "ability", label: "Habilidades" },
   { id: "stat_alignment", label: "Naturezas" },
   { id: "stat_points", label: "Stat Points" },
   { id: "teammate", label: "Parceiros" },
+];
+
+const categoryFilters = [
+  { id: "move", key: "moves", label: "Golpe" },
+  { id: "held_item", key: "items", label: "Item" },
+  { id: "ability", key: "abilities", label: "Habilidade" },
 ];
 
 const statPointLabels = [
@@ -42,6 +49,10 @@ function formatSnapshotDate(value) {
 
 function displayValue(value) {
   return value === null || value === undefined || value === "" ? "—" : String(value);
+}
+
+function snapshotKey(snapshot) {
+  return [snapshot.season || "", snapshot.date || "", snapshot.sourceFile || ""].join("|");
 }
 
 function CategoryRow({ row, category }) {
@@ -88,6 +99,28 @@ function CategoryRow({ row, category }) {
   );
 }
 
+function CategoryRows({ rows, category }) {
+  if (rows.length === 0) {
+    return (
+      <div className="usage-empty usage-empty-compact">
+        <p>Esta resposta não trouxe linhas para “{category.label}”.</p>
+      </div>
+    );
+  }
+
+  return (
+    <ol className="usage-row-list">
+      {rows.map((row, index) => (
+        <CategoryRow
+          key={category.id + "-" + (row.rank === null ? index : row.rank)}
+          row={row}
+          category={category}
+        />
+      ))}
+    </ol>
+  );
+}
+
 function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry }) {
   if (!selectedPokemon) {
     return (
@@ -101,7 +134,11 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
     );
   }
 
-  const rows = usage ? usage.rows.filter((row) => row.category === category.id) : [];
+  const visibleCategories = categories.filter((item) => item.id !== "profile");
+  const rows = usage && category.id !== "profile"
+    ? usage.rows.filter((row) => row.category === category.id)
+    : [];
+  const profileRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
 
   return (
     <section className="usage-detail-panel" aria-label={"Uso de " + selectedPokemon.name}>
@@ -145,13 +182,19 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
               </a>
             </div>
             <div>
-              <span>Período informado pela fonte</span>
+              <span>Período devolvido pela fonte</span>
               <strong>
                 Temporada {usage.season || "não informada"}
                 <span className="usage-provenance-separator"> · </span>
                 {formatSnapshotDate(usage.date)}
               </strong>
             </div>
+            {usage.sourceFile ? (
+              <div className="usage-provenance-file">
+                <span>Arquivo de origem na fonte</span>
+                <code>{usage.sourceFile}</code>
+              </div>
+            ) : null}
             <div className="usage-provenance-notes">
               <span>A temporada é o rótulo da fonte; o regulamento oficial não foi confirmado.</span>
               <span>Tamanho da amostra não informado.</span>
@@ -159,31 +202,36 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
             </div>
           </div>
 
-          <div className="usage-category-heading">
-            <div>
-              <p className="page-label">Distribuição publicada</p>
-              <h3>{category.label}</h3>
+          {category.id === "profile" ? (
+            <div className="usage-profile-sections">
+              {visibleCategories.map((item) => {
+                const itemRows = profileRows(item);
+                return (
+                  <section className="usage-profile-section" key={item.id}>
+                    <div className="usage-category-heading">
+                      <div>
+                        <p className="page-label">Distribuição publicada</p>
+                        <h3>{item.label}</h3>
+                      </div>
+                      <span>{itemRows.length} linhas</span>
+                    </div>
+                    <CategoryRows rows={itemRows} category={item} />
+                  </section>
+                );
+              })}
             </div>
-            <span>{rows.length} linhas</span>
-          </div>
-
-          {status === "success" && rows.length === 0 ? (
-            <div className="usage-empty usage-empty-compact">
-              <p>Esta resposta não trouxe linhas para “{category.label}”.</p>
-            </div>
-          ) : null}
-
-          {status === "success" && rows.length > 0 ? (
-            <ol className="usage-row-list">
-              {rows.map((row, index) => (
-                <CategoryRow
-                  key={category.id + "-" + (row.rank === null ? index : row.rank)}
-                  row={row}
-                  category={category}
-                />
-              ))}
-            </ol>
-          ) : null}
+          ) : (
+            <>
+              <div className="usage-category-heading">
+                <div>
+                  <p className="page-label">Distribuição publicada</p>
+                  <h3>{category.label}</h3>
+                </div>
+                <span>{rows.length} linhas</span>
+              </div>
+              <CategoryRows rows={rows} category={category} />
+            </>
+          )}
         </>
       ) : null}
     </section>
@@ -198,9 +246,16 @@ export function UsagePage() {
   const [indexRetry, setIndexRetry] = useState(0);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [moveFilter, setMoveFilter] = useState("all");
+  const [itemFilter, setItemFilter] = useState("all");
+  const [abilityFilter, setAbilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("position");
   const [selectedId, setSelectedId] = useState(null);
-  const [categoryId, setCategoryId] = useState("move");
+  const [categoryId, setCategoryId] = useState("profile");
+  const [periodMode, setPeriodMode] = useState("current");
+  const [historySeason, setHistorySeason] = useState("all");
+  const [historyDays, setHistoryDays] = useState(7);
+  const [selectedSnapshotKey, setSelectedSnapshotKey] = useState("");
   const [usage, setUsage] = useState(null);
   const [usageStatus, setUsageStatus] = useState("idle");
   const [usageError, setUsageError] = useState("");
@@ -235,10 +290,16 @@ export function UsagePage() {
     if (!selectedId) return undefined;
 
     let active = true;
+    const request = { showdownId: selectedId, force: usageRetry > 0 };
+    if (periodMode === "history") {
+      request.days = historyDays;
+      if (historySeason !== "all") request.season = historySeason;
+    }
 
-    provider.loadPokemonUsage({ showdownId: selectedId, force: usageRetry > 0 }).then((result) => {
+    provider.loadPokemonUsage(request).then((result) => {
       if (!active) return;
       setUsage(result);
+      setSelectedSnapshotKey(result.daily[0] ? snapshotKey(result.daily[0]) : "");
       setUsageStatus("success");
     }).catch(() => {
       if (!active) return;
@@ -248,17 +309,25 @@ export function UsagePage() {
     });
 
     return () => { active = false; };
-  }, [provider, selectedId, usageRetry]);
+  }, [provider, selectedId, periodMode, historySeason, historyDays, usageRetry]);
 
   const selectedPokemon = indexData?.pokemon.find((entry) => entry.showdownId === selectedId) || null;
   const types = Array.from(new Set(indexData?.pokemon.flatMap((entry) => entry.types) || [])).sort();
+  const facetOptions = Object.fromEntries(categoryFilters.map(({ key }) => [
+    key,
+    Array.from(new Set(indexData?.pokemon.flatMap((entry) => entry.filterValues?.[key] || []) || []))
+      .sort((left, right) => left.localeCompare(right, "pt-BR")),
+  ]));
   const normalizedQuery = normalizeSearch(query.trim());
   const filteredPokemon = (indexData?.pokemon || [])
     .filter((entry) => {
       const nameMatches = normalizeSearch(entry.name).includes(normalizedQuery)
         || normalizeSearch(entry.showdownId).includes(normalizedQuery);
       const typeMatches = typeFilter === "all" || entry.types.includes(typeFilter);
-      return nameMatches && typeMatches;
+      const moveMatches = moveFilter === "all" || entry.filterValues?.moves?.includes(moveFilter);
+      const itemMatches = itemFilter === "all" || entry.filterValues?.items?.includes(itemFilter);
+      const abilityMatches = abilityFilter === "all" || entry.filterValues?.abilities?.includes(abilityFilter);
+      return nameMatches && typeMatches && moveMatches && itemMatches && abilityMatches;
     })
     .sort((left, right) => {
       if (sortBy === "name") return left.name.localeCompare(right.name, "pt-BR");
@@ -269,6 +338,11 @@ export function UsagePage() {
     });
 
   const activeCategory = categories.find((item) => item.id === categoryId) || categories[0];
+  const displayedUsage = periodMode === "history"
+    ? usage?.daily.find((snapshot) => snapshotKey(snapshot) === selectedSnapshotKey) || null
+    : usage;
+  const hasActiveFilters = Boolean(query) || typeFilter !== "all" || moveFilter !== "all"
+    || itemFilter !== "all" || abilityFilter !== "all";
 
   return (
     <section className="page-wrap usage-page">
@@ -277,7 +351,7 @@ export function UsagePage() {
           <p className="page-label">Pesquisa de Doubles</p>
           <h1>Usage</h1>
           <p className="page-intro">
-            Busque uma espécie, filtre por tipo e explore as categorias que a fonte publica.
+            Busque uma espécie, combine filtros sustentados pelo índice e abra a ficha de Doubles.
           </p>
         </div>
         <span className="usage-edition-mark">ESTUDO · 01</span>
@@ -363,6 +437,79 @@ export function UsagePage() {
                 </select>
               </label>
 
+              {categoryFilters.map(({ id, key, label }) => {
+                const value = id === "move" ? moveFilter : id === "held_item" ? itemFilter : abilityFilter;
+                const setValue = id === "move" ? setMoveFilter : id === "held_item" ? setItemFilter : setAbilityFilter;
+                const options = facetOptions[key] || [];
+                return (
+                  <label className="usage-filter-field" key={key}>
+                    <span>{label} no resumo da fonte{options.length === 0 ? " · sem dados" : ""}</span>
+                    <select value={value} disabled={options.length === 0} onChange={(event) => setValue(event.target.value)}>
+                      <option value="all">Todos</option>
+                      {options.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                );
+              })}
+
+              <label className="usage-filter-field">
+                <span>Período</span>
+                <select
+                  value={periodMode}
+                  onChange={(event) => {
+                    setPeriodMode(event.target.value);
+                    setSelectedSnapshotKey("");
+                    setUsage(null);
+                    setUsageStatus("loading");
+                    setUsageError("");
+                    setUsageRetry(0);
+                  }}
+                >
+                  <option value="current">Dados atuais</option>
+                  <option value="history">Snapshots diários</option>
+                </select>
+              </label>
+
+              {periodMode === "history" ? (
+                <>
+                  <label className="usage-filter-field">
+                    <span>Temporada da pasta</span>
+                    <select
+                      value={historySeason}
+                      onChange={(event) => {
+                        setHistorySeason(event.target.value);
+                        setSelectedSnapshotKey("");
+                        setUsage(null);
+                        setUsageStatus("loading");
+                        setUsageError("");
+                        setUsageRetry(0);
+                      }}
+                    >
+                      <option value="all">Mais recentes disponíveis</option>
+                      {(indexData?.availableSeasons || []).map((season) => (
+                        <option key={season} value={season}>{season}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="usage-filter-field">
+                    <span>Snapshots solicitados</span>
+                    <select
+                      value={historyDays}
+                      onChange={(event) => {
+                        setHistoryDays(Number(event.target.value));
+                        setSelectedSnapshotKey("");
+                        setUsage(null);
+                        setUsageStatus("loading");
+                        setUsageError("");
+                        setUsageRetry(0);
+                      }}
+                    >
+                      {[7, 14, 31].map((days) => <option key={days} value={days}>{days} dias</option>)}
+                    </select>
+                  </label>
+                </>
+              ) : null}
+
               <label className="usage-filter-field">
                 <span>Ordenar</span>
                 <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
@@ -370,7 +517,27 @@ export function UsagePage() {
                   <option value="name">Nome A–Z</option>
                 </select>
               </label>
+
+              {hasActiveFilters ? (
+                <button
+                  className="button button-outline button-small usage-clear-filters"
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setTypeFilter("all");
+                    setMoveFilter("all");
+                    setItemFilter("all");
+                    setAbilityFilter("all");
+                  }}
+                >
+                  Limpar filtros
+                </button>
+              ) : null}
             </div>
+
+            <p className="usage-filter-note">
+              Golpes, itens e habilidades vêm dos destaques do índice atual. Valores ausentes não são inferidos.
+            </p>
 
             <div className="usage-list-caption">
               <span>Nome</span>
@@ -389,9 +556,9 @@ export function UsagePage() {
                         if (entry.showdownId !== selectedId) {
                           setSelectedId(entry.showdownId);
                           setUsageRetry(0);
-                      setUsage(null);
-                      setUsageStatus("loading");
-                      setUsageError("");
+                          setUsage(null);
+                          setUsageStatus("loading");
+                          setUsageError("");
                         }
                       }}
                     >
@@ -417,7 +584,7 @@ export function UsagePage() {
           </aside>
 
           <div className="usage-results-column">
-            <nav className="usage-category-tabs" aria-label="Filtrar categoria de uso">
+            <nav className="usage-category-tabs" aria-label="Seções da ficha competitiva">
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -430,10 +597,30 @@ export function UsagePage() {
                 </button>
               ))}
             </nav>
+            {periodMode === "history" && usageStatus === "success" && usage?.daily.length > 0 ? (
+              <label className="usage-snapshot-picker">
+                <span>Snapshot consultado</span>
+                <select
+                  value={selectedSnapshotKey}
+                  onChange={(event) => setSelectedSnapshotKey(event.target.value)}
+                >
+                  {usage.daily.map((snapshot) => (
+                    <option key={snapshotKey(snapshot)} value={snapshotKey(snapshot)}>
+                      {snapshot.season || "Temporada não informada"} · {formatSnapshotDate(snapshot.date)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {periodMode === "history" && usageStatus === "success" && usage?.daily.length === 0 ? (
+              <div className="usage-empty usage-empty-compact usage-no-snapshots">
+                <p>A fonte não trouxe snapshots para esta consulta. Isso não significa uso zero.</p>
+              </div>
+            ) : null}
             <UsagePanel
               source={provider.source}
               selectedPokemon={selectedPokemon}
-              usage={usage}
+              usage={displayedUsage}
               category={activeCategory}
               status={usageStatus}
               error={usageError}

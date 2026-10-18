@@ -62,7 +62,7 @@ Guia: [API Guide](https://championsbattledata.com/api_guide) · [regras de uso](
 | `summary.baseStatTotal`, `baseStats` | Total e stats base | Não | Dados de Pokédex, não estatísticas de uso |
 | `summary.types` | Tipos | Sim, como chips e filtro | Tipos vêm do índice da fonte nesta tela |
 | `summary.battleSummary[season][format].position` | Posição publicada para uma espécie | Sim, rótulo “posição na fonte” | Não renomear para ranking de jogadores nem inferir o critério além do guia |
-| `statChanges`, `top`, `values` | Resumo por formato e categoria | Não, exceto posição | A forma das listas varia por categoria; filtros devem usar apenas nomes realmente presentes |
+| `statChanges`, `top`, `values` | Resumo por formato e categoria | Sim, `top`/`values` alimentam filtros de golpe, item e habilidade | A forma das listas varia por categoria; os filtros só aceitam nomes realmente presentes |
 
 ### `GET /api/pokemon/{id}?format=Doubles&season={season}&days={days}`
 
@@ -87,8 +87,8 @@ Guia: [API Guide](https://championsbattledata.com/api_guide) · [regras de uso](
 | `rows[].percentage`, `percentage_value` | Valor e número percentual publicados | Sim | Sem amostra ou denominador; não chamar de percentual de partidas ou taxa de vitória |
 | `rows[].stat_up`, `stat_down` | Aumento/redução de stat da natureza/alinhamento | Sim, quando a categoria é stat alignment | Manter a denominação da fonte; não juntar natureza e spread |
 | `rows[].hp_points`, `attack_points`, `defense_points`, `sp_atk_points`, `sp_def_points`, `speed_points` | Distribuição de Stat Points | Sim | São Stat Points, não EVs |
-| `daily[]` | Snapshots recentes, mais novos primeiro, cada qual com `season`, `date`, `source`, `columns` e `rows` | Não | `days` aceita 1–31; temporada e data são os rótulos da pasta |
-| categorias `move`, `held_item`, `ability`, `teammate`, `stat_alignment`, `stat_points` | Golpes, itens, habilidades, parceiros, nature/alinhamento e spread | Sim, por abas | A resposta de parceiro pode não trazer percentual; manter ausente |
+| `daily[]` | Snapshots recentes, mais novos primeiro, cada qual com `season`, `date`, `source`, `columns` e `rows` | Sim, seleção por temporada da pasta, janela e data devolvida | `days` aceita 1–31; temporada e data são os rótulos da pasta |
+| categorias `move`, `held_item`, `ability`, `teammate`, `stat_alignment`, `stat_points` | Golpes, itens, habilidades, parceiros, nature/alinhamento e spread | Sim, ficha completa e abas por categoria | A resposta de parceiro pode não trazer percentual; manter ausente |
 
 ### `GET /api/metadata/{name}`
 
@@ -160,9 +160,9 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | Recurso da referência | O que temos nas fontes | Estado do Spinda Stop |
 |---|---|---|
 | Busca por Pokémon e filtro por tipo | Battle Data e MetaRoll identificam espécies; Battle Data informa tipos | Busca e tipo já existem |
-| Filtro por golpe, item e habilidade | Há distribuições por espécie; o índice Battle Data publica resumo por categoria | A tela ainda não tem facetas globais; PR #4 vai filtrar apenas por valores presentes na captura |
-| Parceiros, nature e spreads | As duas fontes fornecem parte ou todos esses campos, com definições diferentes | Battle Data já mostra as categorias por aba; MetaRoll ainda não está integrado |
-| Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 (Battle Data) e PR #5 (MetaRoll) |
+| Filtro por golpe, item e habilidade | Há distribuições por espécie; o índice Battle Data publica resumo por categoria | PR #4 adiciona facetas com valores presentes no índice e desativa a faceta sem dados |
+| Parceiros, nature e spreads | As duas fontes fornecem parte ou todos esses campos, com definições diferentes | PR #4 reúne o perfil Battle Data; MetaRoll ainda não está integrado |
+| Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 adiciona snapshots Battle Data; histórico MetaRoll fica para PR #5 |
 | Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #5, separado e rotulado como MetaRoll |
 | Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #5; não usar esse `count` para estatística de Pokémon |
 | Aluguel de times/rentals | Nenhuma das duas APIs avaliadas fornece times de aluguel | Sem fonte; fora do escopo competitivo desta integração |
