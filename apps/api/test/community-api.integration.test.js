@@ -95,6 +95,9 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   assert.equal(createdTeam.response.status, 201);
   assert.equal(createdTeam.body.team.visibility, "private");
   assert.deepEqual(createdTeam.body.team.data.members[0], sampleTeam.members[0]);
+  const emptyTeamPayload = { ...sampleTeam, name: "Equipe sem Pokémon", members: Array(6).fill(null) };
+  const emptyTeam = await request("/api/teams", { method: "POST", cookie: host.cookie, body: { visibility: "private", data: emptyTeamPayload } });
+  assert.equal(emptyTeam.response.status, 201);
   assert.equal((await request("/api/teams", { cookie: guest.cookie })).body.teams.length, 0);
   const publicTeam = await request(`/api/teams/${createdTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { visibility: "public" } });
   assert.equal(publicTeam.response.status, 200);
@@ -113,6 +116,17 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   assert.equal((await request("/api/rooms/join", { method: "POST", cookie: guest.cookie, body: { inviteToken: "invalid" } })).response.status, 400);
   assert.equal((await request("/api/rooms/join", { method: "POST", cookie: guest.cookie, body: { inviteToken } })).response.status, 200);
   assert.equal((await request(`/api/rooms/${roomId}/start`, { method: "POST", cookie: host.cookie, body: {} })).response.status, 409);
+  assert.equal((await request(`/api/rooms/${roomId}/shared-team`, { method: "PUT", cookie: guest.cookie, body: { teamId: createdTeam.body.team.id } })).response.status, 404);
+  assert.equal((await request(`/api/rooms/${roomId}/shared-team`, { method: "PUT", cookie: host.cookie, body: { teamId: emptyTeam.body.team.id } })).response.status, 409);
+  assert.equal((await request(`/api/rooms/${roomId}/shared-team`, { method: "PUT", cookie: host.cookie, body: { teamId: createdTeam.body.team.id } })).response.status, 200);
+  const sharedRoom = await request(`/api/rooms/${roomId}`, { cookie: guest.cookie });
+  const hostRoster = sharedRoom.body.members.find((member) => member.id === host.id).sharedRoster;
+  assert.equal(hostRoster[0].pokemonId, "garchomp");
+  assert.deepEqual(Object.keys(hostRoster[0]).sort(), ["formId", "formSlug", "pokemonId", "speciesId", "speciesSlug"]);
+  assert.equal("moves" in hostRoster[0], false);
+  assert.equal((await request(`/api/rooms/${roomId}/shared-team`, { method: "DELETE", cookie: host.cookie })).body.shared, false);
+  assert.equal((await request(`/api/rooms/${roomId}`, { cookie: guest.cookie })).body.members.find((member) => member.id === host.id).sharedRoster, null);
+  assert.equal((await request(`/api/rooms/${roomId}/shared-team`, { method: "PUT", cookie: host.cookie, body: { teamId: createdTeam.body.team.id } })).response.status, 200);
 
   const hostCheckin = await request(`/api/rooms/${roomId}/check-in`, { method: "POST", cookie: host.cookie, body: {} });
   const guestCheckin = await request(`/api/rooms/${roomId}/check-in`, { method: "POST", cookie: guest.cookie, body: {} });
@@ -145,6 +159,7 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   assert.equal(resolution.body.winnerId, guest.id);
   assert.equal((await request(`/api/rooms/${roomId}`, { cookie: host.cookie })).body.room.status, "completed");
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM room_members WHERE room_id = $1 AND friend_code_ciphertext IS NOT NULL", [roomId])).rows[0].count, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM room_members WHERE room_id = $1 AND shared_roster_json IS NOT NULL", [roomId])).rows[0].count, 0);
 
   const confirmationRoom = await request("/api/rooms", { method: "POST", cookie: host.cookie, body: { name: "Sala com confirmação" } });
   const confirmationId = confirmationRoom.body.room.id;
@@ -174,11 +189,14 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   const created = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles local" } });
   assert.equal(created.response.status, 201);
   assert.equal(created.body.tournament.status, "open");
+  const savedTeam = await request("/api/teams", { method: "POST", cookie: host.cookie, body: { visibility: "private", data: sampleTeam } });
+  assert.equal(savedTeam.response.status, 201);
   const tournamentId = created.body.tournament.id;
   const inviteToken = new URL(created.body.inviteUrl).hash.slice(1);
   for (const entrant of [playerA, playerB, playerC]) {
     assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: entrant.cookie, body: { inviteToken } })).response.status, 200);
   }
+  assert.equal((await request(`/api/tournaments/${tournamentId}/shared-team`, { method: "PUT", cookie: host.cookie, body: { teamId: savedTeam.body.team.id } })).response.status, 200);
   assert.equal((await request(`/api/tournaments/${tournamentId}/leave`, { method: "POST", cookie: playerC.cookie, body: {} })).response.status, 200);
   assert.equal((await request("/api/tournaments", { cookie: playerC.cookie })).body.tournaments.some((tournament) => tournament.id === tournamentId), false);
   assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: playerC.cookie, body: { inviteToken } })).response.status, 200);
@@ -222,6 +240,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   assert.equal(tournamentView.response.status, 200);
   assert.equal(tournamentView.body.matches.length, 2);
   assert.equal(tournamentView.body.members.find((member) => member.id === host.id).friendCode, "1234-5678-9012");
+  assert.equal(tournamentView.body.members.find((member) => member.id === host.id).sharedRoster[0].pokemonId, "garchomp");
   assert.equal((await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "DELETE", cookie: host.cookie })).response.status, 200);
   assert.equal((await request(`/api/tournaments/${tournamentId}`, { cookie: playerA.cookie })).body.members.find((member) => member.id === host.id).friendCode, null);
   assert.equal((await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code: "1234-5678-9012" } })).response.status, 200);
@@ -264,6 +283,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   assert.equal(finished.body.tournament.status, "completed");
   assert.equal(finished.body.matches.length, 3);
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND friend_code_ciphertext IS NOT NULL", [tournamentId])).rows[0].count, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND shared_roster_json IS NOT NULL", [tournamentId])).rows[0].count, 0);
   assert.equal((await pool.query("SELECT count(*)::int AS count FROM moderation_events WHERE tournament_id = $1 AND action = 'resolve_dispute_confirm'", [tournamentId])).rows[0].count, 1);
 
   const cancelledCreation = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles cancelado" } });

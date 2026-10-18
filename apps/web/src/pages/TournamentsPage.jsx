@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { EventTeamSharing, SharedTeamPreview } from "../components/EventTeamSharing.jsx";
 import { communityRequest } from "../data/communityApi.js";
 
 const TOURNAMENT_STATES = {
@@ -256,7 +257,8 @@ export function TournamentDetailPage() {
       <div className="community-room-grid tournament-detail-grid">
         <section className="community-room-panel panel-frame" aria-labelledby="tournament-members-title">
           <div className="section-heading"><h2 id="tournament-members-title">Participantes</h2><span>As partidas acontecem no Pokémon Champions</span></div>
-          <ul className="participant-list">{members.map((member) => <li key={member.id}><div><strong>{member.handle}{member.id === tournament.hostId ? " · host" : ""}{member.seed ? ` · seed ${member.seed}` : ""}</strong><span>{MEMBER_STATES[member.status] || member.status}{member.friendCode ? <span className="friend-code-value"> · Código: {member.friendCode}</span> : ""}</span></div></li>)}</ul>
+          <ul className="participant-list">{members.map((member) => <li key={member.id}><div className="participant-card-main"><div><strong>{member.handle}{member.id === tournament.hostId ? " · host" : ""}{member.seed ? ` · seed ${member.seed}` : ""}</strong><span>{MEMBER_STATES[member.status] || member.status}{member.friendCode ? <span className="friend-code-value"> · Código: {member.friendCode}</span> : ""}</span></div><SharedTeamPreview roster={member.sharedRoster} ownerName={member.handle} /></div></li>)}</ul>
+          {!terminal ? <EventTeamSharing eventId={tournamentId} eventType="tournament" sharedRoster={members.find((member) => member.id === currentUser.id)?.sharedRoster} onSaved={refresh} /> : null}
           {currentUser.memberStatus === "registered" && tournament.status === "open" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/check-in`, { method: "POST", body: {} })}>Fazer check-in</button> : null}
           {isHost && tournament.status === "open" ? <button className="button button-outline" type="button" disabled={busy || !allCheckedIn} onClick={() => act(`/tournaments/${tournamentId}/close`, { method: "POST", body: {} })}>Fechar inscrições</button> : null}
           {isHost && tournament.status === "locked" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/start`, { method: "POST", body: {} })}>Sortear e iniciar</button> : null}

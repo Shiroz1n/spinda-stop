@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
+import dexData from "@spinda-stop/data/pokedex";
+import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
+import { createPokemonSpriteLookup } from "../data/pokemonSprites.js";
 import { calculateChampionsDamage, cloneDamageScenario, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
 
 const statFields = [
@@ -7,6 +10,7 @@ const statFields = [
   ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"],
 ];
 const boostFields = statFields.slice(1);
+const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
 const defaultSide = (species, nature) => ({
   species,
   nature,
@@ -83,12 +87,14 @@ function SideEditor({ title, side, onChange, sideName }) {
   function update(key, value) { onChange({ ...side, [key]: value }); }
   function updateNested(key, child, value) { onChange({ ...side, [key]: { ...side[key], [child]: value } }); }
   const statPointTotal = statFields.reduce((total, [key]) => total + (Number(side.statPoints[key]) || 0), 0);
+  const selectedPokemon = findPokemonSprite(side.species);
 
   return (
     <section className="damage-side panel-frame" aria-labelledby={`${sideName}-heading`}>
       <div className="damage-side-heading">
-        <p className="page-label">{prefix}</p>
-        <h2 id={`${sideName}-heading`}>{title}</h2>
+        <PokemonSprite pokemon={selectedPokemon} name={side.species || title} size={70} decorative className="damage-side-art" />
+        <div><p className="page-label">{prefix}</p><h2 id={`${sideName}-heading`}>{title}</h2></div>
+        {side.item ? <span className="damage-item-chip"><ItemSprite name={side.item} size={28} />{side.item}</span> : null}
       </div>
       <div className="damage-side-fields">
         <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list={`damage-${sideName}-species-options`} placeholder="Buscar no catálogo" />
@@ -190,7 +196,12 @@ function DamageResultPanel({ calculation, form, label }) {
   return (
     <section className="damage-result panel-frame" aria-label={`${label} · ${result.gameType}`}>
       <div className="damage-result-heading">
-        <div>
+        <div className="damage-result-matchup">
+          <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={result.attacker.name} size={82} decorative />
+          <span className="damage-versus" aria-hidden="true">VS</span>
+          <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={result.defender.name} size={82} decorative />
+        </div>
+        <div className="damage-result-copy">
           <p className="page-label">{label} · {result.gameType}</p>
           <h2>{result.attacker.name} usa {result.move.name}</h2>
           <p className="form-hint">Contra {result.defender.name} · nível 50 · {hitSummary}</p>

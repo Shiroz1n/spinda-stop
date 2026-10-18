@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { EventTeamSharing, SharedTeamPreview } from "../components/EventTeamSharing.jsx";
 import { communityRequest } from "../data/communityApi.js";
 
 const ROOM_STATES = {
@@ -319,7 +320,8 @@ export function RoomDetailPage() {
       <div className="community-room-grid">
         <section className="community-room-panel panel-frame" aria-labelledby="participants-title">
           <div className="section-heading"><h2 id="participants-title">Participantes</h2><span>Jogo acontece no Pokémon Champions</span></div>
-          <ul className="participant-list">{members.map((member) => <li key={member.id}><div><strong>{member.handle}{member.id === room.hostId ? " · host" : ""}</strong><span>{member.status === "checked_in" ? "Check-in feito" : "Inscrito"}</span>{member.friendCode ? <span className="friend-code-value">Código compartilhado: {member.friendCode}</span> : null}</div>{member.id === currentUser.id && canShareCode && member.friendCode ? <button className="text-button" type="button" disabled={busy} onClick={() => act(`/rooms/${roomId}/friend-code`, { method: "DELETE" })}>Remover meu código</button> : null}</li>)}</ul>
+          <ul className="participant-list">{members.map((member) => <li key={member.id}><div className="participant-card-main"><div><strong>{member.handle}{member.id === room.hostId ? " · host" : ""}</strong><span>{member.status === "checked_in" ? "Check-in feito" : "Inscrito"}</span>{member.friendCode ? <span className="friend-code-value">Código compartilhado: {member.friendCode}</span> : null}</div><SharedTeamPreview roster={member.sharedRoster} ownerName={member.handle} /></div>{member.id === currentUser.id && canShareCode && member.friendCode ? <button className="text-button" type="button" disabled={busy} onClick={() => act(`/rooms/${roomId}/friend-code`, { method: "DELETE" })}>Remover meu código</button> : null}</li>)}</ul>
+          {canShareCode ? <EventTeamSharing eventId={roomId} eventType="room" sharedRoster={members.find((member) => member.id === currentUser.id)?.sharedRoster} onSaved={refresh} /> : null}
           {canShareCode && friendCodesAvailable ? <form className="friend-code-form" onSubmit={(event) => { event.preventDefault(); act(`/rooms/${roomId}/friend-code`, { method: "PUT", body: { code: friendCode } }).then((result) => { if (result) setFriendCode(""); }); }}><label className="community-field"><span>Seu código de amizade (opcional)</span><input className="text-input" maxLength={40} value={friendCode} onChange={(event) => setFriendCode(event.target.value)} autoComplete="off" /></label><button className="button button-outline button-small" type="submit" disabled={busy || !friendCode}>Compartilhar só nesta sala</button><small>Fica visível aos membros e é removido ao terminar a sala ou após 7 dias.</small></form> : null}
           {canShareCode && !friendCodesAvailable ? <p className="community-empty">Compartilhamento de código temporariamente indisponível neste servidor.</p> : null}
           {currentUser.memberStatus === "registered" && room.status === "open" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/rooms/${roomId}/check-in`, { method: "POST", body: {} })}>Fazer check-in</button> : null}
