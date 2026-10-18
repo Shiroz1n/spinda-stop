@@ -454,6 +454,18 @@ p { max-width: 72ch; }
 .metaroll-card-heading h3 { margin: 0; font-size: 1rem; }
 .metaroll-card-heading > span { color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .metaroll-card-note { margin: 7px 0 0; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
+.metaroll-mega-card { margin-top: 14px; }
+.metaroll-mega-provenance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin-top: 10px; padding: 9px 10px; border: 1px solid var(--line); background: var(--surface-alt); font-size: 0.74rem; }
+.metaroll-mega-provenance > div { min-width: 0; display: grid; align-content: start; gap: 2px; }
+.metaroll-mega-provenance span { color: var(--muted); font-size: 0.67rem; font-weight: 800; }
+.metaroll-mega-provenance strong, .metaroll-mega-provenance a { overflow-wrap: anywhere; }
+.metaroll-mega-list { display: grid; gap: 5px; margin: 9px 0 0; padding: 0; list-style: none; }
+.metaroll-mega-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 9px; border: 1px solid var(--line); background: var(--surface); }
+.metaroll-mega-list li > div { min-width: 0; display: grid; gap: 2px; }
+.metaroll-mega-list strong, .metaroll-mega-list span { overflow-wrap: anywhere; }
+.metaroll-mega-list span { color: var(--muted); font-size: 0.72rem; }
+.metaroll-mega-list b { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.metaroll-mega-card .usage-loading { margin: 10px 0 0; }
 .metaroll-empty { margin: 12px 0 3px; color: var(--muted); font-size: 0.82rem; }
 .metaroll-list { display: grid; gap: 1px; margin: 0; padding: 5px 0 0; list-style: none; }
 .metaroll-list-row { padding: 7px 0; border-top: 1px solid #e5e0cc; }
@@ -579,6 +591,7 @@ p { max-width: 72ch; }
   .metaroll-capture-note { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-heading { align-items: stretch; flex-direction: column; gap: 11px; }
   .metaroll-ladder-heading .usage-filter-field { width: 100%; }
+  .metaroll-mega-provenance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-rating-history-heading { align-items: stretch; flex-direction: column; gap: 10px; }
   .metaroll-rating-history-heading .usage-filter-field { width: 100%; }
   .metaroll-rating-history-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -636,6 +649,7 @@ p { max-width: 72ch; }
   .metaroll-rank-summary { grid-template-columns: 1fr; }
   .metaroll-rank-history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-capture, .metaroll-ladder-filters { grid-template-columns: 1fr; }
+  .metaroll-mega-provenance { grid-template-columns: 1fr; }
   .metaroll-rating-history-meta, .metaroll-rating-history-values { grid-template-columns: 1fr; }
   .metaroll-ladder-filters > .usage-search-field { grid-column: 1; }
   .metaroll-view-switch { display: grid; grid-template-columns: 1fr 1fr; }

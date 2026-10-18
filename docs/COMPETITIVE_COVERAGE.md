@@ -42,7 +42,7 @@ O guia também documenta `dailyBattleDataCsvs` no registro de Pokémon; a captur
 | `/api/v1/megas.json` | Resposta observada: cabeçalho de captura e 81 `entries[]` com `forme`, `id`, `name`, `percent`, `rank`, `stone`; `capturedAt: 2026-10-18T09:46:20Z` |
 | `/api/v1/ladder-cutoffs.json` | Resposta observada: `ranks: trainers`, `count: 1000`, captura em `2026-10-18T09:46:20Z` e `cutoffs` nas posições 10, 100, 300, 500 e 1000 |
 
-O adaptador e a tela usam o `all.json` observado para lista, ranking de espécies, filtros, distribuições e matchups. A captura foi lida diretamente, sem gravar uma cópia no repositório. O guia diz que o arquivo não inclui históricos diários individuais; por isso a tela busca a ficha por espécie ao abrir o histórico. `ratingHistory` agora é apresentado em uma seção da ladder; `megas` fica para um PR próprio. `ladder-cutoffs` continua sem UI separada porque repete os ratings das mesmas posições e seu nome não prova um mínimo de elegibilidade.
+O adaptador e a tela usam o `all.json` observado para lista, ranking de espécies, filtros, distribuições e matchups. A captura foi lida diretamente, sem gravar uma cópia no repositório. O guia diz que o arquivo não inclui históricos diários individuais; por isso a tela busca a ficha por espécie ao abrir o histórico. `ratingHistory` aparece em uma seção da ladder; `megas` é integrado na ficha de espécie com sua própria captura. `ladder-cutoffs` continua sem UI separada porque repete os ratings das mesmas posições e seu nome não prova um mínimo de elegibilidade.
 
 ## Pokémon Champions Battle Data
 
@@ -155,7 +155,7 @@ Docs: [Champions Usage API](https://metaroll.app/api/v1/docs) · base `https://m
 
 | Rota/campo | Resposta real observada | No Spinda Stop | Decisão e lacuna |
 |---|---|---|---|
-| `megas.json.entries[]: rank, id, name, forme, stone, percent` | 81 linhas no M-7, em 18/10/2026 09:46:20 UTC | Ainda não | `rank` coincide com a posição do Pokémon e `percent` com o uso do mesmo item em `all.json` em 81/81 casos. Próximo PR mostra forma e pedra associada, identificadas como uso do item e com captura própria |
+| `megas.json.entries[]: rank, id, name, forme, stone, percent` | 81 linhas no M-7 (18/10/2026 09:46:20 UTC) e 82 em M-6 (07/10/2026 03:16:12 UTC) | Sim: seção da ficha MetaRoll mostra forma, pedra, uso publicado e captura própria | `rank` coincide com a posição do Pokémon e `percent` com o mesmo item em `all.json` em ambas as temporadas. O valor descreve uso do item, não chance de Mega Evolução |
 | `ladder-cutoffs.json.cutoffs` | Ratings das posições 10, 100, 300, 500 e 1000; `count: 1000` | Não há cartão separado | Os valores coincidem com os ratings nas posições correspondentes e com `ratingHistory.ranks` na captura atual. O nome “cutoff” não prova um rating mínimo futuro; a interface não o apresenta como requisito |
 
 ### Campos anunciados mas ainda sem semântica suficiente
