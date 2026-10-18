@@ -568,8 +568,8 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                   <>
                     <div className="usage-provenance metaroll-provenance">
                       <div className="usage-provenance-source"><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
-                      <div><span>Período devolvido pela fonte</span><strong>Temporada {entryCapture?.season || "não informada"} · captura {formatCapture(entryCapture?.capturedAt)}</strong></div>
-                      <div><span>Última consulta do app</span><strong>{formatCapture(entryCapture?.appFetchedAt)}</strong></div>
+                      <div><span>Período da fonte</span><strong>Temporada {entryCapture?.season || "não informada"} · captura {formatCapture(entryCapture?.capturedAt)}</strong></div>
+                      <div><span>Consulta do app</span><strong>{formatCapture(entryCapture?.appFetchedAt)}</strong></div>
                       <details className="usage-source-help usage-provenance-notes"><summary>Interpretação e limites</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Stat Points não são EVs e a fonte não pareia spread com natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
                     </div>
                     <div className="metaroll-rank-summary">

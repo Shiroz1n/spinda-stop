@@ -2099,4 +2099,9 @@ select,
   .damage-editor-disclosure > summary { min-height: 46px; padding-inline: 9px; font-size: 0.83rem; }
   .damage-editor-content { gap: 9px; padding: 8px; }
   .damage-quickbar .damage-toggle { min-height: 38px; }
+  .damage-quickbar-matchup { gap: 5px; }
+  .damage-quickbar-side { gap: 3px; }
+  .damage-quickbar-side > .pokemon-art { width: 34px; height: 34px; min-width: 34px; }
+  .damage-quickbar-side strong { overflow-wrap: normal; word-break: normal; font-size: 0.72rem; }
+  .site-footer { padding-bottom: 86px; }
 }

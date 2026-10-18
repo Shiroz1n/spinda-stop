@@ -194,7 +194,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
               </a>
             </div>
             <div>
-              <span>Período devolvido pela fonte</span>
+              <span>Período da fonte</span>
               <strong>
                 Temporada {usage.season || "não informada"}
                 <span className="usage-provenance-separator"> · </span>
@@ -202,7 +202,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
               </strong>
             </div>
             <div>
-              <span>Última consulta do app</span>
+              <span>Consulta do app</span>
               <strong>{formatTimestamp(usage.appFetchedAt)}</strong>
             </div>
             <details className="usage-source-help">

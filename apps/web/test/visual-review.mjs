@@ -455,6 +455,13 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: a revisão mobile/desktop não conseguiu preencher e reconhecer os seis Pokémon do builder.`);
   }
   await safeCapture(page, viewportName, "builder-six-members", { audit: true });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const firstFoldSlots = await page.locator(".team-slot").evaluateAll((elements) => elements.filter((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top >= 0 && rect.bottom <= window.innerHeight - 72;
+  }).length);
+  observations.push({ viewport: viewportName, name: "builder-six-members-first-fold-visible-slots", count: firstFoldSlots });
+  if (firstFoldSlots !== 6) failures.push(`${viewportName}: os seis slots preenchidos devem caber na primeira dobra, acima da navegação mobile.`);
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
   await page.locator(".builder-secondary-actions > summary").click();
   await page.getByRole("link", { name: /como atacante/i }).click();
@@ -629,6 +636,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".damage-result-more > summary").first().click();
   const visibleRollCount = await page.locator(".damage-result-more[open] .damage-rolls li").count();
   if (visibleRollCount !== 16) failures.push(`${viewportName}: a variação da calculadora não expôs exatamente os 16 rolls ao abrir detalhes.`);
+  await page.locator(".damage-rolls").first().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "calculator-comparison-rolls", { audit: true, fullPage: false });
 
   await captureCommunityState(context, viewport, viewportName, "room");
