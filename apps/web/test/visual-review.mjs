@@ -333,7 +333,10 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true });
 
   if (process.env.DATABASE_URL) {
-    const signIn = await context.request.post(`${baseUrl}/api/test/session`, { data: { handle: `visual-${viewportName}` } });
+    const signIn = await context.request.post(`${baseUrl}/api/test/session`, {
+      headers: { Origin: baseUrl },
+      data: { handle: `visual-${viewportName}` },
+    });
     if (!signIn.ok()) {
       failures.push(`${viewportName}: a sessão de teste para a sala não foi criada (${signIn.status()}).`);
     } else {
@@ -357,7 +360,10 @@ async function runViewport(viewportName, viewport) {
       await safeCapture(guestPage, viewportName, "rooms-join-signin", { audit: true });
       const inviteHeldInTab = await guestPage.evaluate(() => window.sessionStorage.getItem("spinda_pending_invite")?.length > 0 && !window.location.hash);
       if (!inviteHeldInTab) failures.push(`${viewportName}: o convite sem login não foi preservado fora da URL.`);
-      const guestSession = await guestContext.request.post(`${baseUrl}/api/test/session`, { data: { handle: `visual-guest-${viewportName}` } });
+      const guestSession = await guestContext.request.post(`${baseUrl}/api/test/session`, {
+        headers: { Origin: baseUrl },
+        data: { handle: `visual-guest-${viewportName}` },
+      });
       if (!guestSession.ok()) failures.push(`${viewportName}: a sessão de convidado para a sala não foi criada.`);
       const guest = guestSession.ok() ? await guestSession.json() : null;
       await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });

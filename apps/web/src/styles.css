@@ -905,6 +905,7 @@ select,
 .community-auth-card > p { margin-bottom: 18px; color: var(--muted); }
 .community-auth-card .text-button { display: block; margin-top: 14px; }
 .community-config-note, .community-muted, .community-empty, .community-privacy-note, .community-dispute-note { color: var(--muted); font-size: 0.88rem; }
+.community-muted a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.14em; }
 .community-config-note { padding: 12px; border-left: 4px solid var(--gold); background: #f7edce; }
 .community-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .community-create-card, .community-rooms-card, .community-room-panel { min-width: 0; padding: 18px; border: 2px solid var(--ink); background: var(--surface); box-shadow: var(--pixel-edge); }
