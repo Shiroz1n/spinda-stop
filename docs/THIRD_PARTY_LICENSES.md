@@ -10,6 +10,14 @@ O repositório não contém favicon, ícone de aplicativo ou ilustração local 
 
 Tipos e itens seguem as mesmas URLs fixadas de PokeAPI/sprites. Se a imagem não carregar ou não existir para a forma específica, a interface mostra o nome e o fallback em vez de trocar silenciosamente pela imagem da forma base. O componente e a lista de IDs usados ficam em `apps/web/src/data/pokemonSprites.js`.
 
+### Formas recentes de Mega Evolução
+
+As imagens exatas de formas recentes que ainda não aparecem na revisão fixada da PokéAPI são carregadas remotamente do índice público de sprites do Pokémon Showdown: [`/sprites/gen5/`](https://play.pokemonshowdown.com/sprites/gen5/). Em 18/10/2026, conferimos os nomes de arquivo por forma no índice e `garchomp-megaz.png` em si (PNG 96×96); a imagem mostra a Mega Garchomp Z e não a Mega Garchomp base. Comparações também confirmaram arquivos próprios para as variantes Z de Absol e Lucario.
+
+O mapa exato em `SHOWDOWN_FORM_SPRITES` cobre 27 das 47 formas recentes do catálogo que têm sprite IDs próprios, incluindo as variantes Mega Z de Absol, Garchomp e Lucario. As outras entradas não tinham uma imagem Showdown com nome e correspondência exatos nessa verificação. Não inferimos sprites de Staraptor, Heatran ou Raichu Mega X/Y. A revisão fixada de PokeAPI/sprites tampouco continha `other/showdown/10309.gif` quando consultada. Esses casos continuam com fallback até existir uma correspondência específica.
+
+Os sprites ficam no domínio do Showdown; o repositório não copia nenhum arquivo de arte. Não encontramos uma declaração específica de licença de redistribuição para essas imagens. A licença do código do simulador ou do site não é tratada como licença da arte. Registramos a origem sem afirmar direito adicional, endosso oficial ou cobertura pela licença MIT do Spinda Stop.
+
 Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares; atribuição ao repositório que hospeda os arquivos não transfere direitos. O MIT deste projeto cobre somente o código original.
 
 ## `@smogon/calc` 0.12.0

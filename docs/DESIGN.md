@@ -15,6 +15,7 @@ Dados, formulários e textos usam uma sans legível. Press Start 2P fica restrit
 - O builder mostra os seis integrantes com imagens persistentes. Em mobile, a pessoa escolhe um slot e edita esse set; as seis posições não viram uma coluna de seis formulários.
 - Usage começa com resultados sem filtro. A lista e a ficha ficam lado a lado no desktop; em telas estreitas, a busca, a lista e a ficha viram etapas de navegação com uma seleção clara.
 - A calculadora deixa atacante e alvo visíveis junto ao resultado. Comparar cenários mantém os dois independentes.
+- Speed Tiers usa uma tabela ordenável calculada. O builder pode comparar os seis membros contra um alvo com prévias explícitas antes de salvar.
 - Salas e torneios priorizam participantes, equipe compartilhada e próxima ação. Equipe só aparece quando a pessoa escolheu compartilhá-la.
 - Estados de carregamento, erro, vazio e indisponibilidade têm linguagem curta e ação próxima. Dados ausentes não recebem barras ou valores inventados.
 
@@ -30,18 +31,22 @@ Tipos usam o símbolo de Pokémon Champions hospedado em PokeAPI/sprites, com o 
 
 | Token | Valor | Papel |
 |---|---|---|
-| `--paper` | `#dcebe3` | Fundo da página |
-| `--surface` | `#fffef7` | Superfície de leitura |
-| `--surface-alt` | `#edf5ec` | Painéis secundários |
-| `--ink` | `#173745` | Texto principal |
-| `--muted` | `#49636b` | Texto de apoio |
-| `--blue-dark` | `#164c61` | Navegação e links |
-| `--blue` | `#2c7894` | Controles informativos |
-| `--coral` | `#b84134` | Ação principal com contraste AA sobre superfícies claras |
-| `--coral-dark` | `#a93e33` | Hover de ação |
-| `--green` | `#287453` | Seleção e confirmação |
-| `--gold` | `#72520b` | Avisos |
-| `--focus` | `#a5352b` | Contorno de teclado |
+| `--paper` | `#dce9e4` | Fundo de arena menta, sem textura contínua |
+| `--surface` | `#fbfcf4` | Superfície clara de leitura |
+| `--surface-alt` | `#e5efe7` | Faixa de controle secundária |
+| `--ink` | `#153748` | Texto principal azul-marinho |
+| `--muted` | `#3c5964` | Texto de apoio |
+| `--blue-dark` | `#16485e` | Cabeçalho, navegação e links |
+| `--blue` | `#236f91` | Controles informativos |
+| `--coral` | `#bd473b` | Ação principal em superfície clara |
+| `--coral-dark` | `#92372f` | Hover de ação |
+| `--green` | `#28684b` | Seleção de menu e confirmação |
+| `--gold` | `#704f08` | Marcador de seleção e aviso |
+| `--focus` | `#115a9c` | Contorno de teclado |
+
+## Segunda rodada
+
+O cabeçalho escuro separa a navegação do campo de trabalho; o amarelo marca seleção e o coral fica restrito às ações principais. A moldura pixel aparece em workbenches e no resultado principal. Linhas de catálogo e de jogadores usam divisórias planas para reduzir a aparência de cartões aninhados. A Pokédex reduz o palco vazio e coloca o sprite ao lado do nome, forma e tipos; no telefone mantém duas colunas em 390 px e uma coluna de leitura a 320 px. A barra fixa mobile mantém cinco rotas de tarefa e a entrada “Mais”. O conteúdo de dados e formulários continua em sans-serif; a fonte pixelada fica na marca e em índices curtos.
 
 ## Skills aplicadas
 

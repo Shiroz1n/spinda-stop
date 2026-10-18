@@ -9,6 +9,8 @@ A interface usa cores de arena, molduras em degraus e sprites de Pokémon carreg
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Simular dano em nível 50 para Singles ou Doubles, comparar cenários e ver rolls, modificadores e Stat Points usados pelo motor.
+- Comparar Speed calculada no catálogo ou os seis integrantes do builder contra um alvo, sem confundir tiers calculados com ranking de uso.
+- Comparar um atacante contra vários alvos com o mesmo set defensivo; cada dano aparece separadamente.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar salas de duas pessoas ou torneios privados de quatro, com convite, check-in e resultados confirmados manualmente.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
@@ -47,6 +49,7 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
+- [Speed Tiers e fórmulas](docs/SPEED_TIERS.md)
 - [Registro da revisão visual](docs/VISUAL_REVIEW.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
 - [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)

@@ -6,6 +6,8 @@ import {
   POKEAPI_SPRITES_BASE,
   resolvePokemonSpriteUrl,
   resolveCompetitivePokemonSprite,
+  SHOWDOWN_FORM_SPRITES,
+  SHOWDOWN_FORM_SPRITES_BASE,
   typeIconUrl,
 } from "../src/data/pokemonSprites.js";
 
@@ -34,6 +36,36 @@ test("an alternate form without its own sprite ID has no base-form fallback", ()
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "mega-x" }), null);
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, spriteId: 10034, formId: "mega-x" }), `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/10034.gif`);
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "default" }), `${POKEAPI_SPRITES_BASE}/pokemon/versions/generation-v/black-white/6.png`);
+});
+
+test("Mega Z-A uses exact form assets instead of the species base sprite", () => {
+  for (const [slug, file] of Object.entries(SHOWDOWN_FORM_SPRITES)) {
+    assert.equal(
+      resolvePokemonSpriteUrl({ slug, speciesId: 445, spriteId: 10309, formId: "mega-z", isDefault: false }),
+      `${SHOWDOWN_FORM_SPRITES_BASE}/${file}`,
+    );
+  }
+  assert.equal(SHOWDOWN_FORM_SPRITES["garchomp-mega-z"], "garchomp-megaz.png");
+  assert.equal(SHOWDOWN_FORM_SPRITES["absol-mega-z"], "absol-megaz.png");
+  assert.equal(SHOWDOWN_FORM_SPRITES["lucario-mega-z"], "lucario-megaz.png");
+  for (const [slug, file] of Object.entries({
+    "starmie-mega": "starmie-mega.png",
+    "dragonite-mega": "dragonite-mega.png",
+    "meganium-mega": "meganium-mega.png",
+    "feraligatr-mega": "feraligatr-mega.png",
+    "skarmory-mega": "skarmory-mega.png",
+    "froslass-mega": "froslass-mega.png",
+    "emboar-mega": "emboar-mega.png",
+    "meowstic-male-mega": "meowstic-mmega.png",
+    "meowstic-female-mega": "meowstic-fmega.png",
+  })) {
+    assert.equal(SHOWDOWN_FORM_SPRITES[slug], file);
+  }
+  assert.equal(Object.keys(SHOWDOWN_FORM_SPRITES).length, 27);
+  assert.equal(
+    resolvePokemonSpriteUrl({ slug: "raichu-mega-x", speciesId: 26, spriteId: 10304, formId: "mega-x", isDefault: false }),
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/10304.gif`,
+  );
 });
 
 test("base forms after the Black and White roster use their own Showdown sprite IDs", () => {

@@ -423,6 +423,16 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("Nome ou número").fill("Garchomp");
   await page.locator(".species-dialog .picker-result").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".builder-secondary-actions > summary").click();
+  await page.getByRole("link", { name: /usar garchomp como atacante/i }).click();
+  await page.locator(".damage-result-empty").waitFor({ state: "visible", timeout: 10_000 });
+  const builderCalculatorParams = new URL(page.url()).searchParams;
+  if (builderCalculatorParams.get("attacker") !== "Garchomp" || builderCalculatorParams.has("defender")) {
+    failures.push(`${viewportName}: a calculadora do builder deve manter o atacante e pedir um alvo quando não há outro integrante.`);
+  }
+  await safeCapture(page, viewportName, "calculator-from-builder-no-opponent", { audit: true, fullPage: false });
+  await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   const slotNameMetrics = await page.locator(".team-slot.is-selected .slot-copy b").evaluate((element) => ({
     text: element.textContent?.trim(),
     clientWidth: element.clientWidth,
@@ -489,6 +499,30 @@ async function runViewport(viewportName, viewport) {
   observations.push({ viewport: viewportName, name: "builder-six-members-first-fold-visible-slots", count: firstFoldSlots });
   if (firstFoldSlots !== 6) failures.push(`${viewportName}: os seis slots preenchidos devem caber na primeira dobra, acima da navegação mobile.`);
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
+  await page.getByRole("link", { name: "Comparar Speed" }).click();
+  await page.locator("#builder-speed-title").waitFor({ state: "visible", timeout: 10_000 });
+  const speedPanelInView = await page.locator("#builder-speed-title").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top >= 0 && rect.top < window.innerHeight;
+  });
+  if (!speedPanelInView) failures.push(`${viewportName}: o atalho para comparar Speed não levou ao comparador do time.`);
+  await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
+  await page.locator("#speed-target-search").fill("Garchomp-Mega-Z");
+  await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
+  await page.locator(".builder-speed-row").nth(5).waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator(".builder-speed-row").count() !== 6) failures.push(`${viewportName}: a comparação do builder não atualizou os seis integrantes juntos.`);
+  const megaZTargetImage = await page.locator(".builder-speed-target .pokemon-art img").evaluate((image) => ({ src: image.src, width: image.naturalWidth }));
+  if (!megaZTargetImage.src.includes("garchomp-megaz.png") || megaZTargetImage.width !== 96) failures.push(`${viewportName}: Mega Garchomp Z não carregou o sprite específico de 96 px.`);
+  await page.getByLabel("SP do alvo").fill("32");
+  const updatedTeamRows = await page.locator(".builder-speed-row").evaluateAll((rows) => rows.map((row) => ({ speed: row.dataset.speed, target: row.dataset.targetSpeed, relation: row.dataset.relation })));
+  if (updatedTeamRows.length !== 6 || updatedTeamRows.some((row) => row.target !== "203" || !row.speed || !row.relation)) failures.push(`${viewportName}: alterar o SP do alvo não atualizou os seis resultados de Speed.`);
+  await page.locator(".builder-speed-row").first().locator('input[type="number"]').fill("17");
+  await page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" }).click();
+  await page.locator(".team-slot").first().click();
+  if (!(await page.locator(".points-section").evaluate((details) => details.open))) await page.locator(".points-section > summary").click();
+  if (await page.locator("#stat-spe").inputValue() !== "17") failures.push(`${viewportName}: aplicar a prévia de Speed não salvou o SP no set selecionado.`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await safeCapture(page, viewportName, "builder-six-speed-vs-mega-garchomp-z", { audit: true });
   await page.locator(".builder-secondary-actions > summary").click();
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
@@ -677,6 +711,17 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+  const emptyCalculatorInputs = await Promise.all([
+    'input[list="damage-attacker-species-options"]',
+    'input[list="damage-defender-species-options"]',
+    'input[list="damage-move-options"]',
+  ].map((selector) => page.locator(selector).inputValue()));
+  if (emptyCalculatorInputs.some(Boolean) || await page.getByText("Garchomp", { exact: true }).count()) failures.push(`${viewportName}: a calculadora direta não deve injetar uma espécie ou golpe padrão.`);
+  await safeCapture(page, viewportName, "calculator-empty-choice", { audit: true, fullPage: false });
+  await page.locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
+  await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
+  await page.locator('input[list="damage-move-options"]').fill("Earthquake");
+  await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   await page.getByLabel("Comparar com outro cenário").check();
@@ -696,6 +741,32 @@ async function runViewport(viewportName, viewport) {
   if (visibleRollCount !== 16) failures.push(`${viewportName}: a variação da calculadora não expôs exatamente os 16 rolls ao abrir detalhes.`);
   await page.locator(".damage-rolls").first().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "calculator-comparison-rolls", { audit: true, fullPage: false });
+  if (!(await page.locator(".damage-editor-disclosure").evaluate((details) => details.open))) await page.locator(".damage-editor-disclosure > summary").click();
+  await page.getByRole("button", { name: "Vários alvos" }).click();
+  await page.locator('input[list="damage-many-target-1"]').fill("Garchomp-Mega-Z");
+  await page.locator(".damage-multi-row").nth(1).waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator(".damage-multi-row").count() !== 2) failures.push(`${viewportName}: um atacante não mostrou resultados independentes para dois alvos.`);
+  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: false });
+
+  await page.getByRole("button", { name: "Um alvo" }).click();
+  await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
+  await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
+  await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
+  await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 96), { timeout: 15_000 }).catch(() => {});
+  const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth })));
+  if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.includes("lucario-megaz.png") || !alternateFormSprites[1].src.includes("absol-megaz.png") || alternateFormSprites.some(({ width }) => width !== 96)) {
+    failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
+
+  await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByLabel("Buscar na lista").fill("Garchomp");
+  await page.locator(".speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator(".speed-result-row").filter({ hasText: "Mega Garchomp Z" }).count() < 1) failures.push(`${viewportName}: Speed Tiers não manteve a forma Mega Garchomp Z na busca.`);
+  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true });
 
   await captureCommunityState(context, viewport, viewportName, "room");
   await captureCommunityState(context, viewport, viewportName, "tournament");

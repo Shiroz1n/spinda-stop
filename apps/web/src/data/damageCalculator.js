@@ -104,6 +104,10 @@ export function getDamageMove(value) {
   return findEntry(generation.moves, value);
 }
 
+export function getDamageSpeciesName(value) {
+  return findEntry(generation.species, value)?.name || String(value || "");
+}
+
 export function isSpreadTargetMove(move) {
   return Boolean(move && spreadTargets.has(move.target));
 }
@@ -393,4 +397,22 @@ export function calculateChampionsDamage(input) {
     rolls,
     max,
   };
+}
+
+// Reuse the same engine and shared attacker/field inputs for a target list.
+// This is a comparison helper only; each target remains a separate result.
+export function calculateDamageAgainstTargets(input, targetSpecies) {
+  return (Array.isArray(targetSpecies) ? targetSpecies : [])
+    .map((species) => String(species || "").trim())
+    .filter(Boolean)
+    .map((species) => {
+      try {
+        return { species, result: calculateChampionsDamage({
+          ...input,
+          defender: { ...input.defender, species },
+        }), error: "" };
+      } catch (error) {
+        return { species, result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este alvo." };
+      }
+    });
 }

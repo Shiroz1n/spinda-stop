@@ -9,7 +9,8 @@ import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
-import { buildDamageCalculatorSearch } from "../data/damageCalculator.js";
+import { buildDamageCalculatorSearch, getDamageSpeciesName } from "../data/damageCalculator.js";
+import { calculateChampionsSpeed, compareSpeed, minimumTrainingToOutspeed, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
@@ -70,8 +71,13 @@ export function BuilderPage() {
   const [team, setTeam] = useState(initialDraft.team);
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
   const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
+  const [speedTargetSlug, setSpeedTargetSlug] = useState("");
+  const [speedTargetSp, setSpeedTargetSp] = useState(0);
+  const [speedTargetNature, setSpeedTargetNature] = useState("neutral");
+  const [speedPreviews, setSpeedPreviews] = useState({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(0);
+  const [speedTargetPickerOpen, setSpeedTargetPickerOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
@@ -85,10 +91,28 @@ export function BuilderPage() {
     .map((member, index) => ({ member, index, pokemon: member ? pokemonWithDetails(member.pokemonId) : null }))
     .filter(({ member, index, pokemon }) => member && pokemon && index !== selectedSlot);
   const selectedDamageOpponent = damageOpponents.find(({ index }) => index === damageOpponentSlot) || damageOpponents[0] || null;
+  const speedTargetPokemon = useMemo(() => speedTargetSlug ? pokemonWithDetails(speedTargetSlug) : null, [speedTargetSlug]);
+  const speedTargetValue = speedTargetPokemon
+    ? calculateChampionsSpeed(speedTargetPokemon.stats.spe, speedTargetSp, speedTargetNature)
+    : null;
+  const speedComparisonRows = team.members.map((member, index) => {
+    const pokemon = member ? pokemonWithDetails(member.pokemonId) : null;
+    if (!member || !pokemon || speedTargetValue === null) return { member, pokemon, index, preview: null, speed: null, relation: "unknown", requiredSp: null };
+    const savedPreview = speedPreviews[index];
+    const preview = savedPreview || {
+      sp: Number(member.statPoints.spe) || 0,
+      nature: speedNatureFromName(member.nature),
+      natureTouched: false,
+    };
+    const speed = calculateChampionsSpeed(pokemon.stats.spe, preview.sp, preview.nature);
+    const relation = compareSpeed(speed, speedTargetValue);
+    const requiredSp = minimumTrainingToOutspeed({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature });
+    return { member, pokemon, index, preview, speed, relation, requiredSp };
+  });
 
   function toDamageSide(member, pokemon) {
     return {
-      species: pokemon.name,
+      species: getDamageSpeciesName(pokemon.slug),
       nature: member.nature || "Serious",
       ability: member.ability,
       item: member.item,
@@ -101,10 +125,10 @@ export function BuilderPage() {
     const selectedSide = toDamageSide(selectedMember, selectedPokemon);
     const otherSide = selectedDamageOpponent
       ? toDamageSide(selectedDamageOpponent.member, selectedDamageOpponent.pokemon)
-      : { species: "Garchomp", nature: "Serious", statPoints: Object.fromEntries(STAT_FIELDS.map(([key]) => [key, 0])) };
+      : null;
     const attacker = selectedRole === "attacker" ? selectedSide : otherSide;
     const defender = selectedRole === "defender" ? selectedSide : otherSide;
-    const move = attacker.moves?.find((entry) => entry.trim()) || "";
+    const move = attacker?.moves?.find((entry) => entry.trim()) || "";
     return `/calculator?${buildDamageCalculatorSearch(attacker, defender, move)}`;
   }
 
@@ -145,6 +169,11 @@ export function BuilderPage() {
     const selectedPokemon = pokemonWithDetails(pokemon.slug);
     const samePokemon = team.members[pickerSlot]?.pokemonId === selectedPokemon.slug;
     commitTeam(setTeamMember(team, pickerSlot, selectedPokemon));
+    setSpeedPreviews((current) => {
+      const next = { ...current };
+      delete next[pickerSlot];
+      return next;
+    });
     setSelectedSlot(pickerSlot);
     setPickerOpen(false);
     setMessage(samePokemon
@@ -210,6 +239,51 @@ export function BuilderPage() {
     updateMember({ moves });
   }
 
+  function updateSpeedPreview(index, key, value) {
+    const member = team.members[index];
+    if (!member) return;
+    setSpeedPreviews((current) => {
+      const preview = current[index] || {
+        sp: Number(member.statPoints.spe) || 0,
+        nature: speedNatureFromName(member.nature),
+        natureTouched: false,
+      };
+      return {
+        ...current,
+        [index]: {
+          ...preview,
+          [key]: value,
+          ...(key === "nature" ? { natureTouched: true } : {}),
+        },
+      };
+    });
+  }
+
+  function applySpeedPreview(index) {
+    const member = team.members[index];
+    if (!member) return;
+    const preview = speedPreviews[index] || {
+      sp: Number(member.statPoints.spe) || 0,
+      nature: speedNatureFromName(member.nature),
+      natureTouched: false,
+    };
+    const members = [...team.members];
+    members[index] = {
+      ...member,
+      nature: preview.natureTouched ? savedNatureForSpeed(preview.nature, member.nature) : member.nature,
+      statPoints: { ...member.statPoints, spe: preview.sp },
+    };
+    commitTeam({ ...team, members });
+    setMessage(`A prévia foi aplicada à posição ${index + 1}.`);
+  }
+
+  function selectSpeedTarget(pokemon) {
+    setSpeedTargetSlug(pokemon.slug);
+    setSpeedTargetSp(0);
+    setSpeedTargetNature("neutral");
+    setSpeedTargetPickerOpen(false);
+  }
+
   async function saveTeamToAccount(visibility) {
     await communityRequest("/teams", { method: "POST", body: { visibility, data: team } });
   }
@@ -238,6 +312,7 @@ export function BuilderPage() {
           <h1>Monte seu time</h1>
           <p className="page-intro">Seis posições para o seu time de Doubles.</p>
         </div>
+        <a className="button button-outline button-small builder-speed-jump" href="#builder-speed-title">Comparar Speed</a>
       </div>
 
       <div className="builder-status-row">
@@ -304,7 +379,7 @@ export function BuilderPage() {
                       <label className="builder-damage-opponent">
                         <span>Outro lado da simulação</span>
                         <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
-                          {selectedDamageOpponent ? null : <option value="">Garchomp padrão</option>}
+                          {selectedDamageOpponent ? null : <option value="">Escolha outro Pokémon</option>}
                           {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
                         </select>
                       </label>
@@ -364,6 +439,37 @@ export function BuilderPage() {
         </div>
       </section>
 
+      <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
+        <div className="builder-speed-heading">
+          <div><p className="page-label">Comparação temporária · Champions</p><h2 id="builder-speed-title">Speed do time</h2></div>
+          <Link className="button button-outline button-small" to={speedTargetPokemon ? `/speed-tiers?target=${encodeURIComponent(speedTargetPokemon.slug)}` : "/speed-tiers"}>Abrir Speed Tiers</Link>
+        </div>
+        <div className="builder-speed-target">
+          {speedTargetPokemon ? <>
+            <PokemonSprite pokemon={speedTargetPokemon} name={speedTargetPokemon.name} size={52} decorative />
+            <div className="builder-speed-target-name"><small>Adversário escolhido</small><strong>{speedTargetPokemon.name}</strong><span>{speedTargetValue} Speed · nível 50</span></div>
+            <label><span>SP do alvo</span><input className="text-input" type="number" min="0" max="999" value={speedTargetSp} onChange={(event) => setSpeedTargetSp(Math.min(999, Math.max(0, Number(event.target.value) || 0)))} /></label>
+            <label><span>Nature do alvo</span><select className="text-input" value={speedTargetNature} onChange={(event) => setSpeedTargetNature(event.target.value)}><option value="favorable">Favorável à Speed</option><option value="neutral">Neutra para Speed</option><option value="unfavorable">Desfavorável à Speed</option></select></label>
+            <button className="button button-quiet button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Trocar alvo</button>
+          </> : <>
+            <div className="builder-speed-target-placeholder"><strong>Escolha um adversário</strong><span>Os seis integrantes serão comparados juntos.</span></div>
+            <button className="button button-primary button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Selecionar Pokémon</button>
+          </>}
+        </div>
+        {speedTargetPokemon ? <div className="builder-speed-grid" aria-label="Comparação dos seis Pokémon do time">
+          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, requiredSp }) => {
+            if (!member || !pokemon) return <div className="builder-speed-empty" key={index}><span>{String(index + 1).padStart(2, "0")}</span>Posição vazia</div>;
+            return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation}>
+              <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}</small></div></div>
+              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max="999" value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max="999" value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Math.min(999, Math.max(0, Number(event.target.value) || 0)))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div></label>
+              <label className="builder-speed-nature"><span>Nature temporária</span><select className="text-input" value={preview.nature} onChange={(event) => updateSpeedPreview(index, "nature", event.target.value)}><option value="favorable">Favorável (+10%)</option><option value="neutral">Neutra</option><option value="unfavorable">Desfavorável (−10%)</option></select></label>
+              <div className="builder-speed-action"><span>{relation === "faster" ? "Já ultrapassa" : relation === "tie" ? `Empata · ${requiredSp ?? "—"} SP passa` : requiredSp === null ? "Não alcança no modelo" : `${requiredSp} SP passa`}</span><button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)}>Aplicar ao set</button></div>
+            </article>;
+          })}
+        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>O cálculo aceita 0–999 SP como faixa de exploração; limites e legalidade oficiais não foram confirmados.</span></details></div>}
+        {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva · Trick Room muda ordem de atuação, não Speed bruta. <details><summary>Sobre o modelo</summary><span>Fórmula Champions no nível 50 conforme o modelo do @smogon/calc. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Aplicar uma natureza nova também pode alterar outros stats do set.</span></details></div>}
+      </section>
+
       <details className="builder-tools-details">
         <summary>Importar ou exportar equipe</summary>
         <div className="builder-actions">
@@ -385,6 +491,7 @@ export function BuilderPage() {
 
       <p className="form-message" role="status" aria-live="polite">{message}</p>
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
+      <SpeciesPicker idPrefix="speed-target" open={speedTargetPickerOpen} pokemon={dexData.pokemon} onChoose={selectSpeedTarget} onClose={() => setSpeedTargetPickerOpen(false)} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ const navigation = [
   { to: "/usage", label: "Usage", shortLabel: "Usage", icon: "bars" },
   { to: "/builder", label: "Construtor", shortLabel: "Time", icon: "team" },
   { to: "/calculator", label: "Calculadora", shortLabel: "Dano", icon: "calc" },
+  { to: "/speed-tiers", label: "Speed Tiers", shortLabel: "Speed", icon: "speed" },
 ];
 
 function NavigationIcon({ name }) {
@@ -15,6 +16,7 @@ function NavigationIcon({ name }) {
     bars: <><path d="M2 13h2V8H2zm5 0h2V4H7zm5 0h2V6h-2z" /></>,
     team: <><rect x="1.5" y="2" width="5" height="5" /><rect x="9.5" y="2" width="5" height="5" /><rect x="5.5" y="9" width="5" height="5" /></>,
     calc: <><path d="M2 5h12M8 1v8M3 11h4m-2-2v4m4-2h5" /></>,
+    speed: <><path d="M2 12h12M3 9h3m2-3h3m1-3h2" /><path d="m2 4 3 3-3 3" /></>,
   };
   return <svg className="mobile-nav-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">{paths[name]}</svg>;
 }

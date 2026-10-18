@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateDamageAgainstTargets, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -535,6 +535,32 @@ test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
     defenderSpd: "16",
     move: "Earthquake",
   });
+});
+
+test("link do builder sem adversário preserva o lado escolhido e não inventa um alvo", () => {
+  const params = new URLSearchParams(buildDamageCalculatorSearch(side(getDamageSpeciesName("lucario-mega-z")), null, "Shadow Claw"));
+  assert.equal(params.get("attacker"), "Lucario-Mega-Z");
+  assert.equal(params.get("defender"), null);
+  assert.equal(params.get("move"), "Shadow Claw");
+});
+
+test("IDs de forma do catálogo chegam ao motor de dano sem colapsar na espécie base", () => {
+  assert.equal(getDamageSpeciesName("garchomp-mega-z"), "Garchomp-Mega-Z");
+  assert.equal(getDamageSpeciesName("absol-mega-z"), "Absol-Mega-Z");
+  assert.equal(getDamageSpeciesName("raichu-mega-x"), "Raichu-Mega-X");
+  assert.notEqual(getDamageSpeciesName("garchomp-mega-z"), getDamageSpeciesName("garchomp"));
+});
+
+test("um atacante calcula alvos independentes no mesmo cenário, sem mutar o set compartilhado", () => {
+  const input = { attacker: side("Garchomp"), defender: side("Garchomp"), move: "Earthquake", gameType: "Doubles", targetsHit: 1 };
+  const before = structuredClone(input);
+  const targets = calculateDamageAgainstTargets(input, ["Garchomp", "Gardevoir-Mega", ""]);
+  assert.equal(targets.length, 2);
+  assert.deepEqual(targets.map(({ species, result }) => [species, result.min, result.max]), [
+    ["Garchomp", 75, 88],
+    ["Gardevoir-Mega", 100, 118],
+  ]);
+  assert.deepEqual(input, before);
 });
 
 test("copiar um cenário deixa os dois sets e condições independentes", () => {

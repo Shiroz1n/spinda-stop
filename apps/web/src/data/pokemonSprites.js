@@ -1,5 +1,39 @@
 export const POKEAPI_SPRITES_REVISION = "7a7d66b1620e646f69afd48dc1273da9033ede9c";
 export const POKEAPI_SPRITES_BASE = `https://raw.githubusercontent.com/PokeAPI/sprites/${POKEAPI_SPRITES_REVISION}/sprites`;
+export const SHOWDOWN_FORM_SPRITES_BASE = "https://play.pokemonshowdown.com/sprites/gen5";
+
+// The numeric files for these recently added forms are absent from the pinned
+// PokeAPI sprite tree. Each key is an exact PokéAPI form slug; none falls back
+// to the base species image.
+export const SHOWDOWN_FORM_SPRITES = Object.freeze({
+  "absol-mega-z": "absol-megaz.png",
+  "baxcalibur-mega": "baxcalibur-mega.png",
+  "chandelure-mega": "chandelure-mega.png",
+  "chesnaught-mega": "chesnaught-mega.png",
+  "chimecho-mega": "chimecho-mega.png",
+  "crabominable-mega": "crabominable-mega.png",
+  "dragonite-mega": "dragonite-mega.png",
+  "delphox-mega": "delphox-mega.png",
+  "drampa-mega": "drampa-mega.png",
+  "emboar-mega": "emboar-mega.png",
+  "excadrill-mega": "excadrill-mega.png",
+  "feraligatr-mega": "feraligatr-mega.png",
+  "floette-mega": "floette-mega.png",
+  "froslass-mega": "froslass-mega.png",
+  "garchomp-mega-z": "garchomp-megaz.png",
+  "glimmora-mega": "glimmora-mega.png",
+  "golisopod-mega": "golisopod-mega.png",
+  "golurk-mega": "golurk-mega.png",
+  "greninja-mega": "greninja-mega.png",
+  "hawlucha-mega": "hawlucha-mega.png",
+  "lucario-mega-z": "lucario-megaz.png",
+  "meganium-mega": "meganium-mega.png",
+  "meowstic-male-mega": "meowstic-mmega.png",
+  "meowstic-female-mega": "meowstic-fmega.png",
+  "scovillain-mega": "scovillain-mega.png",
+  "skarmory-mega": "skarmory-mega.png",
+  "starmie-mega": "starmie-mega.png",
+});
 
 const TYPE_IDS = Object.freeze({
   normal: 1,
@@ -85,6 +119,8 @@ export function resolveCompetitivePokemonSprite(lookup, { id, name }) {
 
 export function resolvePokemonSpriteUrl(pokemon) {
   if (!pokemon || typeof pokemon !== "object") return null;
+  const exactFormAsset = SHOWDOWN_FORM_SPRITES[pokemon.slug];
+  if (exactFormAsset) return `${SHOWDOWN_FORM_SPRITES_BASE}/${exactFormAsset}`;
   const isDefault = pokemon.formId === "default" || pokemon.isDefault === true;
   const spriteId = Number(pokemon.spriteId);
 

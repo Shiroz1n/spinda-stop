@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { createPokemonSpriteLookup } from "../data/pokemonSprites.js";
-import { calculateChampionsDamage, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
+import { calculateChampionsDamage, calculateDamageAgainstTargets, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
 
 const statFields = [
   ["hp", "HP"], ["atk", "Atk"], ["def", "Def"],
@@ -11,7 +11,7 @@ const statFields = [
 ];
 const boostFields = statFields.slice(1);
 const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
-const defaultSide = (species, nature) => ({
+const defaultSide = (species = "", nature = "Serious") => ({
   species,
   nature,
   ability: "",
@@ -23,8 +23,7 @@ const defaultSide = (species, nature) => ({
 
 function initialForm(search) {
   const params = new URLSearchParams(search);
-  const cameFromBuilder = params.has("attacker") || params.has("defender");
-  const move = params.get("move") || (cameFromBuilder ? "" : "Earthquake");
+  const move = params.get("move") || "";
   const readSide = (sideName, defaults) => {
     const prefix = sideName === "attacker" ? "" : "defender-";
     const side = defaultSide(params.get(sideName) || defaults.species, params.get(`${prefix}nature`) || defaults.nature);
@@ -37,8 +36,8 @@ function initialForm(search) {
     return side;
   };
   return {
-    attacker: readSide("attacker", { species: "Garchomp", nature: "Adamant" }),
-    defender: readSide("defender", { species: "Garchomp", nature: "Serious" }),
+    attacker: readSide("attacker", { species: "", nature: "Serious" }),
+    defender: readSide("defender", { species: "", nature: "Serious" }),
     move,
     hits: getHitOptions(getDamageMove(move))[0],
     targetsHit: 2,
@@ -93,7 +92,7 @@ function CatalogInput({ label, value, onChange, list, placeholder }) {
   );
 }
 
-function SideEditor({ title, side, onChange, sideName }) {
+function SideEditor({ title, side, onChange, sideName, showSpecies = true }) {
   const prefix = sideName.includes("attacker") ? "Quem ataca" : "Quem recebe";
   function update(key, value) { onChange({ ...side, [key]: value }); }
   function updateNested(key, child, value) { onChange({ ...side, [key]: { ...side[key], [child]: value } }); }
@@ -108,7 +107,7 @@ function SideEditor({ title, side, onChange, sideName }) {
         {side.item ? <span className="damage-item-chip"><ItemSprite name={side.item} size={28} />{side.item}</span> : null}
       </div>
       <div className="damage-side-fields">
-        <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list={`damage-${sideName}-species-options`} placeholder="Buscar no catálogo" />
+        {showSpecies ? <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list={`damage-${sideName}-species-options`} placeholder="Buscar no catálogo" /> : <p className="damage-shared-target-note">O mesmo set defensivo vale para cada espécie da lista.</p>}
         <CatalogInput label="Nature" value={side.nature} onChange={(value) => update("nature", value)} list={`damage-${sideName}-nature-options`} placeholder="Serious" />
         <CatalogInput label="Habilidade" value={side.ability} onChange={(value) => update("ability", value)} list={`damage-${sideName}-ability-options`} placeholder="Padrão da espécie" />
         <CatalogInput label="Item" value={side.item} onChange={(value) => update("item", value)} list={`damage-${sideName}-item-options`} placeholder="Sem item" />
@@ -152,8 +151,8 @@ function SideEditor({ title, side, onChange, sideName }) {
   );
 }
 
-function FieldToggle({ label, checked, onChange }) {
-  return <label className="damage-toggle"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
+function FieldToggle({ label, checked, onChange, disabled = false }) {
+  return <label className="damage-toggle"><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
 }
 
 function formatPercent(value) {
@@ -188,6 +187,16 @@ function formatStatus(status) {
 }
 
 function DamageResultPanel({ calculation, form, label, compactMatchup = false }) {
+  if (!calculation?.result && !calculation?.error) {
+    return (
+      <section className="damage-result damage-result-empty" role="status">
+        <p className="page-label">Confronto</p>
+        <h2>Escolha atacante, alvo e golpe</h2>
+        <p>O resultado e os rolls aparecem assim que os três campos estiverem selecionados.</p>
+      </section>
+    );
+  }
+
   if (!calculation?.result) {
     return (
       <section className="damage-result damage-result-error" role="alert">
@@ -276,16 +285,44 @@ function DamageResultPanel({ calculation, form, label, compactMatchup = false })
   );
 }
 
+function MultiTargetResults({ calculations, attacker, move }) {
+  if (!calculations.length) {
+    return <section className="damage-result damage-result-empty" role="status"><p className="page-label">Vários alvos</p><h2>Adicione ao menos dois alvos</h2><p>O atacante, o golpe e o set defensivo serão compartilhados nesta comparação.</p></section>;
+  }
+  return (
+    <section className="damage-multi-results" aria-label={`${attacker} usa ${move} contra vários alvos`}>
+      <div className="damage-multi-heading"><div><p className="page-label">Um atacante · {calculations.length} alvos</p><h2>{attacker} usa {move}</h2></div><span>Set defensivo compartilhado</span></div>
+      <div className="damage-multi-grid">
+        {calculations.map(({ species, result, error }) => (
+          <article className={`damage-multi-row${error ? " has-error" : ""}`} key={species}>
+            <div className="damage-multi-identity"><PokemonSprite pokemon={findPokemonSprite(species)} name={species} size={54} decorative /><strong>{species}</strong></div>
+            {result ? <>
+              <strong className="damage-multi-range">{result.min}–{result.max}</strong>
+              <span className="damage-multi-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} · {result.defender.stats.hp} HP</span>
+              <details><summary>Ver rolls</summary>{result.rolls?.length === 16 ? <ol className="damage-multi-rolls">{result.rolls.map((roll, index) => <li key={`${species}-${index}`}>{roll}</li>)}</ol> : <p className="form-hint">Rolls separados por acerto: {result.rollGroups.map((group) => group.join(" · ")).join(" / ")}</p>}</details>
+            </> : <p className="damage-multi-error" role="alert">{error}</p>}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function DamageCalculatorPage() {
   const location = useLocation();
   const [form, setForm] = useState(() => initialForm(location.search));
+  const [editorOpen, setEditorOpen] = useState(false);
   const [comparison, setComparison] = useState({ enabled: false, overrides: {} });
+  const [targetMode, setTargetMode] = useState("one");
+  const [multiTargets, setMultiTargets] = useState([]);
   const [comparisonAspect, setComparisonAspect] = useState("move");
   const comparisonForm = useMemo(
     () => comparison.enabled ? applyScenarioOverrides(form, comparison.overrides) : null,
     [comparison.enabled, comparison.overrides, form],
   );
   const moveData = getDamageMove(form.move);
+  const selectedTargets = multiTargets.map((species) => species.trim()).filter(Boolean);
+  const calculationReady = Boolean(form.attacker.species.trim() && form.move.trim() && (targetMode === "one" ? form.defender.species.trim() : selectedTargets.length >= 2));
   const availableHits = moveData ? getHitOptions(moveData) : [1];
   const showSpreadTargetCount = form.gameType === "Doubles" && moveData?.category !== "Status" && isSpreadTargetMove(moveData);
   const comparisonMoveData = getDamageMove(comparisonForm?.move);
@@ -296,12 +333,17 @@ export function DamageCalculatorPage() {
   );
 
   const calculation = useMemo(() => {
+    if (!calculationReady || targetMode === "many") return { result: null, error: "" };
     try {
       return { result: calculateChampionsDamage(form), error: "" };
     } catch (error) {
       return { result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este cenário." };
     }
-  }, [form]);
+  }, [form, calculationReady, targetMode]);
+
+  const multipleTargetCalculations = targetMode === "many" && calculationReady
+    ? calculateDamageAgainstTargets(form, selectedTargets)
+    : [];
 
   const comparisonCalculation = useMemo(() => {
     if (!comparisonForm?.move.trim()) return null;
@@ -365,34 +407,51 @@ export function DamageCalculatorPage() {
   function updateComparisonFieldSide(key, value) {
     setComparison((current) => ({ ...current, overrides: { ...current.overrides, [key]: { ...current.overrides[key], ...value } } }));
   }
+  function changeTargetMode(nextMode) {
+    setTargetMode(nextMode);
+    if (nextMode === "many") {
+      setComparison({ enabled: false, overrides: {} });
+      setMultiTargets((current) => current.length ? current : [form.defender.species, ""]);
+      setForm((current) => ({ ...current, defender: { ...current.defender, species: "" } }));
+    }
+  }
+  function updateMultiTarget(index, value) {
+    setMultiTargets((current) => current.map((species, itemIndex) => itemIndex === index ? value : species));
+  }
+  function addMultiTarget() {
+    setMultiTargets((current) => current.length < 6 ? [...current, ""] : current);
+  }
+  function removeMultiTarget(index) {
+    setMultiTargets((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
   return (
     <div className="page-wrap damage-page">
       <div className="page-heading-row damage-heading">
         <div>
           <p className="page-label">Combate · Pokémon Champions</p>
           <h1>Calculadora de dano</h1>
-          <p className="page-intro">Simule um golpe contra um alvo. A calculadora roda no navegador e mostra a faixa de dano do cenário escolhido.</p>
+          <p className="page-intro">Um cenário ou um atacante contra vários alvos, com cálculo local.</p>
         </div>
         <Link className="button button-outline" to="/builder">Voltar ao construtor</Link>
       </div>
 
       <div className={comparison.enabled ? "damage-quickbar damage-quickbar-comparison" : "damage-quickbar"}>
-        {comparison.enabled ? (
-          <div className="damage-quickbar-matchup" role="group" aria-label={`Atacante ${form.attacker.species}; alvo ${form.defender.species}`}>
-            <div className="damage-quickbar-side">
-              <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species} size={46} decorative />
-              <span><small>Atacante</small><strong>{form.attacker.species}</strong></span>
-            </div>
-            <span className="damage-versus" aria-hidden="true">VS</span>
-            <div className="damage-quickbar-side">
-              <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={form.defender.species} size={46} decorative />
-              <span><small>Alvo</small><strong>{form.defender.species}</strong></span>
-            </div>
+        <div className="damage-quickbar-matchup" role="group" aria-label={`Atacante ${form.attacker.species || "não escolhido"}; alvo ${form.defender.species || "não escolhido"}`}>
+          <div className="damage-quickbar-side">
+            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species || "Atacante não escolhido"} size={52} decorative />
+            <span><small>Atacante</small><strong>{form.attacker.species || "Escolha Pokémon"}</strong><small>{calculation?.result ? `${calculation.result.attacker.stats.hp} HP calculado` : "HP —"}</small></span>
           </div>
-        ) : <p><strong>{form.attacker.species}</strong> × <strong>{form.defender.species}</strong><span> · {form.move || "Escolha um golpe"}</span></p>}
+          <span className="damage-versus" aria-hidden="true">VS</span>
+          <div className="damage-quickbar-side">
+            {targetMode === "one" ? <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={form.defender.species || "Alvo não escolhido"} size={52} decorative /> : <span className="damage-target-count" aria-hidden="true">{selectedTargets.length || "…"}</span>}
+            <span><small>Alvo{targetMode === "many" ? "s" : ""}</small><strong>{targetMode === "many" ? `${selectedTargets.length || "Escolha"} alvos` : form.defender.species || "Escolha Pokémon"}</strong><small>{calculation?.result ? `${calculation.result.defender.stats.hp} HP calculado` : "HP —"}</small></span>
+          </div>
+          <strong className="damage-quickbar-move">{form.move || "Escolha um golpe"}</strong>
+        </div>
         <FieldToggle
           label="Comparar com outro cenário"
           checked={comparison.enabled}
+          disabled={targetMode === "many" || (!calculationReady && !comparison.enabled)}
           onChange={(enabled) => setComparison(enabled
             ? { enabled: true, overrides: {} }
             : { enabled: false, overrides: comparison.overrides })}
@@ -412,16 +471,29 @@ export function DamageCalculatorPage() {
             </section>
           )}
         </div>
-      ) : <DamageResultPanel calculation={calculation} form={form} label="Resultado" />}
+      ) : targetMode === "many" ? <MultiTargetResults calculations={multipleTargetCalculations} attacker={form.attacker.species} move={form.move} /> : <DamageResultPanel calculation={calculation} form={form} label="Resultado" />}
 
       <details className="damage-engine-details">
         <summary>Sobre o motor e os limites do cálculo</summary>
         <p>Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
       </details>
 
-      <details className="damage-editor-disclosure">
+      <details className="damage-editor-disclosure" open={editorOpen || !calculationReady} onToggle={(event) => { if (calculationReady) setEditorOpen(event.currentTarget.open); }}>
         <summary>Editar atacante, alvo, golpe e campo</summary>
         <div className="damage-editor-content">
+      <section className="damage-target-mode" aria-label="Quantidade de alvos">
+        <span>Confronto</span>
+        <div role="group" aria-label="Modo do confronto">
+          <button type="button" className={targetMode === "one" ? "is-selected" : ""} aria-pressed={targetMode === "one"} onClick={() => changeTargetMode("one")}>Um alvo</button>
+          <button type="button" className={targetMode === "many" ? "is-selected" : ""} aria-pressed={targetMode === "many"} onClick={() => changeTargetMode("many")}>Vários alvos</button>
+        </div>
+      </section>
+      {targetMode === "many" && <section className="damage-many-targets" aria-label="Alvos comparados">
+        <div className="damage-many-heading"><div><strong>Alvos</strong><span>O set defensivo é compartilhado; os resultados continuam separados.</span></div><button className="button button-outline button-small" type="button" onClick={addMultiTarget} disabled={multiTargets.length >= 6}>Adicionar alvo</button></div>
+        <div className="damage-many-fields">
+          {multiTargets.map((species, index) => <label className="damage-field" key={index}><span>Alvo {index + 1}</span><div className="damage-many-input"><input className="text-input" value={species} onChange={(event) => updateMultiTarget(index, event.target.value)} list={`damage-many-target-${index}`} placeholder="Buscar espécie ou forma" autoComplete="off" /><datalist id={`damage-many-target-${index}`}>{getDamageCatalogOptions("species", species).map((name) => <option key={name} value={name} />)}</datalist><button className="button button-quiet button-small" type="button" aria-label={`Remover alvo ${index + 1}`} onClick={() => removeMultiTarget(index)} disabled={multiTargets.length <= 2}>×</button></div></label>)}
+        </div>
+      </section>}
       <div className="damage-rules-note" role="note">
         <strong>Nível 50 · motor de Pokémon Showdown</strong>
         <p>Os SP entram na fórmula de Champions. Em Doubles, golpes em área só recebem o redutor quando atingem mais de um alvo válido; informe quantos estão no campo. Nada é enviado para uma API.</p>
@@ -429,7 +501,7 @@ export function DamageCalculatorPage() {
 
       <section className="damage-input-grid" aria-label="Pokémon e parâmetros do cálculo">
         <SideEditor title="Atacante" sideName="attacker" side={form.attacker} onChange={(value) => updateSide("attacker", value)} />
-        <SideEditor title="Alvo" sideName="defender" side={form.defender} onChange={(value) => updateSide("defender", value)} />
+        <SideEditor title={targetMode === "many" ? "Set defensivo compartilhado" : "Alvo"} sideName="defender" side={form.defender} onChange={(value) => updateSide("defender", value)} showSpecies={targetMode === "one"} />
       </section>
 
       <section className="damage-move-panel panel-frame" aria-labelledby="move-heading">

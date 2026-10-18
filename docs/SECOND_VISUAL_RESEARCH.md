@@ -12,6 +12,8 @@
 | Pikalytics e Silph Scope calculadora destacam os lados, golpe e resultado; ações sobre golpes recalculam o dano | A/B repetia detalhes visuais do mesmo confronto e repetia nota técnica em cada cenário | Resultado vem antes do editor; B herda A, atacante/alvo aparecem uma vez na comparação e a nota do motor é compartilhada e recolhida. Rolls e modificadores permanecem sob demanda; motor atual preservado | Entradas suportadas por `@smogon/calc` e regras Champions confirmadas no projeto; sem métricas de uso |
 | Silph Matchups e páginas de torneio apresentam o estado ativo e o conteúdo da equipe antes das ações administrativas | Salas e torneios davam precedência a convite e formulário sobre participantes e próxima ação | Estado/próxima ação e lista de participantes aparecem antes dos formulários; convite foi movido para depois do conteúdo operacional; menção ao jogo fica no contexto da partida | Participantes, estado, permissões, chaveamento e resultado da sala/torneio |
 | MetaRoll, Silph e Pikalytics mostram sprites associados aos itens da lista e à forma selecionada | Identidade da Pokédex, Usage, builder e calculadora dependia demais de texto | Sprites e componentes já existentes foram mantidos; esta rodada aumenta o sprite nas cartas do Dex sem alterar mapeamentos ou usar arte dos concorrentes | Catálogo existente de formas/sprites; ausência de sprite continua usando fallback identificável |
+| O índice de sprites do Showdown lista arquivos exatos de Mega recentes, entre eles `garchomp-megaz.png`; o recurso PokeAPI `other/showdown/10309.gif` não existe na revisão fixada | Mega Garchomp Z aparecia com fallback “GA”, sem distinguir sua forma | O mapa resolve 27 slugs recentes para arquivos de forma exata; formas sem imagem específica continuam no fallback e não usam a forma base | Slug do catálogo e arquivo de forma exibido no índice; direitos da arte permanecem separados da licença do código |
+| O HTML público do VGC Multi Calc lista One vs One, Team vs Many, Many vs Team e Speed Calc | A calculadora do Spinda Stop tinha apenas um alvo e a comparação A/B repetia formulários | Um atacante agora pode ser comparado com 2–6 alvos usando um set defensivo compartilhado; Speed Tiers é uma rota própria e o builder compara os seis membros contra um alvo | Formas, stats base, set escolhido e fórmulas dos modelos; nenhuma métrica de uso alimenta esses cálculos |
 
 ## Evidências de navegação
 
@@ -66,7 +68,9 @@ O script `apps/web/test/visual-review.mjs` grava um conjunto por viewport: `desk
 - `*-pokedex-loaded-more.png`, `*-pokedex-filtered.png`, `*-pokedex-restored.png`;
 - `*-usage-battle-data-moves.png` e `*-usage-metaroll-category.png`;
 - `*-builder-six-members-first-fold.png` e `*-builder-six-members.png`;
-- `*-calculator-comparison.png` e `*-calculator-comparison-rolls.png`;
+- `*-builder-six-speed-vs-mega-garchomp-z.png` para os seis cálculos e o sprite da forma adversária;
+- `*-calculator-comparison.png`, `*-calculator-comparison-rolls.png`, `*-calculator-one-v-many.png` e `*-calculator-lucario-z-vs-absol-z.png`;
+- `*-speed-tiers-mega-garchomp-z.png` para busca e forma específica na tabela;
 - `*-room-state-flow.png` e `*-tournament-state-flow.png` para exercitar os estados de resposta;
 - `*-room-live-first-fold.png` e `*-tournament-live-first-fold.png` para mostrar as salas e o torneio criados no PostgreSQL efêmero, antes dos controles secundários.
 
@@ -74,7 +78,8 @@ Para sala/torneio, `*-state-flow.png` usa fixtures com formato de resposta da AP
 
 ## Limites e verificação
 
-- O browser local do ambiente não está instalado. A tentativa de obter Chromium via Playwright foi bloqueada pela política de rede (download do CDN retornou 403), e a prévia local não é alcançável pelo navegador Work. Por isso, a inspeção visual das telas do Spinda Stop precisa ser concluída nas capturas geradas no GitHub Actions; não consideramos lint, axe ou build como aprovação visual.
+- O browser local do ambiente não está instalado. A tentativa de obter Chromium via Playwright foi bloqueada pela política de rede (o CDN retornou um HTML de 195 bytes em vez do ZIP), e a prévia local não é alcançável pelo navegador Work. Por isso, a inspeção visual das telas do Spinda Stop precisa ser concluída nas capturas geradas no GitHub Actions; não consideramos lint, axe ou build como aprovação visual.
+- Para `https://vgcmulticalc.com/`, busquei o HTML estático e confirmei os nomes dos quatro modos. Nesta sessão não consegui iniciar o navegador do Work nem instalar Chromium: a chamada do Work expirou após 300 segundos e o download Playwright recebeu um documento HTML curto no lugar do arquivo compactado esperado. Não cliquei nos controles, não observei seus resultados nem produzi captura dessa referência. As mudanças são uma implementação própria guiada pelos fluxos pedidos; não as descrevemos como padrões interativos observados no VGC Multi Calc.
 - O browser Work não oferece alteração de viewport nesta sessão; as referências concorrentes foram exploradas no desktop. A responsividade do Spinda Stop é exercitada em 390, 320 e 720 px pelo workflow do próprio PR.
 - As rotas Players, Rentals e alguns agregados não produziram conteúdo suficiente para testar o fluxo posterior. A documentação registra o bloqueio sem inferir resultados.
 - A ficha de uso que mantém Garchomp selecionado fora do filtro e a limpeza de filtros ao trocar temporada são comportamentos observados das referências, não requisitos copiados automaticamente.

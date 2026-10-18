@@ -12,8 +12,12 @@ A tela `/calculator` usa `@smogon/calc` 0.12.0 no navegador. Os sets ficam no di
 - O painel lista as entradas escolhidas (incluindo forma, natureza, item, habilidade resolvida, status, boosts, golpe e campo) e os fatores e efeitos que o resultado do motor expõe. Para alguns itens e habilidades, o motor só informa que o efeito foi aplicado, sem fator numérico; a tela mostra o nome e não inventa um multiplicador.
 - A comparação começa copiando os dois Pokémon e o campo do cenário A para um cenário B independente. No B, também é possível mudar espécies, natures, habilidades, itens, status, Stat Points, estágios, golpe, formato, acertos, clima, terreno e condições de campo. Cada resultado mantém seus rolls e modificadores separados; nenhum set do construtor é alterado.
 - No construtor, escolha outro integrante da equipe e abra o Pokémon atual como atacante ou como alvo. Os dois sets e o primeiro golpe preenchido do atacante vão para a calculadora; isso é um ponto de partida editável, não uma recomendação de set.
+- A rota direta começa sem espécie nem golpe pré-selecionado. Ao abrir pelo builder sem um segundo integrante, o Pokémon escolhido permanece no lado indicado e a outra escolha fica vazia.
+- Um atacante pode ser comparado contra dois a seis alvos. O atacante, o golpe, o campo e o set defensivo são compartilhados; cada alvo recebe um cálculo, rolls, faixa e erro independentes. Nenhum set salvo é alterado.
 
 O motor contempla stats, tipos, formas, muitos efeitos de golpes, habilidades, itens, clima, terreno, telas, crítico, spread e múltiplos acertos. A cobertura varia por mecânica e versão. A matriz em [CALC_VALIDATION.md](CALC_VALIDATION.md) diz o que foi cruzado, o que depende apenas do motor e o que continua sem confirmação.
+
+O fluxo de um atacante contra vários alvos não é um cálculo de time completo: cada alvo usa o mesmo set defensivo compartilhado e sua própria espécie. **Vários integrantes do time contra um alvo** ainda não está implementado; no builder, abra o confronto de um integrante por vez.
 
 ## Limites visíveis na tela
 
