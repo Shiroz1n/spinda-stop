@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+artifacts/visual-review/
 .DS_Store
 packages/data/generated/*.json
 *.log

@@ -13,6 +13,7 @@
     "prebuild": "npm run sync --workspace @spinda-stop/data",
     "build": "npm run build --workspace @spinda-stop/web",
     "preview": "npm run preview --workspace @spinda-stop/web",
+    "visual:review": "npm run build && node apps/web/test/visual-review.mjs",
     "lint": "eslint .",
     "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js",
     "data:sync": "npm run sync --workspace @spinda-stop/data"
