@@ -2,7 +2,7 @@
 
 Uma oficina independente para explorar Pokémon, montar times e organizar encontros da comunidade de Pokémon Champions. Doubles é o primeiro formato. O projeto não tem vínculo com The Pokémon Company, Nintendo, Creatures ou GAME FREAK.
 
-A interface usa uma paleta quente, bordas quadradas e detalhes pixel art próprios, com referências gerais a RPGs portáteis da era GBA. O mascote e os ícones são desenhos originais do projeto; nenhum sprite oficial é redistribuído.
+A interface usa cores de arena, molduras em degraus e sprites reais de Pokémon carregados da revisão fixa de PokeAPI/sprites. O Spinda aparece no cabeçalho a partir do sprite Black/White `327.png`; o favicon é um desenho pixel local feito para continuar legível em 16×16. As imagens mantêm os créditos e os direitos dos titulares. O Spinda Stop é um projeto de fã independente.
 
 ## O que já funciona
 
@@ -58,4 +58,4 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 
 ## Licenças
 
-O MIT cobre o código original deste projeto. Nomes, personagens, dados e marcas de Pokémon continuam pertencendo aos respectivos titulares. O repositório não inclui artes ou sprites de Pokémon.
+O MIT cobre o código original deste projeto. Nomes, personagens, sprites, dados e marcas de Pokémon continuam pertencendo aos respectivos titulares. A origem e o carregamento das imagens estão em [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md).

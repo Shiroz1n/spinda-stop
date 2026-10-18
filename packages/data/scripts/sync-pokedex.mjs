@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POKEAPI_COMMIT = "6fd69dfe90465ba96534f6816fc817737d1f97f6";
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -176,6 +176,23 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
   };
 }
 
+export function toDexIndex(pokemon) {
+  return pokemon.map((entry) => ({
+    slug: entry.slug,
+    spriteId: entry.pokemonId,
+    speciesId: entry.speciesId,
+    speciesSlug: entry.speciesSlug,
+    formId: entry.formId,
+    isDefault: entry.isDefault,
+    name: entry.name,
+    speciesName: entry.speciesName,
+    formName: entry.formName,
+    generation: entry.generation,
+    types: entry.types,
+    stats: Object.fromEntries(["atk", "spa", "spe"].map((key) => [key, entry.stats[key]])),
+  }));
+}
+
 function englishNameMap(rows, idField, nameField, secondaryField) {
   return new Map(rows.filter((row) => row.local_language_id === LANGUAGE_ENGLISH).map((row) => [
     row[idField],
@@ -217,7 +234,9 @@ async function run() {
     try {
       const existing = await Promise.all([GENERATED_FILE, DETAILS_FILE, MOVES_FILE, NATURES_FILE]
         .map(async (file) => JSON.parse(await readFile(file, "utf8"))));
-      if (existing.every((data) => data.metadata?.sourceCommit === POKEAPI_COMMIT)) {
+      const spriteIndexIsCurrent = Array.isArray(existing[0]?.pokemon)
+        && existing[0].pokemon.every((entry) => Number.isInteger(entry.spriteId) && typeof entry.formId === "string");
+      if (spriteIndexIsCurrent && existing.every((data) => data.metadata?.sourceCommit === POKEAPI_COMMIT)) {
         console.log(`Catálogo local já está na revisão ${POKEAPI_COMMIT.slice(0, 7)}.`);
         return;
       }
@@ -233,18 +252,7 @@ async function run() {
   const result = buildPokedex(csvByFilename);
   const { pokemon: fullPokemon, moves, natures, ...pokedexData } = result;
   await mkdir(dirname(GENERATED_FILE), { recursive: true });
-  const dexPokemon = fullPokemon.map((entry) => ({
-    slug: entry.slug,
-    speciesId: entry.speciesId,
-    speciesSlug: entry.speciesSlug,
-    formId: entry.formId,
-    name: entry.name,
-    speciesName: entry.speciesName,
-    formName: entry.formName,
-    generation: entry.generation,
-    types: entry.types,
-    stats: Object.fromEntries(["atk", "spa", "spe"].map((key) => [key, entry.stats[key]])),
-  }));
+  const dexPokemon = toDexIndex(fullPokemon);
   const detailBySlug = Object.fromEntries(fullPokemon.map((entry) => [entry.slug, {
     stats: entry.stats,
     abilities: entry.abilities,
@@ -261,8 +269,11 @@ async function run() {
   console.log(`Fonte geral: PokéAPI ${POKEAPI_COMMIT.slice(0, 7)}. Compatibilidade com Pokémon Champions não verificada.`);
 }
 
-run().catch((error) => {
-  console.error(`Não foi possível gerar o catálogo: ${error.message}`);
-  console.error("Confira a conexão e tente novamente com npm run data:sync.");
-  process.exitCode = 1;
-});
+const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
+if (invokedPath === import.meta.url) {
+  run().catch((error) => {
+    console.error(`Não foi possível gerar o catálogo: ${error.message}`);
+    console.error("Confira a conexão e tente novamente com npm run data:sync.");
+    process.exitCode = 1;
+  });
+}

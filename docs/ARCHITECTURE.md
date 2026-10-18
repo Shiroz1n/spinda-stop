@@ -22,3 +22,5 @@ O fornecedor de dados competitivos fica atrás de uma interface `MetaProvider`. 
 O piloto de Usage fica em `apps/web/src/data/usage/providers/`. A tela depende do contrato do provedor (`loadIndex` e `loadPokemonUsage`), enquanto o adaptador Pokémon Champions Battle Data faz as chamadas e normaliza apenas os campos usados pela interface. Outra fonte pode implementar o mesmo contrato sem entrar nos componentes.
 
 O navegador lê `/api` e, para a espécie selecionada, `/api/battle/Doubles/{showdownId}`. A resposta fica em cache somente na memória por cinco minutos, com até 16 entradas; o navegador não grava uma cópia HTTP. Não há endpoint próprio do Spinda Stop nem arquivo espelho. MetaRoll continua fora deste provedor.
+
+As imagens usam `apps/web/src/components/PokemonSprite.jsx` e `data/pokemonSprites.js`. A PokéAPI fornece um ID de sprite separado do número nacional; formas alternativas usam o ID próprio de Pokémon, com fallback explícito quando o asset não existe. Sprites de listas carregam sob demanda. A revisão da coleção e os créditos estão em `docs/THIRD_PARTY_LICENSES.md`.
