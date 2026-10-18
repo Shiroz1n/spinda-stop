@@ -5,7 +5,7 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 ## O que já funciona
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
-- Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points.
+- Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
 

@@ -301,6 +301,7 @@ p { max-width: 72ch; }
 .points-section summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--ink); font-weight: 800; cursor: pointer; }
 .points-section summary span { color: var(--muted); font-size: 0.82rem; font-weight: 500; text-align: right; }
 .points-section > .form-hint { margin-block: 4px 12px; }
+.builder-usage-hint { margin-top: 6px; font-size: 0.74rem; }
 .points-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .points-grid label { display: grid; gap: 4px; color: var(--muted); font-size: 0.8rem; font-weight: 750; }
 .form-message { min-height: 1.5em; margin: 16px 0 0; color: var(--green); font-weight: 700; }
@@ -367,6 +368,7 @@ p { max-width: 72ch; }
 .usage-no-results strong { color: var(--ink); }
 .usage-no-results p { margin: 5px 0 0; font-size: 0.86rem; }
 .usage-filter-note { margin: 10px 2px 0; color: var(--muted); font-size: 0.76rem; line-height: 1.45; }
+.usage-request-note { margin: 9px 2px 0; padding: 8px 10px; border-left: 3px solid var(--coral); background: var(--surface-alt); color: var(--ink); font-size: 0.78rem; line-height: 1.4; }
 .usage-clear-filters { justify-self: start; }
 .usage-results-column { min-width: 0; }
 .usage-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }

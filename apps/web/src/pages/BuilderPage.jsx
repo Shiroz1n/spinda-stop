@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { addPokemonToDraft, createEmptyTeam, createTeamMember, parseTeam, serializeTeam } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
@@ -236,8 +236,12 @@ export function BuilderPage() {
                   <h2 id="active-member-title">{selectedPokemon.name}</h2>
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
+                  <p className="form-hint builder-usage-hint">A consulta mostra tendências da fonte sem alterar este set.</p>
                 </div>
                 <div className="set-heading-actions">
+                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de ${selectedPokemon.name} em Usage`}>
+                    Ver tendências de Usage
+                  </Link>
                   <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
                   <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
                 </div>
