@@ -1689,7 +1689,7 @@ select,
   grid-column: 1 / -1;
   justify-content: stretch;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
   margin: 0;
   padding: 6px 0 0;

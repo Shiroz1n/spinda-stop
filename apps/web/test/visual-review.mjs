@@ -237,6 +237,8 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex", { audit: true });
+  const firstSpeciesStats = await page.locator(".quick-stats").first().innerText();
+  if (firstSpeciesStats.includes("—")) failures.push(`${viewportName}: a Pokédex mostra stats que o catálogo não fornece.`);
   const search = page.getByPlaceholder("Buscar por nome, forma ou número");
   await search.fill("Garchomp");
   await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeout: 10_000 });
