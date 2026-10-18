@@ -340,7 +340,7 @@ async function runViewport(viewportName, viewport) {
     if (!signIn.ok()) {
       failures.push(`${viewportName}: a sessão de teste para a sala não foi criada (${signIn.status()}).`);
     } else {
-      await signIn.json();
+      const hostSession = await signIn.json();
       await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeoutMs: 10_000 });
       await safeCapture(page, viewportName, "rooms-empty", { audit: true });
@@ -384,6 +384,91 @@ async function runViewport(viewportName, viewport) {
       await safeCapture(page, viewportName, "rooms-complete", { audit: true });
       await safeCapture(guestPage, viewportName, "rooms-confirm-result", { audit: true });
       await guestContext.close();
+
+      await page.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Seus torneios" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "tournaments-empty", { audit: true });
+      const tournamentsErrorPage = await context.newPage();
+      await tournamentsErrorPage.route("**/api/tournaments", (route) => route.abort()).catch(() => {});
+      await tournamentsErrorPage.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
+      await tournamentsErrorPage.getByRole("heading", { name: "Não foi possível carregar" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(tournamentsErrorPage, viewportName, "tournaments-api-error", { audit: true });
+      await tournamentsErrorPage.close();
+
+      await page.getByLabel("Nome do torneio").fill("Chave visual Doubles");
+      await page.getByRole("button", { name: "Criar torneio" }).click();
+      await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeoutMs: 10_000 });
+      const tournamentInviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
+      const tournamentId = page.url().split("/").at(-1);
+      const tournamentToken = new URL(tournamentInviteUrl).hash.slice(1);
+      await safeCapture(page, viewportName, "tournament-invite", { audit: true });
+
+      const tournamentJoinContext = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
+      const tournamentJoinPage = await tournamentJoinContext.newPage();
+      await tournamentJoinPage.goto(`${baseUrl}/tournaments/join#${tournamentToken}`, { waitUntil: "networkidle" });
+      await tournamentJoinPage.getByRole("heading", { name: "Entrar no torneio" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await tournamentJoinPage.getByRole("heading", { name: "Entre para organizar ou aceitar um convite" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(tournamentJoinPage, viewportName, "tournament-join-signin", { audit: true });
+      const inviteStorageState = await tournamentJoinPage.evaluate(() => ({
+        token: window.sessionStorage.getItem("spinda_pending_tournament_invite"),
+        hash: window.location.hash,
+      }));
+      if (inviteStorageState.token !== tournamentToken || inviteStorageState.hash) failures.push(`${viewportName}: o convite do torneio não foi guardado em sessão nem removido da URL.`);
+      await tournamentJoinContext.close();
+
+      const playerContexts = new Map([[hostSession.user.id, context]]);
+      for (let playerIndex = 0; playerIndex < 3; playerIndex += 1) {
+        const playerContext = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
+        const playerSession = await playerContext.request.post(`${baseUrl}/api/test/session`, {
+          headers: { Origin: baseUrl },
+          data: { handle: `visual-bracket-${playerIndex}-${viewportName}` },
+        });
+        if (!playerSession.ok()) failures.push(`${viewportName}: a sessão do participante ${playerIndex + 1} não foi criada.`);
+        const player = playerSession.ok() ? await playerSession.json() : null;
+        if (player) {
+          playerContexts.set(player.user.id, playerContext);
+          const joined = await playerContext.request.post(`${baseUrl}/api/tournaments/join`, { headers: { Origin: baseUrl }, data: { inviteToken: tournamentToken } });
+          if (!joined.ok()) failures.push(`${viewportName}: o participante ${playerIndex + 1} não entrou no torneio.`);
+        }
+      }
+      for (const [participantId, playerContext] of playerContexts) {
+        const checkedIn = await playerContext.request.post(`${baseUrl}/api/tournaments/${tournamentId}/check-in`, { headers: { Origin: baseUrl }, data: {} });
+        if (!checkedIn.ok()) failures.push(`${viewportName}: participante ${participantId} não conseguiu fazer check-in.`);
+      }
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByRole("button", { name: "Fechar inscrições" }).click();
+      await page.getByRole("button", { name: "Sortear e iniciar" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("button", { name: "Sortear e iniciar" }).click();
+      await page.getByRole("heading", { name: "Semifinais" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "tournament-semifinals", { audit: true });
+
+      const getTournament = async () => {
+        const response = await context.request.get(`${baseUrl}/api/tournaments/${tournamentId}`);
+        assert.equal(response.ok(), true, "host deve conseguir consultar o chaveamento");
+        return response.json();
+      };
+      const reportAndConfirm = async (match) => {
+        const reporterContext = playerContexts.get(match.playerA.id);
+        const opponentContext = playerContexts.get(match.playerB.id);
+        const report = await reporterContext.request.post(`${baseUrl}/api/matches/${match.id}/report`, { headers: { Origin: baseUrl }, data: { winnerId: match.playerA.id } });
+        if (!report.ok()) failures.push(`${viewportName}: não foi possível relatar a partida ${match.id}.`);
+        const confirm = await opponentContext.request.post(`${baseUrl}/api/matches/${match.id}/confirm`, { headers: { Origin: baseUrl }, data: {} });
+        if (!confirm.ok()) failures.push(`${viewportName}: não foi possível confirmar a partida ${match.id}.`);
+        return confirm.json();
+      };
+      let liveTournament = await getTournament();
+      for (const semifinal of liveTournament.matches.filter((match) => match.roundNumber === 1)) await reportAndConfirm(semifinal);
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Final" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "tournament-final", { audit: true });
+      liveTournament = await getTournament();
+      const finalMatch = liveTournament.matches.find((match) => match.roundNumber === 2);
+      await reportAndConfirm(finalMatch);
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByText(/Concluído/).first().waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "tournament-complete", { audit: true });
+      for (const [participantId, playerContext] of playerContexts) if (participantId !== hostSession.user.id) await playerContext.close();
 
       await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeoutMs: 10_000 });

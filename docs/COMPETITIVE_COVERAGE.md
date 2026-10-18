@@ -199,4 +199,5 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | #7 — Tendências a partir do time | Link de cada integrante para a ficha correspondente, com busca contextual e troca de fonte | Navegação contextual para a fonte ativa e seu período; nenhum campo do set é alterado |
 | #8 — Calculadora de dano | Tela, regras do motor e casos reproduzíveis | Não depende de percentuais de Usage; `@smogon/calc` 0.12.0 tem limites documentados |
 | #9 — Fechar lacunas de contrato | Confirmar com as fontes se `ratingHistory`, `megas` e `ladder-cutoffs` têm semântica útil e validar o arquivo grande | Só integrar campos documentados ou confirmados; `all.json` segue baseado no contrato público |
-| #10 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |
+| #10 — Contas e salas | Identidade, equipes privadas/públicas e sala de duas pessoas | Implementado no PR #22; operação pública continua bloqueada até reforçar privacidade e rate limit |
+| #11 — Torneios | Inscrição privada, check-in, chave de quatro pessoas, resultado e contestação | Implementação inicial no PR #23; anulação encerra o evento sem replay |

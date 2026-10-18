@@ -1,6 +1,6 @@
 # Spinda Stop
 
-Uma oficina independente para explorar Pokémon, montar times e, mais adiante, organizar torneios comunitários de Pokémon Champions. Doubles é o primeiro formato. O projeto não tem vínculo com The Pokémon Company, Nintendo, Creatures ou GAME FREAK.
+Uma oficina independente para explorar Pokémon, montar times e organizar encontros da comunidade de Pokémon Champions. Doubles é o primeiro formato. O projeto não tem vínculo com The Pokémon Company, Nintendo, Creatures ou GAME FREAK.
 
 A interface usa uma paleta quente, bordas quadradas e detalhes pixel art próprios, com referências gerais a RPGs portáteis da era GBA. O mascote e os ícones são desenhos originais do projeto; nenhum sprite oficial é redistribuído.
 
@@ -10,7 +10,7 @@ A interface usa uma paleta quente, bordas quadradas e detalhes pixel art própri
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Simular dano em nível 50 para Singles ou Doubles, comparar cenários e ver rolls, modificadores e Stat Points usados pelo motor.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
-- Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar uma sala privada de duas pessoas com convite, check-in e resultado confirmado manualmente.
+- Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar salas de duas pessoas ou torneios privados de quatro, com convite, check-in e resultados confirmados manualmente.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
 - Conferir cenários representativos da calculadora contra os rolls do simulador Pokémon Showdown fixado; essa checagem valida concordância entre implementações, não uma partida real no jogo.
 
@@ -22,9 +22,9 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 
 - Ampliar a validação da calculadora sem tratar o motor como uma reprodução perfeita do jogo.
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
-- Eventos comunitários com inscrição, pareamento e confirmação de resultados.
+- Ampliar torneios comunitários sem abrir mão de confirmação de resultados e controles de privacidade.
 
-As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API de contas e salas precisa de PostgreSQL e OAuth do GitHub configurados pelo operador.
+As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API comunitária precisa de PostgreSQL e OAuth do GitHub configurados pelo operador.
 
 ## Rodar localmente
 
@@ -37,7 +37,7 @@ npm run dev
 
 Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da PokéAPI e guardado localmente. Depois de instalar, rode `npm run lint`, `npm test` e `npm run build` para conferir o projeto.
 
-Para testar contas e salas localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige PostgreSQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com PostgreSQL 16.
+Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige PostgreSQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com PostgreSQL 16.
 
 ## Documentação
 
