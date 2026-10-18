@@ -370,6 +370,27 @@ test("mantém OHKO e omite 2HKO quando Sand Spit muda o clima", () => {
   assert.ok(result.koProbabilityNotes.some((note) => note.includes("Sand Spit") && note.includes("campo")));
 });
 
+test("omite 2HKO quando Seed Sower muda o terreno após Wood Hammer", () => {
+  const input = {
+    attacker: side("Rillaboom", { nature: "Adamant", statPoints: { atk: 32 } }),
+    defender: side("Arboliva"),
+    move: "Wood Hammer",
+    gameType: "Singles",
+  };
+  const first = calculateChampionsDamage(input);
+  const second = calculateChampionsDamage({ ...input, terrain: "Grassy" });
+  const pairsAfterTerrainChange = first.rolls.reduce((total, firstRoll) => (
+    total + second.rolls.filter((secondRoll) => firstRoll + secondRoll >= first.defender.stats.hp).length
+  ), 0);
+
+  assert.equal(first.defender.ability, "Seed Sower");
+  assert.deepEqual([first.min, first.max], [60, 71]);
+  assert.deepEqual([second.min, second.max], [78, 92]);
+  assert.equal(pairsAfterTerrainChange, 83);
+  assert.equal(first.koProbabilities?.twoHit, null);
+  assert.ok(first.koProbabilityNotes.some((note) => note.includes("Seed Sower") && note.includes("campo")));
+});
+
 test("valida espécie e Stat Points antes de calcular", () => {
   assert.throws(() => calculateChampionsDamage({
     attacker: side("nome inventado"),

@@ -64,7 +64,7 @@ const firstHitChangingAbilities = new Set([
   "disguise", "iceface", "multiscale", "shadowshield",
 ]);
 const repeatedDamageChangingAbilities = new Set([
-  "angershell", "colorchange", "emergencyexit", "sandspit", "stamina", "weakarmor", "wimpout",
+  "angershell", "colorchange", "emergencyexit", "sandspit", "seedsower", "stamina", "weakarmor", "wimpout",
 ]);
 const contactReactiveAbilities = new Set([
   "cursedbody", "effectspore", "flamebody", "gooey", "ironbarbs", "mummy", "perishbody",
