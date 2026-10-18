@@ -102,9 +102,7 @@ function DistributionCard({ title, rows, spread = false, note = "", pokemonRows 
                     {hasBar ? displayPercent(row.percentageValue) : "—"}
                   </b>
                 </div>
-                <div className="usage-bar-track" aria-hidden="true">
-                  {hasBar ? <span style={{ width: barWidth }} /> : null}
-                </div>
+                {hasBar ? <div className="usage-bar-track" aria-hidden="true"><span style={{ width: barWidth }} /></div> : null}
               </li>
             );
           })}
@@ -397,20 +395,21 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
         <div>
           <p className="page-label">Pesquisa de Doubles</p>
           <h1>Usage · MetaRoll</h1>
-          <p className="page-intro">Ficha e histórico do ladder ranqueado publicados por esta fonte independente.</p>
+          <p className="page-intro">Ranking e distribuições da captura selecionada.</p>
         </div>
-        <span className="usage-edition-mark">CAPTURA · MR</span>
       </div>
 
       <div className="usage-source-banner metaroll-source-banner">
         <span className="usage-source-icon" aria-hidden="true">MR</span>
         <div className="usage-source-copy">
           <a href={metaRollSource.url} target="_blank" rel="noreferrer">{metaRollSource.attribution}</a>
-          <p>Fonte independente. Os dados aparecem separados de Pokémon Champions Battle Data.</p>
+          <span>Doubles · fonte e temporada preservadas</span>
         </div>
-        <a className="usage-source-guide" href={metaRollSource.guideUrl} target="_blank" rel="noreferrer">
-          Guia da API <span aria-hidden="true">↗</span>
-        </a>
+        <details className="usage-source-details">
+          <summary>Sobre os dados</summary>
+          <p>Esta tela mantém os dados da MetaRoll separados de Pokémon Champions Battle Data.</p>
+          <a className="usage-source-guide" href={metaRollSource.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
+        </details>
       </div>
 
       {view === "species" && indexData ? (
@@ -420,7 +419,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
           <span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span>
           <span><b>Última consulta do app</b> {formatCapture(indexData.appFetchedAt)}</span>
           <span><b>Pokémon no ranking</b> {indexData.count}</span>
-          <p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p>
+          <details className="usage-source-help"><summary>O que esta captura informa</summary><p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p></details>
         </div>
       ) : null}
       {view === "species" && indexData ? <button className="button button-outline button-small metaroll-refresh" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>{indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}</button> : null}
@@ -485,6 +484,9 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                 <span>Buscar Pokémon</span>
                 <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ex.: Tauros-Paldea-Aqua" autoComplete="off" />
               </label>
+              <details className="usage-more-filters">
+                <summary>Golpe, item, habilidade e período</summary>
+                <div className="usage-more-filter-grid">
               {filters.map(([key, label]) => {
                 const value = key === "moves" ? moveFilter : key === "items" ? itemFilter : abilityFilter;
                 const setter = key === "moves" ? setMoveFilter : key === "items" ? setItemFilter : setAbilityFilter;
@@ -519,6 +521,8 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                   <option value="name">Nome A–Z</option>
                 </select>
               </label>
+                </div>
+              </details>
             </div>
             <p className="usage-filter-note">A MetaRoll não publica tipo nesta ficha. As facetas usam golpes, itens e habilidades do próprio arquivo desta captura.</p>
             <div className="usage-list-caption"><span>Nome</span><span>Posição</span></div>
@@ -566,7 +570,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                       <div className="usage-provenance-source"><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
                       <div><span>Período devolvido pela fonte</span><strong>Temporada {entryCapture?.season || "não informada"} · captura {formatCapture(entryCapture?.capturedAt)}</strong></div>
                       <div><span>Última consulta do app</span><strong>{formatCapture(entryCapture?.appFetchedAt)}</strong></div>
-                      <div className="usage-provenance-notes"><span>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon.</span><span>Parceiros não têm percentual publicado.</span><span>Tamanho da amostra não informado.</span><span>Stat Points não são EVs e a fonte não pareia spread com natureza.</span>{entryCapture?.comparedTo ? <span>Posição anterior comparada com a captura de {formatCapture(entryCapture.comparedTo)}.</span> : null}</div>
+                      <details className="usage-source-help usage-provenance-notes"><summary>Interpretação e limites</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Stat Points não são EVs e a fonte não pareia spread com natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
                     </div>
                     <div className="metaroll-rank-summary">
                       <div><span>Posição nesta captura</span><strong>#{entry.rank ?? "não informada"}</strong></div>
@@ -588,7 +592,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                     {activeProfileSection === "summary" ? (
                       <div className="metaroll-profile-grid metaroll-profile-summary">
                         {distributionSections.filter(([key]) => ["moves", "items", "abilities", "teammates"].includes(key)).map(([key, label]) => (
-                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 3)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Parceiros sem percentual informado." : "Principais linhas desta captura."} />
+                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 2)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Sem percentual publicado." : ""} />
                         ))}
                       </div>
                     ) : null}

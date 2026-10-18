@@ -294,27 +294,25 @@ export function BuilderPage() {
                   <h2 id="active-member-title">{selectedPokemon.name}</h2>
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
-                  <p className="form-hint builder-usage-hint">Tendências abrem em outra tela. A calculadora começa no nível 50 e usa o primeiro golpe preenchido.</p>
                 </div>
                 <div className="set-heading-actions">
-                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>
-                    Ver tendências de Usage
-                  </Link>
-                  <label className="builder-damage-opponent">
-                    <span>Outro lado da simulação</span>
-                    <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
-                      {selectedDamageOpponent ? null : <option value="">Garchomp padrão</option>}
-                      {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
-                    </select>
-                  </label>
-                  <Link className="button button-outline button-small" to={calculatorUrl("attacker")} aria-label={`Usar ${selectedPokemon.name} como atacante na calculadora`}>
-                    Como atacante
-                  </Link>
-                  <Link className="button button-outline button-small" to={calculatorUrl("defender")} aria-label={`Usar ${selectedPokemon.name} como alvo na calculadora`}>
-                    Como alvo
-                  </Link>
-                  <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
-                  <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
+                  <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar Pokémon</button>
+                  <details className="builder-secondary-actions">
+                    <summary>Usage e calculadora</summary>
+                    <div>
+                      <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>Ver tendências de Usage</Link>
+                      <label className="builder-damage-opponent">
+                        <span>Outro lado da simulação</span>
+                        <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
+                          {selectedDamageOpponent ? null : <option value="">Garchomp padrão</option>}
+                          {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
+                        </select>
+                      </label>
+                      <Link className="button button-outline button-small" to={calculatorUrl("attacker")} aria-label={`Usar ${selectedPokemon.name} como atacante na calculadora`}>Como atacante</Link>
+                      <Link className="button button-outline button-small" to={calculatorUrl("defender")} aria-label={`Usar ${selectedPokemon.name} como alvo na calculadora`}>Como alvo</Link>
+                      <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
+                    </div>
+                  </details>
                 </div>
               </div>
 
@@ -346,11 +344,11 @@ export function BuilderPage() {
                     <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
                   </label>
                 ))}
-                <p className="form-hint field-wide">A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p>
+                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p></details>
 
                 <details className="points-section field-wide">
-                  <summary>Stat Points <span>{pointTotal} distribuídos · limite ainda não aplicado</span></summary>
-                  <p className="form-hint">Os valores ficam no arquivo da equipe. O limite do jogo ainda precisa de confirmação.</p>
+                  <summary>Conferir Stat Points <span>{pointTotal} distribuídos</span></summary>
+                  <p className="form-hint">Os valores ficam no arquivo da equipe. Os limites oficiais do jogo ainda não foram confirmados.</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>

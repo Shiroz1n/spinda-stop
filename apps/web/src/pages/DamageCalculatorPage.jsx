@@ -224,6 +224,8 @@ function DamageResultPanel({ calculation, form, label }) {
       ) : (
         <>
           <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
+          <details className="damage-result-more">
+            <summary>16 rolls, condições e detalhes</summary>
           {result.isSpreadTarget && result.gameType === "Doubles" && (
             <p className="damage-spread-note">
               {result.isSpread
@@ -265,6 +267,7 @@ function DamageResultPanel({ calculation, form, label }) {
             <p className="form-hint">Habilidades, itens e condições só aparecem quando o motor os registrou neste cenário. Quando o resultado não expõe o fator numérico, mostramos o efeito pelo nome sem estimá-lo.</p>
           </details>
           {result.max === 0 && <p className="damage-spread-note">Neste cenário, o golpe não causa dano. Pode haver imunidade, proteção ou um efeito especial.</p>}
+          </details>
         </>
       )}
       <p className="damage-engine-note">Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
@@ -372,6 +375,35 @@ export function DamageCalculatorPage() {
         <Link className="button button-outline" to="/builder">Voltar ao construtor</Link>
       </div>
 
+      <div className="damage-quickbar">
+        <p><strong>{form.attacker.species}</strong> × <strong>{form.defender.species}</strong><span> · {form.move || "Escolha um golpe"}</span></p>
+        <FieldToggle
+          label="Comparar com outro cenário"
+          checked={comparison.enabled}
+          onChange={(enabled) => setComparison(enabled
+            ? { enabled: true, overrides: {} }
+            : { enabled: false, overrides: comparison.overrides })}
+        />
+      </div>
+
+      {comparison.enabled ? (
+        <div className="damage-comparison-results" aria-label="Comparação dos cenários">
+          <DamageResultPanel calculation={calculation} form={form} label="A · atual" />
+          {Object.keys(comparison.overrides).length > 0 && comparisonForm?.move.trim() ? (
+            <DamageResultPanel calculation={comparisonCalculation} form={comparisonForm} label="B · variação" />
+          ) : (
+            <section className="damage-comparison-empty panel-frame" role="status">
+              <p className="page-label">Cenário B</p>
+              <h2>Escolha uma variação</h2>
+              <p>Edite apenas o golpe, campo, atacante ou alvo que deseja comparar.</p>
+            </section>
+          )}
+        </div>
+      ) : <DamageResultPanel calculation={calculation} form={form} label="Resultado" />}
+
+      <details className="damage-editor-disclosure">
+        <summary>Editar atacante, alvo, golpe e campo</summary>
+        <div className="damage-editor-content">
       <div className="damage-rules-note" role="note">
         <strong>Nível 50 · motor de Pokémon Showdown</strong>
         <p>Os SP entram na fórmula de Champions. Em Doubles, golpes em área só recebem o redutor quando atingem mais de um alvo válido; informe quantos estão no campo. Nada é enviado para uma API.</p>
@@ -442,13 +474,6 @@ export function DamageCalculatorPage() {
           </div>
         </details>
         <div className="damage-comparison-controls">
-          <FieldToggle
-            label="Comparar com outro cenário"
-            checked={comparison.enabled}
-            onChange={(enabled) => setComparison(enabled
-              ? { enabled: true, overrides: {} }
-              : { enabled: false, overrides: comparison.overrides })}
-          />
           {comparisonForm && (
             <>
               <p>O cenário B acompanha o A. Escolha o que muda; atacante, alvo e demais condições continuam iguais até você sobrescrevê-los.</p>
@@ -486,26 +511,8 @@ export function DamageCalculatorPage() {
           )}
         </div>
       </section>
-
-      {comparison.enabled ? (
-        <>
-          <p className="damage-comparison-note" role="note">Comparação lado a lado. Cada cenário mostra seus rolls e modificadores; não compartilha probabilidades entre golpes.</p>
-          <div className="damage-comparison-results" aria-label="Comparação dos cenários">
-            <DamageResultPanel calculation={calculation} form={form} label="Cenário A · atual" />
-            {Object.keys(comparison.overrides).length > 0 && comparisonForm?.move.trim() ? (
-              <DamageResultPanel calculation={comparisonCalculation} form={comparisonForm} label="Cenário B · comparação" />
-            ) : (
-              <section className="damage-comparison-empty panel-frame" role="status">
-                <p className="page-label">Cenário B</p>
-                <h2>Escolha uma variação</h2>
-                <p>O resultado aparece aqui quando você alterar o golpe, campo, atacante ou alvo.</p>
-              </section>
-            )}
-          </div>
-        </>
-      ) : (
-        <DamageResultPanel calculation={calculation} form={form} label="Resultado" />
-      )}
+        </div>
+      </details>
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <DataLists form={form} comparisonForm={comparisonForm} />
     </div>

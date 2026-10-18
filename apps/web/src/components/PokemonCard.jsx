@@ -5,13 +5,13 @@ import { TypeTag } from "./TypeTag.jsx";
 
 const QUICK_STATS = [["hp", "HP"], ["atk", "Atk"], ["def", "Def"], ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"]];
 
-export function PokemonCard({ pokemon }) {
+export function PokemonCard({ pokemon, onOpen }) {
   const availableStats = QUICK_STATS.filter(([key]) => Number.isFinite(pokemon.stats?.[key]));
   const statsLabel = availableStats.map(([key, label]) => `${label} ${pokemon.stats[key]}`).join(", ");
 
   return (
     <article className="pokemon-card">
-      <Link className="pokemon-card-link" to={`/dex/${encodeURIComponent(pokemon.slug)}`}>
+      <Link className="pokemon-card-link" to={`/dex/${encodeURIComponent(pokemon.slug)}`} onClick={onOpen}>
         <span className="pokemon-card-art"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={112} decorative /></span>
         <span className="pokemon-card-copy">
           <span className="pokemon-card-number">{formatNationalNumber(pokemon.speciesId)}</span>

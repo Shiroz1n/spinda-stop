@@ -73,9 +73,9 @@ async function waitForUsage(page, selector = ".usage-index-note, .usage-index-er
   }
 }
 
-async function capture(page, viewport, name, { audit = false } = {}) {
+async function capture(page, viewport, name, { audit = false, fullPage = true } = {}) {
   const file = join(outputDir, `${viewport}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true, animations: "disabled" });
+  await page.screenshot({ path: file, fullPage, animations: "disabled" });
   const metrics = await page.evaluate(() => ({
     viewportWidth: window.innerWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -166,6 +166,103 @@ async function waitForEither(page, selector, timeout = 35_000) {
   }
 }
 
+async function fulfillJson(route, body, status = 200) {
+  await route.fulfill({
+    status,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+}
+
+async function inspectCommunityHierarchy(page, viewportName, kind, dataMode) {
+  const hierarchy = await page.evaluate(() => {
+    const step = document.querySelector(".community-next-step");
+    const participants = document.querySelector(".participant-list");
+    const grid = document.querySelector(".community-room-grid");
+    const invite = document.querySelector(".community-invite-panel");
+    return {
+      nextStepTop: step?.getBoundingClientRect().top,
+      participantsTop: participants?.getBoundingClientRect().top,
+      nextStepBeforeGrid: Boolean(step && grid && (step.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      inviteAfterGrid: Boolean(invite && grid && (grid.compareDocumentPosition(invite) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      championsMentions: [...document.querySelectorAll(".community-game-context")].filter((element) => element.innerText.includes("Pokémon Champions")).length,
+    };
+  });
+  observations.push({ viewport: viewportName, name: `${kind}-state-before-forms`, ...hierarchy, dataMode });
+  if (!hierarchy.nextStepBeforeGrid || hierarchy.nextStepTop >= hierarchy.participantsTop) failures.push(`${viewportName}/${kind}: estado e próxima ação não aparecem antes da lista de participantes.`);
+  if (hierarchy.championsMentions !== 1) failures.push(`${viewportName}/${kind}: o contexto da partida deve aparecer uma vez.`);
+  return hierarchy;
+}
+
+async function captureCommunityState(context, viewport, viewportName, kind) {
+  const page = await context.newPage();
+  const hostId = "00000000-0000-4000-8000-000000000001";
+  const participantIds = [
+    hostId,
+    "00000000-0000-4000-8000-000000000002",
+    "00000000-0000-4000-8000-000000000003",
+    "00000000-0000-4000-8000-000000000004",
+  ];
+  const members = participantIds.map((id, index) => ({
+    id,
+    handle: ["DoublesCoach", "Marina", "Ren", "Kai"][index],
+    status: "checked_in",
+    checkedInAt: "2026-10-18T12:00:00.000Z",
+    seed: null,
+    friendCode: null,
+    sharedRoster: index === 1 ? [{ pokemonId: "garchomp", formSlug: "garchomp" }, null, null, null, null, null] : null,
+  }));
+
+  await page.route("**/api/auth/status", (route) => fulfillJson(route, { githubOAuthAvailable: false, friendCodesAvailable: false }));
+  await page.route("**/api/me", (route) => fulfillJson(route, { user: { id: hostId, handle: "DoublesCoach", isModerator: false } }));
+  await page.route("**/api/teams", (route) => fulfillJson(route, { teams: [] }));
+
+  let url;
+  if (kind === "room") {
+    const roomId = "visual-room";
+    const roomView = {
+      room: { id: roomId, name: "Sala de revisão", status: "in_progress", capacity: 2, hostId, createdAt: "2026-10-18T12:00:00.000Z", inviteExpiresAt: "2026-10-25T12:00:00.000Z" },
+      currentUser: { id: hostId, role: "host", memberStatus: "checked_in" },
+      members: members.slice(0, 2),
+      match: {
+        id: "00000000-0000-4000-8000-000000000010",
+        status: "scheduled",
+        playerA: { id: hostId, handle: "DoublesCoach" },
+        playerB: { id: participantIds[1], handle: "Marina" },
+        report: null,
+        dispute: null,
+      },
+    };
+    await page.route(`**/api/rooms/${roomId}`, (route) => fulfillJson(route, roomView));
+    url = `${baseUrl}/rooms/${roomId}`;
+  } else {
+    const tournamentId = "visual-tournament";
+    const tournamentView = {
+      tournament: { id: tournamentId, name: "Chave de sábado", status: "open", capacity: 4, hostId, bracketVersion: 0, championId: null, createdAt: "2026-10-18T12:00:00.000Z", inviteExpiresAt: "2026-10-25T12:00:00.000Z", startedAt: null, finishedAt: null },
+      currentUser: { id: hostId, role: "host", memberStatus: "checked_in" },
+      participantCount: 4,
+      members,
+      matches: [],
+    };
+    await page.route(`**/api/tournaments/${tournamentId}`, (route) => fulfillJson(route, tournamentView));
+    url = `${baseUrl}/tournaments/${tournamentId}`;
+  }
+
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".participant-list").waitFor({ state: "visible", timeout: 10_000 });
+  const hierarchy = await inspectCommunityHierarchy(page, viewportName, kind, "API-shaped visual fixture");
+  if (kind === "room") {
+    await page.getByText("Aguardando resultado", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+    await page.getByLabel("Vencedor informado").waitFor({ state: "visible", timeout: 10_000 });
+  } else {
+    await page.getByRole("button", { name: "Fechar inscrições" }).waitFor({ state: "visible", timeout: 10_000 });
+    if (!hierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: a ação secundária de convite deve vir depois de participantes e chaveamento.`);
+  }
+  await safeCapture(page, viewportName, `${kind}-state-flow`, { audit: true, fullPage: false });
+  await page.close();
+}
+
 async function runViewport(viewportName, viewport) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
   const page = await context.newPage();
@@ -237,18 +334,68 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex", { audit: true });
+  const initialCardCount = await page.locator(".pokemon-card").count();
+  const catalogCount = Number((await page.locator(".results-line strong").innerText()).replace(/\D/g, ""));
+  observations.push({ viewport: viewportName, name: "pokedex-progressive-loading", initialCardCount, catalogCount });
+  if (initialCardCount >= catalogCount) failures.push(`${viewportName}: a Pokédex renderizou o catálogo inteiro em vez de usar lotes.`);
+  if (await page.locator(".pagination").count()) failures.push(`${viewportName}: a paginação antiga ainda aparece na Pokédex.`);
+  await page.locator(".dex-scroll-sentinel").scrollIntoViewIfNeeded();
+  await page.waitForFunction((count) => document.querySelectorAll(".pokemon-card").length > count, initialCardCount, { timeout: 10_000 });
+  const loadedCardCount = await page.locator(".pokemon-card").count();
+  if (loadedCardCount <= initialCardCount || loadedCardCount >= catalogCount) {
+    failures.push(`${viewportName}: o carregamento progressivo não adicionou um lote limitado de Pokémon.`);
+  }
+  await safeCapture(page, viewportName, "pokedex-loaded-more");
   const firstSpeciesStats = await page.locator(".quick-stats").first().innerText();
   if (firstSpeciesStats.includes("—")) failures.push(`${viewportName}: a Pokédex mostra stats que o catálogo não fornece.`);
   const search = page.getByPlaceholder("Buscar por nome, forma ou número");
+  const dexTypeFilter = page.locator('.dex-toolbar .filter-field:has-text("Tipo") select');
+  const dexGenerationFilter = page.locator('.dex-toolbar .filter-field:has-text("Geração") select');
+  await dexTypeFilter.selectOption("dragon");
+  await dexGenerationFilter.selectOption("4");
   await search.fill("Garchomp");
   await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator(".pokemon-card").count() !== 1 || !(await page.locator(".pokemon-card-title").first().innerText()).includes("Garchomp")) {
+    failures.push(`${viewportName}: busca e filtros não consultaram o catálogo completo para Garchomp.`);
+  }
+  await safeCapture(page, viewportName, "pokedex-filtered");
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
-  await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
-  await page.getByPlaceholder("Buscar por nome, forma ou número").fill("spindastop-no-match-457");
+  await page.getByRole("link", { name: "Pokédex" }).click();
+  await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
+  const returnedDexState = await page.evaluate(() => ({
+    query: document.querySelector('.dex-toolbar input[type="search"]')?.value,
+    type: document.querySelector('.dex-toolbar .filter-field select')?.value,
+    generation: document.querySelectorAll('.dex-toolbar .filter-field select')[1]?.value,
+    scrollY: window.scrollY,
+  }));
+  observations.push({ viewport: viewportName, name: "pokedex-return-state", ...returnedDexState });
+  if (returnedDexState.query !== "Garchomp" || returnedDexState.type !== "dragon" || returnedDexState.generation !== "4") {
+    failures.push(`${viewportName}: a Pokédex perdeu busca ou filtros ao voltar da ficha.`);
+  }
+  await search.fill("spindastop-no-match-457");
   await page.locator(".empty-state-panel").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex-empty");
+  await page.getByRole("button", { name: "Limpar busca e filtros" }).click();
+  await dexTypeFilter.selectOption("water");
+  await page.waitForFunction(() => document.querySelectorAll(".pokemon-card").length > 12, null, { timeout: 10_000 });
+  await page.evaluate(() => window.scrollTo({ top: 700, behavior: "instant" }));
+  const waterScrollBeforeOpen = await page.evaluate(() => window.scrollY);
+  await page.locator(".pokemon-card-link").nth(12).click();
+  await page.locator(".detail-page").waitFor({ state: "visible", timeout: 10_000 });
+  const savedScrollY = await page.evaluate(() => JSON.parse(window.sessionStorage.getItem("spinda-dex-view") || "null")?.scrollY);
+  await page.getByRole("link", { name: "Pokédex" }).click();
+  await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
+  const restoredScrollState = await page.evaluate(() => ({
+    type: document.querySelector('.dex-toolbar .filter-field select')?.value,
+    scrollY: window.scrollY,
+  }));
+  observations.push({ viewport: viewportName, name: "pokedex-scroll-restored", before: waterScrollBeforeOpen, saved: savedScrollY, ...restoredScrollState });
+  if (restoredScrollState.type !== "water" || Math.abs(restoredScrollState.scrollY - savedScrollY) > 100) {
+    failures.push(`${viewportName}: a Pokédex não restaurou o filtro e a posição após abrir e voltar da ficha.`);
+  }
+  await safeCapture(page, viewportName, "pokedex-restored");
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
@@ -294,6 +441,19 @@ async function runViewport(viewportName, viewport) {
     await page.locator(".species-dialog .picker-result").first().click();
   }
   await safeCapture(page, viewportName, "builder-two-sides");
+  for (const [slotIndex, species] of [[2, "Incineroar"], [3, "Rillaboom"], [4, "Charizard"], [5, "Pelipper"]]) {
+    await page.locator(".team-slot").nth(slotIndex).click();
+    await page.getByLabel("Nome ou número").fill(species);
+    await page.locator(".species-dialog .picker-result").first().click();
+    await page.getByRole("heading", { name: species, exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  }
+  const slotNames = await page.locator(".team-slot .slot-copy b").allTextContents();
+  observations.push({ viewport: viewportName, name: "builder-six-member-names", slotNames });
+  if (slotNames.length !== 6 || slotNames.some((name) => name === "Vazio")) {
+    failures.push(`${viewportName}: a revisão mobile/desktop não conseguiu preencher e reconhecer os seis Pokémon do builder.`);
+  }
+  await safeCapture(page, viewportName, "builder-six-members", { audit: true });
+  await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   await safeCapture(page, viewportName, "calculator-from-builder", { audit: true });
@@ -305,11 +465,16 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true });
   if (await page.locator(".usage-index-note").count()) {
+    const usageCategory = page.locator(".usage-category-tabs .usage-category-tab").filter({ hasText: "Golpes" }).first();
+    await usageCategory.click();
+    if ((await usageCategory.getAttribute("aria-pressed")) !== "true") failures.push(`${viewportName}: a aba de golpes do Usage não ficou selecionada.`);
+    await safeCapture(page, viewportName, "usage-battle-data-moves", { audit: true, fullPage: false });
     const usageSearch = page.locator(".usage-browser-panel input[type=search]");
     await usageSearch.fill("spindastop-no-match-457");
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
     await safeCapture(page, viewportName, "usage-empty");
     await usageSearch.fill("Garchomp");
+    await page.locator(".usage-more-filters > summary").click();
     const sourceFilters = [
       ['.usage-filters .usage-filter-field:has-text("Tipo") select', "Dragon"],
       ['.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select', "Earthquake"],
@@ -380,6 +545,14 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".metaroll-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-metaroll", { audit: true });
+  if (await page.locator(".metaroll-layout .usage-more-filters > summary").count()) {
+    await page.locator(".metaroll-layout .usage-more-filters > summary").click();
+    const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
+    if (await profileTabs.count()) {
+      await profileTabs.nth(1).click();
+      await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
+    }
+  }
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
     const teammateCard = page.locator(".metaroll-profile-summary .metaroll-card").filter({ hasText: "Parceiros" }).first();
     const teammateRows = teammateCard.locator(".metaroll-list-row");
@@ -436,14 +609,24 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
-  await safeCapture(page, viewportName, "calculator", { audit: true });
+  await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   await page.getByLabel("Comparar com outro cenário").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".damage-editor-disclosure > summary").click();
   await page.getByLabel("Golpe B").fill("Dragon Claw");
   const comparisonResults = page.locator(".damage-comparison-results .damage-result");
   await comparisonResults.nth(1).getByRole("heading", { name: "Garchomp usa Dragon Claw" }).waitFor({ state: "visible", timeout: 10_000 });
   if (await comparisonResults.count() !== 2) failures.push(`${viewportName}: a comparação deve calcular A e B com a variação selecionada.`);
-  await safeCapture(page, viewportName, "calculator-comparison", { audit: true });
+  await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
+  const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
+  if (compactDetailState.some(Boolean)) failures.push(`${viewportName}: os rolls e modificadores secundários devem começar recolhidos.`);
+  await page.locator(".damage-result-more").first().locator("summary").click();
+  const visibleRollCount = await page.locator(".damage-result-more[open] .damage-rolls li").count();
+  if (visibleRollCount !== 16) failures.push(`${viewportName}: a variação da calculadora não expôs exatamente os 16 rolls ao abrir detalhes.`);
+  await safeCapture(page, viewportName, "calculator-comparison-rolls", { audit: true, fullPage: false });
+
+  await captureCommunityState(context, viewport, viewportName, "room");
+  await captureCommunityState(context, viewport, viewportName, "tournament");
 
   if (process.env.DATABASE_URL) {
     const signIn = await context.request.post(`${baseUrl}/api/test/session`, {
@@ -472,6 +655,9 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("button", { name: "Criar sala privada" }).click();
       await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
+      await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
+      const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral PostgreSQL integration fixture");
+      if (!roomHierarchy.inviteAfterGrid) failures.push(`${viewportName}/room: painel de convite aparece antes de participantes e resultado.`);
       if (sharedTeamId) {
         await page.locator(".event-team-sharing-controls select").selectOption(sharedTeamId);
         await page.getByRole("button", { name: "Compartilhar", exact: true }).click();
@@ -533,6 +719,9 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("button", { name: "Criar torneio" }).click();
       await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
+      await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
+      const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral PostgreSQL integration fixture");
+      if (!tournamentHierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: painel de convite aparece antes de participantes e chaveamento.`);
       const tournamentInviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       const tournamentId = page.url().split("/").at(-1);
       const tournamentToken = new URL(tournamentInviteUrl).hash.slice(1);
@@ -641,7 +830,7 @@ let browser;
 try {
   await waitForServer();
   await waitForApi();
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
   const viewports = [
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
