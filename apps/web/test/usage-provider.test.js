@@ -3,7 +3,17 @@ import assert from "node:assert/strict";
 import {
   normalizeUsageBattleResponse,
   normalizeUsageIndexResponse,
+  withRequestTimeout,
 } from "../src/data/usage/providers/pokemonChampionsBattleData.js";
+
+test("encerra a espera quando a origem ignora o abort e não responde", async () => {
+  let aborted = false;
+  await assert.rejects(
+    withRequestTimeout(new Promise(() => {}), 5, () => { aborted = true; }),
+    /A fonte demorou a responder/,
+  );
+  assert.equal(aborted, true);
+});
 
 test("normalizes only fields available in the source index", () => {
   const result = normalizeUsageIndexResponse({
