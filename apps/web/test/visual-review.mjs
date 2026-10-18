@@ -137,6 +137,7 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await page.getByLabel("Nature", { exact: true }).fill("Adamant");
   await page.locator("#move-0").fill("Earthquake");
+  await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
   const downloadReady = page.waitForEvent("download", { timeoutMs: 10_000 });
   await page.getByRole("button", { name: "Exportar JSON" }).click();
