@@ -10,6 +10,8 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
+As APIs de uso competitivo foram avaliadas, mas ainda não estão ligadas ao app. Os limites, termos e lacunas de amostra estão em [APIs de dados competitivos](docs/META_SOURCES.md).
+
 ## Próximas partes
 
 - Análise de tipos e legalidade por regulamento.
@@ -33,6 +35,7 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 ## Documentação
 
 - [Fontes e atribuições](docs/DATA_SOURCES.md)
+- [Avaliação das APIs competitivas](docs/META_SOURCES.md)
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
