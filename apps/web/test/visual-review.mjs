@@ -260,6 +260,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator("#move-0").fill("Earthquake");
   await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
+  await page.locator(".builder-tools-details > summary").click();
   const downloadReady = page.waitForEvent("download", { timeout: 10_000 });
   await page.getByRole("button", { name: "Exportar JSON" }).click();
   const download = await downloadReady;
