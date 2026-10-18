@@ -2,7 +2,9 @@
 
 ## Identidade visual do Spinda Stop
 
-`apps/web/public/spinda-stop-mascot.svg`, favicons e ícones PNG são desenhos originais em pixel art criados para este repositório. Não incorporam sprites oficiais nem dependem de imagens remotas. O nome Pokémon aparece apenas para identificar o tema do app; marcas e personagens continuam pertencendo a seus titulares.
+`apps/web/public/spinda-stop-mascot.svg` é um desenho pixel art original feito para o Spinda Stop, com a silhueta e as manchas assimétricas do Spinda como referência visual. O sprite público consultado no Pokémon Database não tem licença clara de redistribuição concedida pelo titular; nenhum arquivo daquele site foi baixado ou incluído no repositório.
+
+`favicon.svg`, `favicon-16.svg`, `favicon.ico`, `favicon-16.png`, `favicon-32.png`, `spinda-stop-icon-192.png`, `spinda-stop-icon-512.png` e `apple-touch-icon.png` são artes locais originais ou versões renderizadas do SVG. As imagens não fazem requisições a Pokémon Database. Nomes e personagens da franquia continuam pertencendo a seus titulares; consulte a licença do projeto para o código e a arte original.
 
 ## `@smogon/calc` 0.12.0
 

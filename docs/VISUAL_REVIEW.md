@@ -28,6 +28,21 @@ O mobile é um viewport simulado em Chromium, não um aparelho físico. Foram te
 
 Esta captura registra a identidade que existia antes do PR próprio de Spinda/GBA. O tema e o mascote serão conferidos de novo em desktop e mobile depois dessa mudança; não use esta rodada como aprovação visual final da nova identidade.
 
+## PR #18 — identidade Spinda/GBA
+
+A nova identidade foi conferida no Chromium do GitHub Actions com a prévia Vite do build. O [run visual #14](https://github.com/Shiroz1n/spinda-stop/actions/runs/39119805042) passou. O [artefato final](https://github.com/Shiroz1n/spinda-stop/actions/runs/39119805042/artifacts/12134105614) contém 42 capturas e o relatório da inspeção; a retenção termina em 01/11/2026.
+
+| Viewport | Imagens | Observações | Overflow | Violações axe |
+|---|---:|---:|---:|---:|
+| Desktop — 1440 × 960 | 21 | 24 | 0 px | 0 |
+| Mobile simulado — 390 × 844 | 21 | 24 | 0 px | 0 |
+
+Foram abertas a página inicial, Pokédex, ficha, builder vazio e configurado, importação/exportação, Usage Battle Data e MetaRoll, histórico, matchups, ladder e calculadora com comparação. Busca sem resultado e erros de ambas as APIs também foram capturados. Navegação por teclado chegou à Pokédex e trocou a fonte do Usage com foco visível. O set exportado e importado preservou espécie, item, natureza, golpe e Stat Points.
+
+A primeira execução apontou contraste 4,45:1 no texto de confirmação verde. O verde da interface e dos ícones foi escurecido para `#2C704A` (4,83:1 no fundo da página); a segunda execução não encontrou violações axe. A inspeção manual das capturas finais não encontrou cortes ou overflow.
+
+O mobile continua sendo viewport simulado, sem aparelho físico. Ficam fora desta rodada uma passagem dedicada a 320 px, zoom do sistema e leitor de tela. A validação automatizada cobre apenas os critérios axe configurados; não substitui essas verificações.
+
 Para abrir a branch localmente:
 
 ```sh
