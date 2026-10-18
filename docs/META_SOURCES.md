@@ -44,13 +44,13 @@ Documentação: [Champions Usage API](https://metaroll.app/api/v1/docs) · base 
 | `GET /ladder.json` | Até mil jogadores do ladder de Doubles; é dado de jogadores, não de uso de Pokémon. |
 | `GET /singles/ladder.json` | Ladder de jogadores de Singles. Não há API de uso de Pokémon em Singles. |
 
-O Spinda Stop consulta `ladder.json` só na seção “Ladder de jogadores”. Busca, filtros por país e idioma, ordenação e paginação usam campos presentes nessa resposta. A captura própria da ladder fica visível; se ela não trouxer temporada, a interface não copia o rótulo do índice de Pokémon. O dado `ratingHistory`, observado mas não descrito no guia, ainda não é exibido.
+O Spinda Stop consulta `all.json` para espécies e fichas e `ladder.json` só na seção “Ladder de jogadores”. Busca, filtros por país e idioma, ordenação e paginação usam campos presentes nas respostas. A captura própria da ladder fica visível; se ela não trouxer temporada, a interface não copia o rótulo do índice de Pokémon. A resposta real de `all.json` foi conferida em 18/10/2026: trazia 262 entradas `entries[]`, cabeçalho de captura, atribuição e os campos usados na ficha. `ratingHistory`, observado no endpoint de ladder mas não descrito no guia, ainda não é exibido.
 
 **Formato e período.** A API de uso de Pokémon é apenas Doubles, vindo do ladder ranqueado do jogo. As respostas identificam temporada, `capturedAt` e `comparedTo`. As temporadas duram cerca de quatro semanas; o ranking recomeça a cada temporada. A captura é feita aproximadamente a cada hora e publicada quando há mudança. O exemplo da documentação para M-5 contém `count: 235`: são Pokémon ranqueados naquela captura, não partidas, jogadores nem denominador das porcentagens.
 
 **Amostra e limites dos campos.** Os percentuais de golpes, itens, habilidades, nature, parceiros e spreads representam uma proporção das aparições daquele Pokémon. A API não informa quantas partidas ou aparições compõem esses percentuais. Os parceiros vêm com `percent: null`. Nature e Stat Point spread são distribuições separadas: não dá para afirmar qual nature acompanha qual spread. Stat Points não são EVs. A tela de matchups mostra apenas as listas que a fonte publica: nomes associados a vitórias/derrotas e contagens alinhadas quando presentes. Isso não equivale ao total de jogos do confronto; percentuais de golpes no matchup também não são taxa de vitória. `ladder.json` conta jogadores, então seus números nunca devem ser usados como amostra das distribuições de Pokémon.
 
-**Limites e termos.** A documentação diz que não exige chave, cadastro ou quota e aceita uso gratuito em qualquer contexto. Respostas indicam cache público de 300 segundos; respeitar esse prazo e buscar `all.json` uma vez em vez de consultar as 235 espécies em sequência. A documentação pede que o projeto cite MetaRoll e inclua um link para `metaroll.app`, sem sugerir parceria ou endosso. Não há licença formal identificada na página; o crédito é descrito como pedido, não como condição técnica imposta. É um projeto independente e não oficial.
+**Limites e termos.** A documentação diz que não exige chave nem cadastro e permite uso gratuito; consulte o guia atual para limites operacionais, que podem mudar. Respostas indicam cache público de 300 segundos; respeitar esse prazo e buscar `all.json` uma vez em vez de consultar cada espécie em sequência. A documentação pede que o projeto cite MetaRoll e inclua um link para `metaroll.app`, sem sugerir parceria ou endosso. Não há licença formal identificada na página; o crédito é descrito como pedido, não como licença de redistribuição. É um projeto independente e não oficial.
 
 ## Como o app deve guardar os dados
 
@@ -60,7 +60,7 @@ Uma tela pode comparar fontes lado a lado, com seus rótulos e períodos, mas n�
 
 ## O que falta
 
-- Conferir a interface em navegador. O servidor Vite iniciou, mas o navegador de conferência não conseguiu alcançar `127.0.0.1`; lint, testes e build passaram.
-- Validar a resposta de `/all.json` do MetaRoll numa sessão de prévia acessível. O contrato documentado e o endpoint anunciado no índice sustentam o adaptador, que valida a lista antes de renderizar; esta captura não enumerou o arquivo de 1,3 MB.
+- Conferir todas as telas em viewport mobile real e repetir a inspeção na cadeia atualizada. A prévia desktop existe; o navegador disponível ainda não oferece controle de viewport e o Chromium local não está instalado.
+- A semântica de `ratingHistory.avg`, `ratingHistory.ranks`, `megas.percent`/`rank` e `ladder-cutoffs.cutoffs` continua sem definição no guia. Não integrar esses campos antes de obter contrato explícito da fonte.
 - Não há tamanho de amostra nem ligação verificada entre temporada e regulamento em nenhuma das fontes. Esses campos ficam ausentes.
 - Rever atribuição e cache se os termos publicados mudarem.
