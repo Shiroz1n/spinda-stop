@@ -65,9 +65,9 @@ async function waitForApi() {
 
 async function waitForUsage(page, selector = ".usage-index-note, .usage-index-error") {
   try {
-    await page.locator(selector).first().waitFor({ state: "visible", timeoutMs: 35_000 });
+    await page.locator(selector).first().waitFor({ state: "visible", timeout: 35_000 });
   } catch {
-    const state = await page.locator("body").innerText({ timeoutMs: 5_000 });
+    const state = await page.locator("body").innerText({ timeout: 5_000 });
     failures.push(`Usage não chegou a um estado de sucesso ou erro: ${state.slice(0, 240)}`);
   }
 }
@@ -115,7 +115,7 @@ async function safeCapture(page, viewport, name, options) {
 
 async function waitForEither(page, selector, timeout = 35_000) {
   try {
-    await page.locator(selector).first().waitFor({ state: "visible", timeoutMs: timeout });
+    await page.locator(selector).first().waitFor({ state: "visible", timeout: timeout });
     return true;
   } catch {
     return false;
@@ -132,12 +132,12 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "home", { audit: true });
 
   await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Salas privadas" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Salas privadas" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "rooms-signed-out", { audit: true });
   const unavailablePage = await context.newPage();
   await unavailablePage.route("**/api/auth/status", (route) => route.abort());
   await unavailablePage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
-  await unavailablePage.locator(".community-auth-card .community-error").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await unavailablePage.locator(".community-auth-card .community-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(unavailablePage, viewportName, "rooms-api-error", { audit: true });
   await unavailablePage.close();
   await page.keyboard.press("Tab");
@@ -168,36 +168,36 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: não foi possível focar Pokédex com contorno visível pelo teclado.`);
   } else {
     await page.keyboard.press("Enter");
-    await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+    await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   }
 
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex", { audit: true });
   const search = page.getByPlaceholder("Buscar por nome, forma ou número");
   await search.fill("Garchomp");
-  await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".pokemon-card-title").first().click();
-  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByPlaceholder("Buscar por nome, forma ou número").fill("spindastop-no-match-457");
-  await page.locator(".empty-state-panel").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.locator(".empty-state-panel").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex-empty");
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-empty", { audit: true });
   await page.getByRole("button", { name: "Escolher espécie" }).first().click();
   await page.getByLabel("Nome ou número").fill("Garchomp");
   await page.locator(".species-dialog .picker-result").first().click();
-  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await page.getByLabel("Nature", { exact: true }).fill("Adamant");
   await page.locator("#move-0").fill("Earthquake");
   await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
-  const downloadReady = page.waitForEvent("download", { timeoutMs: 10_000 });
+  const downloadReady = page.waitForEvent("download", { timeout: 10_000 });
   await page.getByRole("button", { name: "Exportar JSON" }).click();
   const download = await downloadReady;
   const exportedFile = await download.path();
@@ -209,7 +209,7 @@ async function runViewport(viewportName, viewport) {
   assert.equal(exportedTeam.members[0].moves[0], "Earthquake");
   assert.equal(exportedTeam.members[0].statPoints.atk, 14);
   await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
-  await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-preserved-set", { audit: true });
   await page.locator(".team-slot").nth(1).click();
   const pickerSearch = page.getByLabel("Nome ou número");
@@ -219,7 +219,7 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "builder-two-sides");
   await page.getByRole("link", { name: /como atacante/i }).click();
-  await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeoutMs: 10_000 }).catch(() => {});
+  await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   await safeCapture(page, viewportName, "calculator-from-builder", { audit: true });
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
@@ -231,7 +231,7 @@ async function runViewport(viewportName, viewport) {
   if (await page.locator(".usage-index-note").count()) {
     const usageSearch = page.locator(".usage-browser-panel input[type=search]");
     await usageSearch.fill("spindastop-no-match-457");
-    await page.locator(".usage-no-results").waitFor({ state: "visible", timeoutMs: 10_000 });
+    await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
     await safeCapture(page, viewportName, "usage-empty");
     await usageSearch.fill("Garchomp");
     const sourceFilters = [
@@ -263,7 +263,7 @@ async function runViewport(viewportName, viewport) {
   if (await metaRollButton.count()) {
     await metaRollButton.press("Enter");
     const activeSource = page.locator(".usage-source-switch button.is-active");
-    await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+    await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeout: 10_000 });
     const keyboardSource = await metaRollButton.evaluate((button) => ({
       pressed: button.getAttribute("aria-pressed"),
       outlineWidth: getComputedStyle(button).outlineWidth,
@@ -274,7 +274,7 @@ async function runViewport(viewportName, viewport) {
       failures.push(`${viewportName}: a troca de fonte por teclado não deixou estado e foco visíveis.`);
     }
     await page.getByRole("button", { name: "Battle Data", exact: true }).press("Enter");
-    await page.locator(".usage-source-switch button.is-active").filter({ hasText: "Battle Data" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+    await page.locator(".usage-source-switch button.is-active").filter({ hasText: "Battle Data" }).waitFor({ state: "visible", timeout: 10_000 });
   } else {
     failures.push(`${viewportName}: o seletor de fonte não está disponível no Usage de Battle Data.`);
   }
@@ -303,19 +303,19 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-ladder", { audit: true });
     await page.getByRole("button", { name: "Espécies" }).click();
     await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");
-    await page.locator(".usage-no-results").waitFor({ state: "visible", timeoutMs: 10_000 });
+    await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
     await safeCapture(page, viewportName, "usage-metaroll-empty");
   }
 
   const errorPage = await context.newPage();
   await errorPage.route("https://championsbattledata.com/**", (route) => route.abort());
   await errorPage.goto(`${baseUrl}/usage`, { waitUntil: "domcontentloaded" });
-  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(errorPage, viewportName, "usage-battle-data-error");
   await errorPage.goto(`${baseUrl}/usage?source=metaroll`, { waitUntil: "domcontentloaded" });
   await errorPage.route("https://metaroll.app/**", (route) => route.abort()).catch(() => {});
   await errorPage.reload({ waitUntil: "domcontentloaded" });
-  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(errorPage, viewportName, "usage-metaroll-error");
 
   const megaErrorPage = await context.newPage();
@@ -326,10 +326,10 @@ async function runViewport(viewportName, viewport) {
   await errorPage.close();
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeoutMs: 10_000 }).catch(() => {});
+  await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   await safeCapture(page, viewportName, "calculator", { audit: true });
   await page.getByLabel("Comparar com outro cenário").check();
-  await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true });
 
   if (process.env.DATABASE_URL) {
@@ -342,12 +342,12 @@ async function runViewport(viewportName, viewport) {
     } else {
       const hostSession = await signIn.json();
       await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
-      await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-empty", { audit: true });
       await page.getByLabel("Nome da sala").fill("Revisão visual");
       await page.getByRole("button", { name: "Criar sala privada" }).click();
-      await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeoutMs: 10_000 });
-      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
+      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       const inviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       await safeCapture(page, viewportName, "rooms-invite", { audit: true });
 
@@ -356,7 +356,7 @@ async function runViewport(viewportName, viewport) {
       guestPage.on("pageerror", (error) => pageErrors.push(error.message));
       const inviteToken = new URL(inviteUrl).hash.slice(1);
       await guestPage.goto(`${baseUrl}/rooms/join#${inviteToken}`, { waitUntil: "networkidle" });
-      await guestPage.getByRole("heading", { name: "Entrar na sala" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await guestPage.getByRole("heading", { name: "Entrar na sala" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(guestPage, viewportName, "rooms-join-signin", { audit: true });
       const inviteHeldInTab = await guestPage.evaluate(() => window.sessionStorage.getItem("spinda_pending_invite")?.length > 0 && !window.location.hash);
       if (!inviteHeldInTab) failures.push(`${viewportName}: o convite sem login não foi preservado fora da URL.`);
@@ -367,38 +367,38 @@ async function runViewport(viewportName, viewport) {
       if (!guestSession.ok()) failures.push(`${viewportName}: a sessão de convidado para a sala não foi criada.`);
       const guest = guestSession.ok() ? await guestSession.json() : null;
       await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
-      await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await guestPage.getByRole("button", { name: "Fazer check-in" }).click();
       await page.getByRole("button", { name: "Fazer check-in" }).click();
       await page.reload({ waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Fechar inscrições" }).click();
       await page.getByRole("button", { name: "Iniciar sala" }).click();
-      await page.getByRole("heading", { name: "Resultado" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Resultado" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.getByLabel("Vencedor informado").selectOption(guest?.user?.id || "");
       await page.getByRole("button", { name: "Registrar resultado" }).click();
       await guestPage.reload({ waitUntil: "networkidle" });
       await guestPage.getByRole("button", { name: "Confirmar resultado" }).click();
-      await guestPage.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await guestPage.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
       await page.reload({ waitUntil: "networkidle" });
-      await page.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-complete", { audit: true });
       await safeCapture(guestPage, viewportName, "rooms-confirm-result", { audit: true });
       await guestContext.close();
 
       await page.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
-      await page.getByRole("heading", { name: "Seus torneios" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Seus torneios" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournaments-empty", { audit: true });
       const tournamentsErrorPage = await context.newPage();
       await tournamentsErrorPage.route("**/api/tournaments", (route) => route.abort()).catch(() => {});
       await tournamentsErrorPage.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
-      await tournamentsErrorPage.getByRole("heading", { name: "Não foi possível carregar" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await tournamentsErrorPage.getByRole("heading", { name: "Não foi possível carregar" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(tournamentsErrorPage, viewportName, "tournaments-api-error", { audit: true });
       await tournamentsErrorPage.close();
 
       await page.getByLabel("Nome do torneio").fill("Chave visual Doubles");
       await page.getByRole("button", { name: "Criar torneio" }).click();
-      await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeoutMs: 10_000 });
-      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeout: 10_000 });
+      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       const tournamentInviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       const tournamentId = page.url().split("/").at(-1);
       const tournamentToken = new URL(tournamentInviteUrl).hash.slice(1);
@@ -407,8 +407,8 @@ async function runViewport(viewportName, viewport) {
       const tournamentJoinContext = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
       const tournamentJoinPage = await tournamentJoinContext.newPage();
       await tournamentJoinPage.goto(`${baseUrl}/tournaments/join#${tournamentToken}`, { waitUntil: "networkidle" });
-      await tournamentJoinPage.getByRole("heading", { name: "Entrar no torneio" }).waitFor({ state: "visible", timeoutMs: 10_000 });
-      await tournamentJoinPage.getByRole("heading", { name: "Entre para organizar ou aceitar um convite" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await tournamentJoinPage.getByRole("heading", { name: "Entrar no torneio" }).waitFor({ state: "visible", timeout: 10_000 });
+      await tournamentJoinPage.getByRole("heading", { name: "Entre para organizar ou aceitar um convite" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(tournamentJoinPage, viewportName, "tournament-join-signin", { audit: true });
       const inviteStorageState = await tournamentJoinPage.evaluate(() => ({
         token: window.sessionStorage.getItem("spinda_pending_tournament_invite"),
@@ -438,9 +438,9 @@ async function runViewport(viewportName, viewport) {
       }
       await page.reload({ waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Fechar inscrições" }).click();
-      await page.getByRole("button", { name: "Sortear e iniciar" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("button", { name: "Sortear e iniciar" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.getByRole("button", { name: "Sortear e iniciar" }).click();
-      await page.getByRole("heading", { name: "Semifinais" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Semifinais" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournament-semifinals", { audit: true });
 
       const getTournament = async () => {
@@ -460,20 +460,20 @@ async function runViewport(viewportName, viewport) {
       let liveTournament = await getTournament();
       for (const semifinal of liveTournament.matches.filter((match) => match.roundNumber === 1)) await reportAndConfirm(semifinal);
       await page.reload({ waitUntil: "networkidle" });
-      await page.getByRole("heading", { name: "Final" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Final" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournament-final", { audit: true });
       liveTournament = await getTournament();
       const finalMatch = liveTournament.matches.find((match) => match.roundNumber === 2);
       await reportAndConfirm(finalMatch);
       await page.reload({ waitUntil: "networkidle" });
-      await page.getByText(/Concluído/).first().waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByText(/Concluído/).first().waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournament-complete", { audit: true });
       for (const [participantId, playerContext] of playerContexts) if (participantId !== hostSession.user.id) await playerContext.close();
 
       await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
-      await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
-      await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
       const teamSaveResponses = [];
       page.on("response", (response) => {
         if (response.url().includes("/api/teams") && response.request().method() === "POST") {
@@ -488,11 +488,11 @@ async function runViewport(viewportName, viewport) {
         await safeCapture(page, viewportName, "builder-account-save-error", { audit: true });
       }
       if (await page.locator(".account-team-row").count()) {
-        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeoutMs: 10_000 });
+        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-team", { audit: true });
         await page.locator(".account-team-visibility").first().selectOption("public");
         await page.getByRole("button", { name: "Atualizar" }).last().click();
-        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-public", { audit: true });
       }
     }

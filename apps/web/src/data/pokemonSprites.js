@@ -36,11 +36,19 @@ function formAliases(entry) {
 
   if (form.startsWith("mega")) aliases.push(`${species}${form}`);
   if (form === "mega") aliases.push(`${species}mega`);
-  const region = ({ alola: "alola", galar: "galar", hisui: "hisui", paldea: "paldea" })[form];
+  const regionalForm = form.match(/^(alola|galar|hisui|paldea)(.*)$/);
+  const region = regionalForm?.[1];
   if (region) {
-    aliases.push(`${species}${region}`);
     const regionalAdjective = ({ alola: "alolan", galar: "galarian", hisui: "hisuian", paldea: "paldean" })[region];
-    aliases.push(`${regionalAdjective}${species}`);
+    const qualifier = regionalForm[2]?.replace(/breed$/, "");
+    if (qualifier) {
+      // Showdown and MetaRoll omit PokeAPI's "-breed" suffix for Paldean Tauros.
+      aliases.push(`${species}${region}${qualifier}`);
+      aliases.push(`${regionalAdjective}${species}${qualifier}`);
+    } else {
+      aliases.push(`${species}${region}`);
+      aliases.push(`${regionalAdjective}${species}`);
+    }
   }
   return aliases;
 }
