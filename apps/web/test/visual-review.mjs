@@ -355,14 +355,16 @@ async function runViewport(viewportName, viewport) {
   await dexGenerationFilter.selectOption("4");
   await search.fill("Garchomp");
   await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeout: 10_000 });
-  if (await page.locator(".pokemon-card").count() !== 1 || !(await page.locator(".pokemon-card-title").first().innerText()).includes("Garchomp")) {
+  const filteredCount = Number((await page.locator(".results-line strong").innerText()).replace(/\D/g, ""));
+  const filteredNames = await page.locator(".pokemon-card-title").allTextContents();
+  if (filteredCount < 1 || filteredNames.length !== filteredCount || filteredNames.some((name) => !name.includes("Garchomp"))) {
     failures.push(`${viewportName}: busca e filtros não consultaram o catálogo completo para Garchomp.`);
   }
   await safeCapture(page, viewportName, "pokedex-filtered");
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
-  await page.getByRole("link", { name: "Pokédex" }).click();
+  await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   const returnedDexState = await page.evaluate(() => ({
     query: document.querySelector('.dex-toolbar input[type="search"]')?.value,
@@ -385,7 +387,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".pokemon-card-link").nth(12).click();
   await page.locator(".detail-page").waitFor({ state: "visible", timeout: 10_000 });
   const savedScrollY = await page.evaluate(() => JSON.parse(window.sessionStorage.getItem("spinda-dex-view") || "null")?.scrollY);
-  await page.getByRole("link", { name: "Pokédex" }).click();
+  await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   const restoredScrollState = await page.evaluate(() => ({
     type: document.querySelector('.dex-toolbar .filter-field select')?.value,
@@ -454,6 +456,7 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "builder-six-members", { audit: true });
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
+  await page.locator(".builder-secondary-actions > summary").click();
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   await safeCapture(page, viewportName, "calculator-from-builder", { audit: true });
@@ -658,6 +661,7 @@ async function runViewport(viewportName, viewport) {
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
       const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral PostgreSQL integration fixture");
       if (!roomHierarchy.inviteAfterGrid) failures.push(`${viewportName}/room: painel de convite aparece antes de participantes e resultado.`);
+      await safeCapture(page, viewportName, "room-live-first-fold", { audit: true, fullPage: false });
       if (sharedTeamId) {
         await page.locator(".event-team-sharing-controls select").selectOption(sharedTeamId);
         await page.getByRole("button", { name: "Compartilhar", exact: true }).click();
@@ -722,6 +726,7 @@ async function runViewport(viewportName, viewport) {
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
       const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral PostgreSQL integration fixture");
       if (!tournamentHierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: painel de convite aparece antes de participantes e chaveamento.`);
+      await safeCapture(page, viewportName, "tournament-live-first-fold", { audit: true, fullPage: false });
       const tournamentInviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       const tournamentId = page.url().split("/").at(-1);
       const tournamentToken = new URL(tournamentInviteUrl).hash.slice(1);
