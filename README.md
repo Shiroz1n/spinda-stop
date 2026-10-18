@@ -8,9 +8,10 @@ A interface usa uma paleta quente, bordas quadradas e detalhes pixel art própri
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
-- Simular dano em nível 50 para Singles ou Doubles, com condições de campo, natureza e Stat Points, usando o motor do Pokémon Showdown.
+- Simular dano em nível 50 para Singles ou Doubles, comparar cenários e ver rolls, modificadores e Stat Points usados pelo motor.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
+- Conferir cenários representativos da calculadora contra os rolls do simulador Pokémon Showdown fixado; essa checagem valida concordância entre implementações, não uma partida real no jogo.
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
@@ -18,7 +19,7 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 
 ## Próximas partes
 
-- Ampliar os cenários de referência da calculadora e conferir atualizações do motor contra regras de jogo.
+- Ampliar a validação da calculadora sem tratar o motor como uma reprodução perfeita do jogo.
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 
@@ -46,6 +47,7 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 - [Registro da revisão visual](docs/VISUAL_REVIEW.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
 - [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)
+- [Como executar o oráculo independente da calculadora](DEVELOPMENT.md#oráculo-opcional-da-calculadora)
 - [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md)
 - [Segurança e privacidade](docs/SECURITY.md)
 - [Próximas etapas](docs/ROADMAP.md)

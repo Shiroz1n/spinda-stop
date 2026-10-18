@@ -16,6 +16,7 @@
     "visual:review": "npm run build && node apps/web/test/visual-review.mjs",
     "lint": "eslint .",
     "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js",
+    "validate:damage-oracle": "node scripts/validate-damage-oracle.mjs",
     "data:sync": "npm run sync --workspace @spinda-stop/data"
   },
   "devDependencies": {
