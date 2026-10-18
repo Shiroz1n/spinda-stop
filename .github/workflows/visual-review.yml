@@ -1,10 +1,6 @@
 name: Visual review
 
 on:
-  push:
-    branches:
-      - fix/visual-review-captures
-      - feat/spinda-gba-identity
   pull_request:
   workflow_dispatch:
 

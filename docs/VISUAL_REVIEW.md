@@ -1,32 +1,42 @@
 # Revisão visual
 
-## Conferência parcial — 18/10/2026
+## PR #17 — inspeção com Playwright
 
-Usei a prévia temporária do commit `77b0ff7` (`feat/fire-red-identity`) em desktop, com viewport de 1363 × 936. Ela contém a identidade visual atual, mas antecede a comparação de cenários da calculadora do PR #11.
+A inspeção foi executada no Chromium do GitHub Actions, com a prévia Vite do próprio build. O run [Visual review #11](https://github.com/Shiroz1n/spinda-stop/actions/runs/39118793206) terminou com `passed`; o artefato reúne 21 capturas por viewport e o relatório da execução.
 
-| Tela ou fluxo | Conferência feita |
-|---|---|
-| Pokédex | Busca por Garchomp; três formas apareceram e a ficha abriu. |
-| Ficha | Dados gerais, origem PokéAPI e aviso de disponibilidade desconhecida foram exibidos. |
-| Construtor | Set salvo no navegador, campos de set, ações para Usage e calculadora visíveis. |
-| Usage — Battle Data | Busca e filtros por tipo e golpe; Garchomp permaneceu com fonte, período e lacunas identificados. Uma busca sem resultado mostrou contagem zero e mensagem de vazio. |
-| Usage — MetaRoll | Troca de fonte, ficha, seleção de data diária, matchups e ladder foram consultados. Data de captura e temporada permaneceram ligadas à MetaRoll. |
-| Teclado | `Tab` levou ao link de salto; o foco apareceu com contorno de 3 px. |
-| Calculadora | Um cenário Doubles mostrou 16 rolagens e o aviso sobre o redutor de golpe em área. A comparação do PR #11 não estava nesta prévia. |
+| Viewport | Capturas | Overflow horizontal | Violações axe nas telas auditadas |
+|---|---:|---:|---:|
+| Desktop — 1440 × 960 | 21 | 0 px | 0 |
+| Mobile simulado — 390 × 844 | 21 | 0 px | 0 |
 
-Nas páginas consultadas, não encontrei corte horizontal em desktop. As capturas disponíveis foram guardadas fora do repositório para revisão: `desktop-dex.jpg`, `desktop-detail.jpg`, `desktop-builder.jpg`, `desktop-usage-battle-data.jpg`, `desktop-usage-metaroll.jpg`, `desktop-usage-history.jpg`, `desktop-ladder.jpg` e `desktop-calculator-result.jpg`.
+O roteiro abriu a página inicial, Pokédex, ficha, builder vazio e configurado, calculadora aberta pelo builder, Usage das duas fontes, filtros combinados, histórico, matchups, ladder e calculadora com comparação. Também cobriu busca sem resultado, falha das duas fontes e exportação/importação do set. A amostra exportada manteve espécie, item, natureza, golpe e Stat Points. O [artefato do run](https://github.com/Shiroz1n/spinda-stop/actions/runs/39118793206/artifacts/12132918513) fica disponível por 14 dias.
 
-## O que falta
+O teste de teclado confirmou o link de salto no primeiro `Tab`, foco visível de 3 px na Pokédex e ativação do link com `Enter`. A troca entre Battle Data e MetaRoll também funcionou com `Enter`, mantendo o botão ativo e o contorno visíveis.
 
-Esta conferência **não conclui a revisão visual**. Não consegui configurar viewport mobile no Chrome remoto, e por isso não capturei nem validei telas mobile. A rota de calculadora comparativa do PR #11 também precisa de uma prévia atual antes de avaliar visualmente esse fluxo.
+### Correções feitas a partir da inspeção
 
-Tentativas no ambiente:
+- Ajustado o nome acessível do atalho de Usage no builder para incluir seu texto visível.
+- Links que identificam o motor da calculadora receberam contraste e sublinhado; axe antes os apontava como links indistinguíveis do texto ao redor.
+- A captura inicial agora mostra a página sem foco de teclado; a captura do link de salto fica separada.
+- O Playwright combina as quatro facetas visíveis de Garchomp com opções observadas no índice da fonte e registra uma tela filtrada.
 
-- `npx playwright install chromium` recebeu um arquivo de 0 MiB do CDN e terminou com erro de ZIP truncado.
-- `apt-get update` falhou ao iniciar o usuário isolado `_apt` (`setgroups: Operation not permitted`); não há navegador local instalado.
-- O Chrome remoto funciona, mas expõe viewport fixo de 1363 × 936 e não aceita os atalhos de DevTools enviados pela automação.
-- A criação de uma prévia mais recente pelo conector Vercel foi rejeitada na validação do campo `gitSource`, antes de iniciar um deploy.
-- Uma segunda consulta ao conector Vercel para obter uma prévia da branch retornou `403 Forbidden`; o comando `vercel` não está instalado. Nenhum deploy foi iniciado.
-- A prévia local do Vite iniciou em `localhost:5173`, mas o Chrome remoto não alcança o loopback do ambiente (`ERR_CONNECTION_REFUSED`).
+As imagens mostram layouts inteiros em 1440 px e 390 px. Li telas, formulários, texto de atribuição e estados de carregamento/erro/vazio nas capturas; não encontrei texto cortado. O artefato contém o relatório e todas as imagens.
 
-Para conferir a branch localmente, use `git clone https://github.com/Shiroz1n/spinda-stop.git`, entre na pasta, execute `git fetch origin feat/calculator-validated-scenarios`, `git switch --track origin/feat/calculator-validated-scenarios`, `npm ci` e `npm run dev`; abra o endereço impresso pelo Vite. No DevTools do navegador, escolha 390 px e 320 px para validar o mobile. A inspeção permanece parcial até que esses fluxos e a comparação sejam vistos em uma viewport estreita.
+## Limites da conferência
+
+O mobile é um viewport simulado em Chromium, não um aparelho físico. Foram testados 390 px; ainda não foi feita uma passagem específica em 320 px, com leitor de tela ou com zoom do sistema. Axe automatiza critérios WCAG 2.1 A/AA, mas não substitui essas verificações.
+
+Esta captura registra a identidade que existia antes do PR próprio de Spinda/GBA. O tema e o mascote serão conferidos de novo em desktop e mobile depois dessa mudança; não use esta rodada como aprovação visual final da nova identidade.
+
+Para abrir a branch localmente:
+
+```sh
+git clone https://github.com/Shiroz1n/spinda-stop.git
+cd spinda-stop
+git fetch origin fix/visual-review-captures
+git switch --track origin/fix/visual-review-captures
+npm ci
+npm run dev
+```
+
+Abra o endereço impresso pelo Vite. Para reproduzir as capturas automatizadas, rode `npx playwright install chromium` e `npm run visual:review`.
