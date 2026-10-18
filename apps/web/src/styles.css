@@ -1638,3 +1638,30 @@ select,
   .event-team-sharing-controls { grid-template-columns: 1fr; align-items: stretch; }
   .event-team-sharing-controls .button { width: 100%; }
 }
+
+/* Narrow builder grids keep each species name intact at zoom and small widths. */
+@media (max-width: 760px) {
+  .team-slots { grid-template-columns: minmax(0, 1fr); }
+  .team-slot {
+    min-height: 82px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 3px 10px;
+  }
+  .team-slot-art { grid-column: 1; grid-row: 1 / 3; min-height: 64px; }
+  .team-slot-art .pokemon-art { --sprite-size: 56px !important; }
+  .slot-number { grid-column: 2; grid-row: 1; align-self: start; }
+  .slot-copy { grid-column: 2; grid-row: 2; min-width: 0; }
+  .slot-copy b { display: block; overflow-wrap: normal; word-break: normal; }
+  .slot-copy small { display: block; }
+  .slot-types, .slot-add { grid-column: 2; }
+}
+
+.participant-card-main > div { display: grid; gap: 3px; }
+
+@media (max-width: 420px) {
+  .team-slot { min-height: 76px; grid-template-columns: 48px minmax(0, 1fr); gap: 3px 8px; padding: 7px; }
+  .team-slot-art { min-height: 56px; }
+  .team-slot-art .pokemon-art { --sprite-size: 48px !important; }
+  .slot-copy b { font-size: 0.86rem; }
+}
