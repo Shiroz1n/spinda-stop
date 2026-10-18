@@ -14,4 +14,6 @@ Revisão inicial: 18/10/2026. Cada conjunto precisa guardar fonte, versão ou pe
 
 Nenhum sprite ou artwork é incluído nesta entrega. O projeto exibe atribuição à PokéAPI e informa que a marca e os elementos de Pokémon pertencem aos seus titulares. A licença MIT do código original não licencia imagens, personagens ou marcas da franquia.
 
+O título usa Press Start 2P pela distribuição Fontsource (`@fontsource/press-start-2p`, SIL OFL 1.1). O corpo da interface usa fontes do sistema.
+
 O arquivo de captura enviado pelo proprietário foi consultado como referência de função e não será publicado. O XML Burp citado no prompt de execução não estava entre os anexos disponíveis; nenhum dado dele foi usado.

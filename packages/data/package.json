@@ -1,0 +1,14 @@
+{
+  "name": "@spinda-stop/data",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./pokedex": "./generated/pokedex.json",
+    "./details": "./generated/details.json",
+    "./moves": "./generated/moves.json",
+    "./natures": "./generated/natures.json"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-pokedex.mjs"
+  }
+}

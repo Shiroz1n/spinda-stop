@@ -2,7 +2,7 @@
 
 ## Primeira fase
 
-O construtor funciona no navegador e salva o rascunho localmente. Não há conta, API própria, analytics, upload ou sala de batalha. Arquivos importados são tratados como JSON: validar tamanho, versão e campos; nunca executar conteúdo importado.
+O construtor funciona no navegador e salva o rascunho localmente. Não há conta, API própria, analytics, envio de arquivo a um servidor ou sala de batalha. Arquivos importados são tratados como JSON com limite de 128 KB, versão e campos validados; o conteúdo nunca é executado.
 
 O importador baixa CSVs de uma revisão fixa da PokéAPI e produz dados locais ignorados pelo Git. Nenhum segredo é necessário. Um erro de download precisa informar a fonte e permitir nova tentativa.
 

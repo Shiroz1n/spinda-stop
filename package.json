@@ -1,0 +1,26 @@
+{
+  "name": "spinda-stop",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/domain",
+    "packages/data"
+  ],
+  "scripts": {
+    "predev": "npm run sync --workspace @spinda-stop/data",
+    "dev": "npm run dev --workspace @spinda-stop/web",
+    "prebuild": "npm run sync --workspace @spinda-stop/data",
+    "build": "npm run build --workspace @spinda-stop/web",
+    "preview": "npm run preview --workspace @spinda-stop/web",
+    "lint": "eslint .",
+    "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js",
+    "data:sync": "npm run sync --workspace @spinda-stop/data"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0"
+  }
+}
