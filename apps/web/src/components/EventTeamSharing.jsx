@@ -10,17 +10,17 @@ const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
 export function SharedTeamPreview({ roster, ownerName }) {
   if (!Array.isArray(roster) || !roster.some(Boolean)) return null;
   return (
-    <div className="shared-team-preview" aria-label={`Pokémon compartilhados por ${ownerName}`}>
+    <section className="shared-team-preview" aria-label={`Pokémon compartilhados por ${ownerName}`}>
       <span className="shared-team-label">Time compartilhado</span>
-      <div className="shared-team-sprites">
+      <ul className="shared-team-sprites" aria-label="Integrantes do time compartilhado">
         {roster.map((member, index) => {
-          if (!member) return <span className="shared-team-empty" key={`empty-${index}`} aria-hidden="true" />;
+          if (!member) return <li className="shared-team-empty" key={`empty-${index}`} aria-hidden="true" />;
           const pokemon = findPokemon(member.pokemonId || member.formSlug);
           const label = pokemon?.name || member.formSlug || "Pokémon";
-          return <PokemonSprite key={`${member.formSlug}-${index}`} pokemon={pokemon} name={label} size={52} decorative />;
+          return <li key={`${member.formSlug}-${index}`}><PokemonSprite pokemon={pokemon} name={label} size={52} /></li>;
         })}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
 
