@@ -5,7 +5,7 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 ## O que já funciona
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
-- Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points.
+- Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
 
@@ -15,9 +15,8 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 
 ## Próximas partes
 
-- Análise de tipos e legalidade por regulamento.
-- Mais fontes competitivas, quando seus campos, cobertura e condições estiverem confirmados.
-- Matchups e calculadora de dano com casos de referência.
+- Calculadora de dano com regras e limites documentados; ainda não substitui a conferência no jogo.
+- Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 
 As partidas continuam acontecendo dentro do jogo. O site organiza equipes e eventos; não cria partidas ou serviços oficiais do Pokémon Champions.

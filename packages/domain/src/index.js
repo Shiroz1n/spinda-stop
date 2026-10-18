@@ -28,6 +28,15 @@ export function createTeamMember(pokemon) {
   };
 }
 
+export function setTeamMember(team, slot, pokemon) {
+  if (!pokemon || !Number.isInteger(slot) || slot < 0 || slot >= team.members.length) return team;
+  if (team.members[slot]?.pokemonId === pokemon.slug) return team;
+
+  const members = [...team.members];
+  members[slot] = createTeamMember(pokemon);
+  return { ...team, members };
+}
+
 export function addPokemonToDraft(team, pokemon) {
   if (!pokemon) return { team, selectedSlot: 0, status: "missing" };
 
@@ -91,6 +100,9 @@ export function parseTeam(text, pokemon = []) {
   }
   if (candidate.schemaVersion !== TEAM_SCHEMA_VERSION) {
     return { ok: false, error: "Esta versão do arquivo não é compatível." };
+  }
+  if (candidate.format !== "doubles" || candidate.rulesetId !== "champions-doubles-draft") {
+    return { ok: false, error: "O arquivo não corresponde a um rascunho de Doubles do Spinda Stop." };
   }
   if (typeof candidate.name !== "string" || candidate.name.trim().length === 0 || candidate.name.length > 48) {
     return { ok: false, error: "Informe um nome de equipe com até 48 caracteres." };

@@ -1,6 +1,6 @@
 # Cobertura competitiva das fontes
 
-Inventário conferido em 18/10/2026. O estado da interface acompanha os PRs #1 a #6, empilhados e ainda sem merge. Foram comparados os guias das duas APIs com respostas públicas reais consultadas nessa data. Os exemplos dos guias podem estar atrasados: o índice MetaRoll consultado, por exemplo, trazia 262 Pokémon, enquanto a documentação ainda cita 235.
+Inventário conferido em 18/10/2026. O estado da interface acompanha os PRs #1 a #7, empilhados e ainda sem merge. Foram comparados os guias das duas APIs com respostas públicas reais consultadas nessa data. Os exemplos dos guias podem estar atrasados: o índice MetaRoll consultado, por exemplo, trazia 262 Pokémon, enquanto a documentação ainda cita 235.
 
 ## Campos vistos nas respostas reais
 
@@ -165,6 +165,7 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 e PR #5 mantêm períodos separados |
 | Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #6, separado, rotulado e com os limites ao lado dos números |
 | Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #6, tela e filtros próprios; `count` não é usado como estatística de Pokémon |
+| Tendências a partir do builder | As fichas por espécie estão disponíveis nas duas fontes | PR #7 abre Usage para o integrante escolhido e permite trocar de fonte; não altera o set |
 | Aluguel de times/rentals | Nenhuma das duas APIs avaliadas fornece times de aluguel | Sem fonte; fora do escopo competitivo desta integração |
 | Contas, salas e pareamento | Nenhuma das APIs oferece identidade ou salas do Spinda Stop | Etapa comunitária própria |
 | Calculadora de dano | Nenhuma API substitui regras oficiais e um modelo de dano validado | Etapa própria; fontes de uso não serão usadas como fórmula |
@@ -186,6 +187,7 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | #4 — Perfil e histórico Battle Data | Facetas de tipo/golpe/item/habilidade, ficha completa por Pokémon, consultas por temporada e snapshots diários | Battle Data; Doubles; dados limitados às respostas disponíveis |
 | #5 — MetaRoll: fichas e histórico | Adaptador próprio; perfil, ranking de espécies, histórico diário e temporadas arquivadas | Captura e atribuição próprias; sem tipo no arquivo |
 | #6 — MetaRoll: matchups e ladder | Matchups publicados, top de jogadores e filtros por país/idioma/posição/rating/partidas/taxa | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
-| #7 — Tendências a partir do time | Acesso do builder à ficha de cada integrante, sem escolher ou preencher um set automaticamente | Navegação contextual para a fonte ativa e seu período |
-| #8 — Calculadora completa | Regras, fórmulas e casos de dano verificados | Não depende de percentuais de usage |
-| #9 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |
+| #7 — Tendências a partir do time | Link de cada integrante para a ficha correspondente, com busca contextual e troca de fonte | Navegação contextual para a fonte ativa e seu período; nenhum campo do set é alterado |
+| #8 — Calculadora de dano | Regras cobertas, cálculo e casos de referência verificáveis | Não depende de percentuais de Usage; lacunas do motor devem aparecer na tela |
+| #9 — Fechar lacunas de contrato | Confirmar com as fontes se `ratingHistory`, `megas` e `ladder-cutoffs` têm semântica útil e validar o arquivo grande | Só integrar campos documentados ou confirmados; `all.json` segue baseado no contrato público |
+| #10 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |

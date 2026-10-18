@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { addPokemonToDraft, createEmptyTeam, createTeamMember, parseTeam, serializeTeam } from "@spinda-stop/domain";
+import { Link, useLocation, useNavigate } from "react-router";
+import { addPokemonToDraft, createEmptyTeam, parseTeam, serializeTeam, setTeamMember } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
@@ -21,11 +21,13 @@ const STAT_FIELDS = [
 function readSavedTeam() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return createEmptyTeam();
+    if (!saved) return { team: createEmptyTeam(), preserveStored: false, message: "" };
     const parsed = parseTeam(saved, dexData.pokemon);
-    return parsed.ok ? parsed.value : createEmptyTeam();
+    return parsed.ok
+      ? { team: parsed.value, preserveStored: false, message: "" }
+      : { team: createEmptyTeam(), preserveStored: true, message: "O rascunho salvo não pôde ser lido e foi preservado. Importe um arquivo válido ou faça uma alteração para salvar uma equipe nova." };
   } catch {
-    return createEmptyTeam();
+    return { team: createEmptyTeam(), preserveStored: true, message: "O armazenamento deste navegador não pôde ser lido. A equipe atual ainda pode ser exportada." };
   }
 }
 
@@ -35,9 +37,10 @@ function pokemonWithDetails(slug) {
 }
 
 function createInitialDraft(pokemonSlug) {
-  const team = readSavedTeam();
+  const saved = readSavedTeam();
+  const team = saved.team;
   const pokemon = pokemonWithDetails(pokemonSlug);
-  if (!pokemon) return { team, selectedSlot: 0, message: "" };
+  if (!pokemon) return { team, selectedSlot: 0, message: saved.message, preserveStored: saved.preserveStored };
 
   const result = addPokemonToDraft(team, pokemon);
   const slotLabel = result.selectedSlot + 1;
@@ -50,7 +53,8 @@ function createInitialDraft(pokemonSlug) {
   return {
     team: result.team,
     selectedSlot: result.selectedSlot,
-    message: messages[result.status] || "",
+    message: [saved.message, messages[result.status]].filter(Boolean).join(" "),
+    preserveStored: saved.preserveStored,
   };
 }
 
@@ -63,8 +67,7 @@ export function BuilderPage() {
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(0);
-  const [pickerSession, setPickerSession] = useState(0);
-  const [saveStatus, setSaveStatus] = useState("Rascunho local");
+  const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
   const selectedPokemon = useMemo(
@@ -79,6 +82,7 @@ export function BuilderPage() {
   }, [location.pathname, location.state?.pokemonSlug, navigate]);
 
   useEffect(() => {
+    if (initialDraft.preserveStored) return;
     try { localStorage.setItem(STORAGE_KEY, serializeTeam(initialDraft.team)); } catch { /* Export remains available if storage is blocked. */ }
   }, [initialDraft]);
 
@@ -103,18 +107,18 @@ export function BuilderPage() {
   function chooseForSlot(slot) {
     setSelectedSlot(slot);
     setPickerSlot(slot);
-    setPickerSession((current) => current + 1);
     setPickerOpen(true);
   }
 
   function choosePokemon(pokemon) {
     const selectedPokemon = pokemonWithDetails(pokemon.slug);
-    const members = [...team.members];
-    members[pickerSlot] = createTeamMember(selectedPokemon);
-    commitTeam({ ...team, members });
+    const samePokemon = team.members[pickerSlot]?.pokemonId === selectedPokemon.slug;
+    commitTeam(setTeamMember(team, pickerSlot, selectedPokemon));
     setSelectedSlot(pickerSlot);
     setPickerOpen(false);
-    setMessage(`${selectedPokemon.name} adicionado à posição ${pickerSlot + 1}.`);
+    setMessage(samePokemon
+      ? `${selectedPokemon.name} já está nesta posição; o set foi mantido.`
+      : `${selectedPokemon.name} adicionado à posição ${pickerSlot + 1}.`);
   }
 
   function clearSlot() {
@@ -125,14 +129,23 @@ export function BuilderPage() {
   }
 
   function exportTeam() {
-    const file = new Blob([serializeTeam(team)], { type: "application/json" });
-    const url = URL.createObjectURL(file);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${safeFileName(team.name)}.json`;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setMessage("Arquivo JSON exportado.");
+    let url = "";
+    try {
+      const file = new Blob([serializeTeam(team)], { type: "application/json" });
+      url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeFileName(team.name)}.json`;
+      link.hidden = true;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setMessage("Arquivo JSON exportado.");
+    } catch {
+      setMessage("Não foi possível exportar o arquivo neste navegador.");
+    } finally {
+      if (url) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
   }
 
   async function importTeam(event) {
@@ -143,14 +156,21 @@ export function BuilderPage() {
       setMessage("O arquivo passou de 128 KB.");
       return;
     }
-    const result = parseTeam(await file.text(), dexData.pokemon);
+    let contents;
+    try {
+      contents = await file.text();
+    } catch {
+      setMessage("Não foi possível ler o arquivo selecionado.");
+      return;
+    }
+    const result = parseTeam(contents, dexData.pokemon);
     if (!result.ok) {
       setMessage(result.error);
       return;
     }
-    commitTeam(result.value);
+    const saved = commitTeam(result.value);
     setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
-    setMessage("Equipe importada.");
+    setMessage(saved ? "Equipe importada e salva neste navegador." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
   }
 
   function updateMove(index, value) {
@@ -236,8 +256,12 @@ export function BuilderPage() {
                   <h2 id="active-member-title">{selectedPokemon.name}</h2>
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
+                  <p className="form-hint builder-usage-hint">A consulta mostra tendências da fonte sem alterar este set.</p>
                 </div>
                 <div className="set-heading-actions">
+                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de ${selectedPokemon.name} em Usage`}>
+                    Ver tendências de Usage
+                  </Link>
                   <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
                   <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
                 </div>
@@ -291,7 +315,7 @@ export function BuilderPage() {
       <p className="form-message" role="status" aria-live="polite">{message}</p>
       <p className="builder-footnote">Esta etapa guarda os campos do time e exporta um formato próprio. Não calcula dano nem confirma legalidade.</p>
 
-      <SpeciesPicker key={pickerSession} open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
+      <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
     </div>
   );
 }

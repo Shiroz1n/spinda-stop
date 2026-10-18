@@ -7,6 +7,7 @@ import {
   formatNationalNumber,
   parseTeam,
   searchPokemon,
+  setTeamMember,
   serializeTeam,
 } from "../src/index.js";
 
@@ -56,6 +57,42 @@ test("keeps an existing set when the same Pokémon is opened from the Pokédex",
   assert.deepEqual(result.team.members[2].moves, ["Protect", "Thunderbolt", "", ""]);
 });
 
+test("keeps a configured set when the same species is selected in its slot", () => {
+  const team = createEmptyTeam();
+  team.members[0] = {
+    ...createTeamMember(catalog[0]),
+    ability: "Lightning Rod",
+    item: "Sitrus Berry",
+    nature: "Calm",
+    moves: ["Protect", "Thunderbolt", "", ""],
+    statPoints: { hp: 12, atk: 0, def: 8, spa: 18, spd: 20, spe: 8 },
+  };
+  const before = team.members[0];
+
+  const result = setTeamMember(team, 0, catalog[0]);
+
+  assert.equal(result, team);
+  assert.equal(result.members[0], before);
+  assert.equal(result.members[0].item, "Sitrus Berry");
+  assert.deepEqual(result.members[0].moves, ["Protect", "Thunderbolt", "", ""]);
+  assert.deepEqual(result.members[0].statPoints, before.statPoints);
+});
+
+test("replacing a slot starts a fresh set and preserves the other slots", () => {
+  const team = createEmptyTeam();
+  team.members[0] = { ...createTeamMember(catalog[0]), item: "Sitrus Berry", moves: ["Protect", "", "", ""] };
+  team.members[1] = createTeamMember(catalog[0]);
+  const otherSlot = team.members[1];
+  const nextPokemon = { ...catalog[0], slug: "raichu", name: "Raichu", speciesId: 26 };
+
+  const result = setTeamMember(team, 0, nextPokemon);
+
+  assert.equal(result.members[0].pokemonId, "raichu");
+  assert.equal(result.members[0].item, "");
+  assert.deepEqual(result.members[0].moves, ["", "", "", ""]);
+  assert.equal(result.members[1], otherSlot);
+});
+
 test("does not replace a team member when every slot is occupied", () => {
   const team = createEmptyTeam();
   team.members = Array.from({ length: 6 }, (_, index) => ({ pokemonId: `member-${index}` }));
@@ -98,6 +135,9 @@ test("returns useful errors for malformed, oversized, unknown, and wrong-version
   assert.match(parseTeam(JSON.stringify(team), catalog).error, /versão/);
 
   team.schemaVersion = 1;
+  team.format = "singles";
+  assert.match(parseTeam(JSON.stringify(team), catalog).error, /rascunho de Doubles/);
+  team.format = "doubles";
   team.members[0] = { ...createTeamMember(catalog[0]), pokemonId: "missing" };
   assert.match(parseTeam(JSON.stringify(team), catalog).error, /não encontrado/);
 });

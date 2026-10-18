@@ -1,4 +1,5 @@
-import { Link, NavLink } from "react-router";
+import { useEffect, useRef } from "react";
+import { Link, NavLink, useLocation } from "react-router";
 import { BrandMark } from "./BrandMark.jsx";
 
 const navigation = [
@@ -8,6 +9,17 @@ const navigation = [
 ];
 
 export function AppShell({ children }) {
+  const location = useLocation();
+  const mainRef = useRef(null);
+  const previousPath = useRef(location.pathname);
+
+  useEffect(() => {
+    if (previousPath.current !== location.pathname) {
+      previousPath.current = location.pathname;
+      mainRef.current?.focus();
+    }
+  }, [location.pathname]);
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -32,7 +44,7 @@ export function AppShell({ children }) {
         </Link>
       </header>
 
-      <main id="main-content" className="main-content">{children}</main>
+      <main ref={mainRef} id="main-content" className="main-content" tabIndex={-1}>{children}</main>
 
       <footer className="site-footer">
         <span>Spinda Stop é um projeto independente da comunidade.</span>

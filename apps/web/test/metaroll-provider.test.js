@@ -48,6 +48,30 @@ test("normalizes MetaRoll all entries and uses their fields for filters", () => 
   assert.equal(Object.hasOwn(result, "regulation"), false);
 });
 
+test("normalizes nested all.json entries without losing the outer rank", () => {
+  const result = normalizeMetaRollIndexResponse({
+    format: "doubles",
+    season: "M-7",
+    entries: [{
+      rank: 12,
+      previousRank: 15,
+      entry: {
+        id: "garchomp",
+        name: "Garchomp",
+        moves: [{ name: "Earthquake", percent: 65.4 }],
+        spreads: [{ statPoints: { hp: 12, atk: 0, def: null, spa: 0, spd: 20, spe: 8 }, percent: 20 }],
+      },
+    }],
+  });
+
+  assert.equal(result.entries[0].id, "garchomp");
+  assert.equal(result.entries[0].rank, 12);
+  assert.equal(result.entries[0].previousRank, 15);
+  assert.deepEqual(result.entries[0].filterValues.moves, ["Earthquake"]);
+  assert.equal(result.entries[0].distributions.spreads[0].statPoints.hp, 12);
+  assert.equal(result.entries[0].distributions.spreads[0].statPoints.defense, null);
+});
+
 test("normalizes separate daily rank and usage histories", () => {
   const result = normalizeMetaRollPokemonResponse({
     version: 1,

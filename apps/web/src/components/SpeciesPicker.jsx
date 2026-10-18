@@ -25,13 +25,18 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
     };
   }, [open]);
 
+  function closePicker() {
+    setQuery("");
+    onClose();
+  }
+
   return (
     <dialog
       ref={dialogRef}
       className="species-dialog"
       aria-labelledby="species-dialog-title"
-      onCancel={(event) => { event.preventDefault(); onClose(); }}
-      onClick={(event) => { if (event.target === dialogRef.current) onClose(); }}
+      onCancel={(event) => { event.preventDefault(); closePicker(); }}
+      onClick={(event) => { if (event.target === dialogRef.current) closePicker(); }}
     >
       <div className="dialog-content">
         <div className="dialog-heading">
@@ -39,7 +44,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
             <p className="page-label">Catálogo geral</p>
             <h2 id="species-dialog-title">Escolha uma espécie</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar seletor">
+          <button className="icon-button" type="button" onClick={closePicker} aria-label="Fechar seletor">
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m5 5 10 10M15 5 5 15" /></svg>
           </button>
         </div>
@@ -60,7 +65,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
               className="picker-result"
               type="button"
               key={entry.slug}
-              onClick={() => onChoose(entry)}
+              onClick={() => { setQuery(""); onChoose(entry); }}
             >
               <span className="dex-number">#{String(entry.speciesId).padStart(4, "0")}</span>
               <span className="picker-name">{entry.name}</span>

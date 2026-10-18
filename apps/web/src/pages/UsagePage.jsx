@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { usageProviders } from "../data/usage/registry.js";
+import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -239,13 +241,15 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   );
 }
 
-function BattleDataUsagePage() {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
   const [indexError, setIndexError] = useState("");
   const [indexRetry, setIndexRetry] = useState(0);
-  const [query, setQuery] = useState("");
+  const indexForceKey = useRef("");
+  const [query, setQuery] = useState(initialPokemonName);
+  const initialPokemonNameRef = useRef(initialPokemonName);
   const [typeFilter, setTypeFilter] = useState("all");
   const [moveFilter, setMoveFilter] = useState("all");
   const [itemFilter, setItemFilter] = useState("all");
@@ -261,16 +265,27 @@ function BattleDataUsagePage() {
   const [usageStatus, setUsageStatus] = useState("idle");
   const [usageError, setUsageError] = useState("");
   const [usageRetry, setUsageRetry] = useState(0);
+  const usageForceKey = useRef("");
+
+  useEffect(() => {
+    initialPokemonNameRef.current = initialPokemonName;
+  }, [initialPokemonName]);
 
   useEffect(() => {
     let active = true;
+    const requestKey = `index|${indexRetry}`;
+    const force = indexForceKey.current === requestKey;
+    if (force) indexForceKey.current = "";
 
-    provider.loadIndex({ force: indexRetry > 0 }).then((result) => {
+    provider.loadIndex({ force }).then((result) => {
       if (!active) return;
       setIndexData(result);
       setIndexStatus("success");
       setSelectedId((current) => {
-        if (current) return current;
+        if (current && result.pokemon.some((entry) => entry.showdownId === current)) return current;
+        if (initialPokemonNameRef.current) {
+          return findUsagePokemonByReference(result.pokemon, initialPokemonNameRef.current)?.showdownId || null;
+        }
         return [...result.pokemon].sort((left, right) => {
           const leftPosition = left.position ?? Number.POSITIVE_INFINITY;
           const rightPosition = right.position ?? Number.POSITIVE_INFINITY;
@@ -291,7 +306,10 @@ function BattleDataUsagePage() {
     if (!selectedId) return undefined;
 
     let active = true;
-    const request = { showdownId: selectedId, force: usageRetry > 0 };
+    const requestKey = [periodMode, historySeason, historyDays, selectedId, usageRetry].join("|");
+    const force = usageForceKey.current === requestKey;
+    if (force) usageForceKey.current = "";
+    const request = { showdownId: selectedId, force };
     if (periodMode === "history") {
       request.days = historyDays;
       if (historySeason !== "all") request.season = historySeason;
@@ -313,6 +331,9 @@ function BattleDataUsagePage() {
   }, [provider, selectedId, periodMode, historySeason, historyDays, usageRetry]);
 
   const selectedPokemon = indexData?.pokemon.find((entry) => entry.showdownId === selectedId) || null;
+  const requestedPokemon = initialPokemonName
+    ? findUsagePokemonByReference(indexData?.pokemon || [], initialPokemonName)
+    : null;
   const types = Array.from(new Set(indexData?.pokemon.flatMap((entry) => entry.types) || [])).sort();
   const facetOptions = Object.fromEntries(categoryFilters.map(({ key }) => [
     key,
@@ -399,7 +420,9 @@ function BattleDataUsagePage() {
             onClick={() => {
               setIndexStatus("loading");
               setIndexError("");
-              setIndexRetry((value) => value + 1);
+              const nextRetry = indexRetry + 1;
+              indexForceKey.current = `index|${nextRetry}`;
+              setIndexRetry(nextRetry);
             }}
           >
             Tentar de novo
@@ -539,6 +562,9 @@ function BattleDataUsagePage() {
             <p className="usage-filter-note">
               Golpes, itens e habilidades vêm dos destaques do índice atual. Valores ausentes não são inferidos.
             </p>
+            {initialPokemonName && indexData && !requestedPokemon ? (
+              <p className="usage-request-note" role="status">A Battle Data não listou {initialPokemonName} neste índice. Limpe a busca para escolher outra espécie.</p>
+            ) : null}
 
             <div className="usage-list-caption">
               <span>Nome</span>
@@ -556,6 +582,7 @@ function BattleDataUsagePage() {
                       onClick={() => {
                         if (entry.showdownId !== selectedId) {
                           setSelectedId(entry.showdownId);
+                          onPokemonSelect?.(entry.name);
                           setUsageRetry(0);
                           setUsage(null);
                           setUsageStatus("loading");
@@ -629,7 +656,9 @@ function BattleDataUsagePage() {
                 setUsage(null);
                 setUsageStatus("loading");
                 setUsageError("");
-                setUsageRetry((value) => value + 1);
+                const nextRetry = usageRetry + 1;
+                usageForceKey.current = [periodMode, historySeason, historyDays, selectedId, nextRetry].join("|");
+                setUsageRetry(nextRetry);
               }}
             />
           </div>
@@ -640,7 +669,20 @@ function BattleDataUsagePage() {
 }
 
 export function UsagePage() {
-  const [sourceId, setSourceId] = useState("pokemon-champions-battle-data");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sourceId = searchParams.get("source") === "metaroll" ? "metaroll" : "pokemon-champions-battle-data";
+  const initialPokemonName = searchParams.get("pokemon") || "";
+  const selectSource = (nextSource) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("source", nextSource);
+    setSearchParams(nextParams, { replace: true });
+  };
+  const selectPokemon = (pokemonName) => {
+    if (!pokemonName) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("pokemon", pokemonName);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   return (
     <>
@@ -654,7 +696,7 @@ export function UsagePage() {
             aria-pressed={sourceId === "pokemon-champions-battle-data"}
             className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
             type="button"
-            onClick={() => setSourceId("pokemon-champions-battle-data")}
+            onClick={() => selectSource("pokemon-champions-battle-data")}
           >
             Battle Data
           </button>
@@ -662,13 +704,15 @@ export function UsagePage() {
             aria-pressed={sourceId === "metaroll"}
             className={sourceId === "metaroll" ? "is-active" : ""}
             type="button"
-            onClick={() => setSourceId("metaroll")}
+            onClick={() => selectSource("metaroll")}
           >
             MetaRoll
           </button>
         </div>
       </div>
-      {sourceId === "metaroll" ? <MetaRollUsagePage /> : <BattleDataUsagePage />}
+      {sourceId === "metaroll"
+        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
+        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
     </>
   );
 }
