@@ -15,7 +15,7 @@ O modo é **Operate**: quem usa está procurando uma espécie ou ajustando um ti
 | `ink` | `#20283A` | Texto e bordas principais. |
 | `blue` | `#2D67A4` | Links e navegação. |
 | `coral` | `#C44033` | Ações principais e estados de atenção. |
-| `green` | `#2E7650` | Seleção e confirmação. |
+| `green` | `#2C704A` | Seleção e confirmação, com contraste AA no fundo principal. |
 | `gold` | `#785300` | Aviso e dado provisório. |
 
 Tipo também aparece por nome. Press Start 2P é usada só na marca; corpo e formulários usam sans do sistema. Números de catálogo usam largura tabular. Molduras quadradas, sombras curtas e áreas de cor se repetem na navegação, cartões, filtros, campos, seleções e resultados. Cabeçalho, botões, abas de Usage, fichas e calculadora usam a mesma paleta.
