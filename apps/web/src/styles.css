@@ -1335,7 +1335,7 @@ a:hover { color: var(--coral-dark); }
 .damage-result-heading .form-hint { margin: 0; }
 .damage-result-range { flex: 0 0 auto; display: grid; justify-items: end; line-height: 1.15; }
 .damage-result-range strong { color: var(--blue-dark); font-size: clamp(1.75rem, 4vw, 2.8rem); font-variant-numeric: tabular-nums; }
-.damage-result-range span { color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+.damage-result-range span { color: #173745; font-size: 0.85rem; font-weight: 700; }
 .damage-percent { margin: 12px 0 0; color: var(--ink); font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .damage-spread-note { margin: 10px 0 0; padding: 9px 11px; border-radius: 8px; background: #f4dfc5; color: var(--coral-dark); font-size: 0.9rem; font-weight: 700; }
 .damage-rolls, .damage-ko-note, .damage-breakdown { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
