@@ -12,14 +12,14 @@ export function SharedTeamPreview({ roster, ownerName }) {
   return (
     <section className="shared-team-preview" aria-label={`Pokémon compartilhados por ${ownerName}`}>
       <span className="shared-team-label">Time compartilhado</span>
-      <ul className="shared-team-sprites" aria-label="Integrantes do time compartilhado">
+      <div className="shared-team-sprites" role="list" aria-label="Integrantes do time compartilhado">
         {roster.map((member, index) => {
-          if (!member) return <li className="shared-team-empty" key={`empty-${index}`} aria-hidden="true" />;
+          if (!member) return <span className="shared-team-empty" key={`empty-${index}`} role="listitem" aria-label={`Posição ${index + 1} vazia`} />;
           const pokemon = findPokemon(member.pokemonId || member.formSlug);
           const label = pokemon?.name || member.formSlug || "Pokémon";
-          return <li key={`${member.formSlug}-${index}`}><PokemonSprite pokemon={pokemon} name={label} size={52} /></li>;
+          return <span key={`${member.formSlug}-${index}`} role="listitem"><PokemonSprite pokemon={pokemon} name={label} size={52} /></span>;
         })}
-      </ul>
+      </div>
     </section>
   );
 }
