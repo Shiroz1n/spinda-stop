@@ -13,7 +13,7 @@ O editor não depende de uma conta nem de servidor. Um rascunho fica no navegado
 
 ## Depois
 
-Contas, salas e resultados usam API Node separada do Vite, PostgreSQL e transações. A API é a única camada que guarda segredos e acessa o banco. OAuth e código de amizade são configurados por ambiente; nenhum serviço de produção está conectado.
+Contas, salas, torneios e resultados usam API Node separada do Vite, PostgreSQL e transações. A API é a única camada que guarda segredos e acessa o banco. OAuth e código de amizade são configurados por ambiente; nenhum serviço de produção está conectado.
 
 O fornecedor de dados competitivos fica atrás de uma interface `MetaProvider`. Isso permite desligar uma fonte ou mostrar cobertura parcial sem misturar dados de formatos e temporadas diferentes.
 

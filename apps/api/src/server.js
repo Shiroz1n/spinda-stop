@@ -10,6 +10,14 @@ import {
   validateTeamPayload,
 } from "./community-domain.js";
 import { decryptFriendCode, encryptFriendCode, encryptionKey } from "./friend-code.js";
+import {
+  canLockTournament,
+  canStartTournament,
+  semifinalPairings,
+  shuffleTournamentSeeds,
+  TOURNAMENT_CAPACITY,
+  validateTournamentName,
+} from "./tournament-domain.js";
 
 const MAX_BODY_BYTES = 128 * 1024;
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -124,6 +132,22 @@ function roomSummary(row) {
     hostId: row.host_id,
     createdAt: row.created_at,
     inviteExpiresAt: row.invite_expires_at,
+  };
+}
+
+function tournamentSummary(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    capacity: row.capacity,
+    hostId: row.host_id,
+    bracketVersion: row.bracket_version,
+    championId: row.champion_id,
+    createdAt: row.created_at,
+    inviteExpiresAt: row.invite_expires_at,
+    startedAt: row.started_at,
+    finishedAt: row.finished_at,
   };
 }
 
@@ -376,6 +400,265 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
       const result = await pool.query("DELETE FROM teams WHERE id = $1 AND owner_id = $2", [teamMatch[1], current.id]);
       if (!result.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada.");
       return json(res, 200, { ok: true });
+    }
+
+    if (method === "GET" && pathname === "/api/tournaments") {
+      const current = assertUser(user);
+      await clearExpiredTournamentFriendCodes(pool);
+      const result = await pool.query(
+        `SELECT t.*, tm.status AS member_status,
+                (SELECT count(*)::int FROM tournament_members active
+                  WHERE active.tournament_id = t.id AND active.status IN ('registered', 'checked_in')) AS participant_count
+           FROM tournaments t JOIN tournament_members tm ON tm.tournament_id = t.id
+          WHERE tm.user_id = $1 AND tm.status IN ('registered', 'checked_in')
+          ORDER BY t.created_at DESC LIMIT 100`,
+        [current.id],
+      );
+      return json(res, 200, { tournaments: result.rows.map((row) => ({ ...tournamentSummary(row), memberStatus: row.member_status, participantCount: row.participant_count })) });
+    }
+
+    if (method === "POST" && pathname === "/api/tournaments") {
+      const current = assertUser(user);
+      const body = await readJson(req);
+      const name = validateTournamentName(body.name);
+      if (!name) throw new HttpError(400, "invalid_name", "O nome do torneio precisa ter de 1 a 48 caracteres.");
+      const inviteToken = randomToken();
+      const tournament = await transaction(pool, async (client) => {
+        const inserted = await client.query(
+          `INSERT INTO tournaments (host_id, name, invite_hash, invite_expires_at)
+           VALUES ($1, $2, $3, now() + interval '7 days') RETURNING *`,
+          [current.id, name, digest(inviteToken)],
+        );
+        await client.query("INSERT INTO tournament_members (tournament_id, user_id) VALUES ($1, $2)", [inserted.rows[0].id, current.id]);
+        return inserted.rows[0];
+      });
+      return json(res, 201, { tournament: tournamentSummary(tournament), inviteUrl: `${config.appOrigin}/tournaments/join#${inviteToken}` });
+    }
+
+    if (method === "POST" && pathname === "/api/tournaments/join") {
+      rateLimit(req, "tournament-invite-join");
+      const current = assertUser(user);
+      const body = await readJson(req);
+      if (typeof body.inviteToken !== "string" || body.inviteToken.length < 32 || body.inviteToken.length > 64) throw new HttpError(400, "invalid_invite", "O convite não é válido.");
+      const tournamentId = await transaction(pool, async (client) => {
+        const found = await client.query("SELECT * FROM tournaments WHERE invite_hash = $1 FOR UPDATE", [digest(body.inviteToken)]);
+        if (!found.rowCount || found.rows[0].status !== "open" || new Date(found.rows[0].invite_expires_at) <= new Date()) throw new HttpError(404, "invite_not_found", "Este convite expirou ou o torneio não aceita mais inscrições.");
+        const tournament = found.rows[0];
+        const existing = await client.query("SELECT status FROM tournament_members WHERE tournament_id = $1 AND user_id = $2", [tournament.id, current.id]);
+        if (existing.rows[0]?.status === "removed") throw new HttpError(403, "member_removed", "Sua inscrição neste torneio foi removida.");
+        if (existing.rows[0]?.status === "left") {
+          const count = await client.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND status IN ('registered', 'checked_in')", [tournament.id]);
+          if (count.rows[0].count >= TOURNAMENT_CAPACITY) throw new HttpError(409, "tournament_full", "O torneio já está completo.");
+          await client.query("UPDATE tournament_members SET status = 'registered', checked_in_at = NULL, seed = NULL WHERE tournament_id = $1 AND user_id = $2", [tournament.id, current.id]);
+        } else if (!existing.rowCount) {
+          const count = await client.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND status IN ('registered', 'checked_in')", [tournament.id]);
+          if (count.rows[0].count >= TOURNAMENT_CAPACITY) throw new HttpError(409, "tournament_full", "O torneio já está completo.");
+          await client.query("INSERT INTO tournament_members (tournament_id, user_id) VALUES ($1, $2)", [tournament.id, current.id]);
+        }
+        return tournament.id;
+      });
+      return json(res, 200, { tournamentId });
+    }
+
+    const tournamentMatch = pathname.match(/^\/api\/tournaments\/([0-9a-f-]+)(?:\/(.*))?$/i);
+    if (tournamentMatch && isUuid(tournamentMatch[1])) {
+      const current = assertUser(user);
+      const tournamentId = tournamentMatch[1];
+      const action = tournamentMatch[2] || "";
+
+      if (method === "GET" && !action) {
+        await clearExpiredTournamentFriendCodes(pool, tournamentId);
+        const tournamentResult = await pool.query("SELECT * FROM tournaments WHERE id = $1", [tournamentId]);
+        const membership = await pool.query("SELECT status FROM tournament_members WHERE tournament_id = $1 AND user_id = $2", [tournamentId, current.id]);
+        if (!tournamentResult.rowCount || !membership.rowCount || !["registered", "checked_in"].includes(membership.rows[0].status)) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+        const tournament = tournamentResult.rows[0];
+        const members = await pool.query(
+          `SELECT u.id, u.handle, tm.status, tm.seed, tm.checked_in_at,
+                  tm.friend_code_ciphertext, tm.friend_code_nonce, tm.friend_code_tag
+             FROM tournament_members tm JOIN users u ON u.id = tm.user_id
+            WHERE tm.tournament_id = $1 AND tm.status IN ('registered', 'checked_in')
+            ORDER BY tm.seed NULLS LAST, tm.created_at`,
+          [tournamentId],
+        );
+        const matchRows = await pool.query(
+          `SELECT m.id, m.round_number, m.bracket_slot, m.status, m.created_at,
+                  pa.id AS player_a_id, pa.handle AS player_a_handle,
+                  pb.id AS player_b_id, pb.handle AS player_b_handle,
+                  report.reporter_id, report.winner_id, report.note, report.created_at AS report_created_at,
+                  winner.handle AS winner_handle,
+                  dispute.id AS dispute_id, dispute.opened_by, dispute.reason AS dispute_reason,
+                  dispute.status AS dispute_status, dispute.resolution, dispute.created_at AS dispute_created_at
+             FROM matches m
+             JOIN users pa ON pa.id = m.player_a_id JOIN users pb ON pb.id = m.player_b_id
+             LEFT JOIN match_reports report ON report.match_id = m.id
+             LEFT JOIN users winner ON winner.id = report.winner_id
+             LEFT JOIN disputes dispute ON dispute.match_id = m.id
+            WHERE m.tournament_id = $1 ORDER BY m.round_number, m.bracket_slot`,
+          [tournamentId],
+        );
+        const memberData = members.rows.map((member) => {
+          let friendCode = null;
+          if (member.friend_code_ciphertext) {
+            if (!config.friendKey) throw new HttpError(503, "friend_code_unavailable", "O compartilhamento de códigos não foi configurado neste ambiente.");
+            friendCode = decryptFriendCode(
+              { ciphertext: member.friend_code_ciphertext, nonce: member.friend_code_nonce, tag: member.friend_code_tag },
+              config.friendKey,
+              `tournament:${tournamentId}:${member.id}`,
+            );
+          }
+          return { id: member.id, handle: member.handle, status: member.status, seed: member.seed, checkedInAt: member.checked_in_at, friendCode };
+        });
+        const matches = matchRows.rows.map((row) => ({
+          id: row.id,
+          roundNumber: row.round_number,
+          bracketSlot: row.bracket_slot,
+          status: row.status,
+          createdAt: row.created_at,
+          playerA: { id: row.player_a_id, handle: row.player_a_handle },
+          playerB: { id: row.player_b_id, handle: row.player_b_handle },
+          report: row.reporter_id ? { reporterId: row.reporter_id, winnerId: row.winner_id, winnerHandle: row.winner_handle, note: row.note, createdAt: row.report_created_at } : null,
+          dispute: row.dispute_id ? { id: row.dispute_id, openedBy: row.opened_by, reason: row.dispute_reason, status: row.dispute_status, resolution: row.resolution, createdAt: row.dispute_created_at } : null,
+        }));
+        const activeCount = await pool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND status IN ('registered', 'checked_in')", [tournamentId]);
+        return json(res, 200, {
+          tournament: tournamentSummary(tournament),
+          currentUser: { id: current.id, role: tournament.host_id === current.id ? "host" : "member", memberStatus: membership.rows[0].status },
+          participantCount: activeCount.rows[0].count,
+          members: memberData,
+          matches,
+        });
+      }
+
+      if (method === "POST" && action === "invite") {
+        const newToken = randomToken();
+        const result = await pool.query(
+          `UPDATE tournaments SET invite_hash = $1, invite_expires_at = now() + interval '7 days'
+            WHERE id = $2 AND host_id = $3 AND status = 'open' RETURNING *`,
+          [digest(newToken), tournamentId, current.id],
+        );
+        if (!result.rowCount) throw new HttpError(404, "tournament_not_open", "Só o host pode criar convite para um torneio com inscrições abertas.");
+        return json(res, 200, { tournament: tournamentSummary(result.rows[0]), inviteUrl: `${config.appOrigin}/tournaments/join#${newToken}` });
+      }
+
+      if (method === "POST" && action === "check-in") {
+        const result = await transaction(pool, async (client) => {
+          const tournament = await client.query("SELECT status FROM tournaments WHERE id = $1 FOR UPDATE", [tournamentId]);
+          const member = await client.query("SELECT status FROM tournament_members WHERE tournament_id = $1 AND user_id = $2 FOR UPDATE", [tournamentId, current.id]);
+          if (!tournament.rowCount || !member.rowCount) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+          if (member.rows[0].status === "checked_in") return { status: "checked_in" };
+          if (tournament.rows[0].status !== "open" || member.rows[0].status !== "registered") throw new HttpError(409, "check_in_closed", "O check-in não está disponível nesta etapa.");
+          await client.query("UPDATE tournament_members SET status = 'checked_in', checked_in_at = now() WHERE tournament_id = $1 AND user_id = $2", [tournamentId, current.id]);
+          return { status: "checked_in" };
+        });
+        return json(res, 200, result);
+      }
+
+      if (method === "POST" && action === "leave") {
+        await transaction(pool, async (client) => {
+          const tournament = await client.query("SELECT status, host_id FROM tournaments WHERE id = $1 FOR UPDATE", [tournamentId]);
+          if (!tournament.rowCount || tournament.rows[0].status !== "open" || tournament.rows[0].host_id === current.id) throw new HttpError(409, "cannot_leave", "Só é possível sair de um torneio aberto, e o host não pode sair.");
+          const result = await client.query(
+            `UPDATE tournament_members SET status = 'left', checked_in_at = NULL, seed = NULL,
+                    friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
+              WHERE tournament_id = $1 AND user_id = $2 AND status IN ('registered', 'checked_in')
+              RETURNING tournament_id`,
+            [tournamentId, current.id],
+          );
+          if (!result.rowCount) throw new HttpError(409, "cannot_leave", "Sua inscrição não pode mais ser alterada.");
+        });
+        return json(res, 200, { ok: true });
+      }
+
+      if (method === "POST" && action === "close") {
+        const result = await transaction(pool, async (client) => {
+          const tournament = await client.query("SELECT * FROM tournaments WHERE id = $1 FOR UPDATE", [tournamentId]);
+          if (!tournament.rowCount || tournament.rows[0].host_id !== current.id) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+          if (tournament.rows[0].status === "locked") return { status: "locked" };
+          const counts = await client.query(
+            `SELECT count(*) FILTER (WHERE status IN ('registered', 'checked_in'))::int AS members,
+                    count(*) FILTER (WHERE status = 'checked_in')::int AS checked_in
+               FROM tournament_members WHERE tournament_id = $1`,
+            [tournamentId],
+          );
+          if (!canLockTournament(tournament.rows[0].status, counts.rows[0].members, counts.rows[0].checked_in)) throw new HttpError(409, "tournament_not_ready", "O host pode fechar as inscrições quando quatro participantes estiverem inscritos e com check-in.");
+          await client.query("UPDATE tournaments SET status = 'locked', locked_at = now(), invite_expires_at = now() WHERE id = $1", [tournamentId]);
+          return { status: "locked" };
+        });
+        return json(res, 200, result);
+      }
+
+      if (method === "POST" && action === "start") {
+        const result = await transaction(pool, async (client) => {
+          const tournament = await client.query("SELECT * FROM tournaments WHERE id = $1 FOR UPDATE", [tournamentId]);
+          if (!tournament.rowCount || tournament.rows[0].host_id !== current.id) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+          if (tournament.rows[0].status === "in_progress") {
+            const existing = await client.query("SELECT id FROM matches WHERE tournament_id = $1 ORDER BY round_number, bracket_slot", [tournamentId]);
+            return { status: "in_progress", matchIds: existing.rows.map((row) => row.id) };
+          }
+          const checkedIn = await client.query(
+            "SELECT user_id FROM tournament_members WHERE tournament_id = $1 AND status = 'checked_in' ORDER BY created_at FOR UPDATE",
+            [tournamentId],
+          );
+          if (!canStartTournament(tournament.rows[0].status, checkedIn.rowCount)) throw new HttpError(409, "tournament_not_ready", "Feche as inscrições e aguarde quatro check-ins.");
+          const seeded = shuffleTournamentSeeds(checkedIn.rows.map((row) => row.user_id));
+          for (const member of seeded) await client.query("UPDATE tournament_members SET seed = $1 WHERE tournament_id = $2 AND user_id = $3", [member.seed, tournamentId, member.userId]);
+          const pairings = semifinalPairings(seeded);
+          const matchIds = [];
+          for (const [bracketSlot, pairing] of pairings.entries()) {
+            const match = await client.query(
+              "INSERT INTO matches (tournament_id, round_number, bracket_slot, player_a_id, player_b_id) VALUES ($1, 1, $2, $3, $4) RETURNING id",
+              [tournamentId, bracketSlot, pairing[0], pairing[1]],
+            );
+            matchIds.push(match.rows[0].id);
+          }
+          await client.query("UPDATE tournaments SET status = 'in_progress', started_at = now(), invite_expires_at = now(), bracket_version = bracket_version + 1 WHERE id = $1", [tournamentId]);
+          return { status: "in_progress", matchIds };
+        });
+        return json(res, 200, result);
+      }
+
+      if (method === "POST" && action === "cancel") {
+        await transaction(pool, async (client) => {
+          const result = await client.query(
+            `UPDATE tournaments SET status = 'cancelled', finished_at = now(), invite_expires_at = now(), bracket_version = bracket_version + 1
+              WHERE id = $1 AND host_id = $2 AND status IN ('open', 'locked') RETURNING id`,
+            [tournamentId, current.id],
+          );
+          if (!result.rowCount) throw new HttpError(409, "cannot_cancel", "O host só pode cancelar antes do início do torneio.");
+          await clearTournamentFriendCodes(client, tournamentId);
+        });
+        return json(res, 200, { status: "cancelled" });
+      }
+
+      if (method === "PUT" && action === "friend-code") {
+        if (!config.friendKey) throw new HttpError(503, "friend_code_unavailable", "O compartilhamento de códigos não foi configurado neste ambiente.");
+        const body = await readJson(req);
+        const code = normalizeFriendCode(body.code);
+        if (!code) throw new HttpError(400, "invalid_friend_code", "Informe um código de amizade válido, sem símbolos além de espaços e hífens.");
+        const encrypted = encryptFriendCode(code, config.friendKey, `tournament:${tournamentId}:${current.id}`);
+        await transaction(pool, async (client) => {
+          const tournament = await client.query("SELECT status FROM tournaments WHERE id = $1 FOR UPDATE", [tournamentId]);
+          const member = await client.query("SELECT status FROM tournament_members WHERE tournament_id = $1 AND user_id = $2 FOR UPDATE", [tournamentId, current.id]);
+          if (!tournament.rowCount || !member.rowCount || !["registered", "checked_in"].includes(member.rows[0].status)) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+          if (["completed", "cancelled"].includes(tournament.rows[0].status)) throw new HttpError(409, "tournament_finished", "O torneio já terminou.");
+          await client.query(
+            `UPDATE tournament_members SET friend_code_ciphertext = $1, friend_code_nonce = $2, friend_code_tag = $3, friend_code_created_at = now()
+              WHERE tournament_id = $4 AND user_id = $5`,
+            [encrypted.ciphertext, encrypted.nonce, encrypted.tag, tournamentId, current.id],
+          );
+        });
+        return json(res, 200, { shared: true });
+      }
+
+      if (method === "DELETE" && action === "friend-code") {
+        const result = await pool.query(
+          `UPDATE tournament_members SET friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
+            WHERE tournament_id = $1 AND user_id = $2 RETURNING tournament_id`,
+          [tournamentId, current.id],
+        );
+        if (!result.rowCount) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+        return json(res, 200, { shared: false });
+      }
     }
 
     if (method === "GET" && pathname === "/api/rooms") {
@@ -638,14 +921,25 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
 
       if (method === "POST" && action === "confirm") {
         const result = await transaction(pool, async (client) => {
+          const candidate = await client.query("SELECT * FROM matches WHERE id = $1", [matchId]);
+          if (!candidate.rowCount || !isRoomParticipant(candidate.rows[0], current.id)) throw new HttpError(404, "match_not_found", "Partida não encontrada.");
+          if (candidate.rows[0].tournament_id) {
+            // Torneios são bloqueados antes da partida para serializar o avanço do chaveamento.
+            const tournament = await client.query("SELECT status FROM tournaments WHERE id = $1 FOR UPDATE", [candidate.rows[0].tournament_id]);
+            if (!tournament.rowCount || tournament.rows[0].status !== "in_progress") throw new HttpError(409, "tournament_finished", "O torneio não aceita mais confirmações de resultado.");
+          }
           const match = await client.query("SELECT * FROM matches WHERE id = $1 FOR UPDATE", [matchId]);
           if (!match.rowCount || !isRoomParticipant(match.rows[0], current.id)) throw new HttpError(404, "match_not_found", "Partida não encontrada.");
           const report = await client.query("SELECT * FROM match_reports WHERE match_id = $1", [matchId]);
           if (!report.rowCount || report.rows[0].reporter_id === current.id || match.rows[0].status !== "awaiting_confirmation") throw new HttpError(409, "confirmation_not_allowed", "Só a outra pessoa pode confirmar um relato pendente.");
           await client.query("UPDATE matches SET status = 'confirmed', resolved_at = now() WHERE id = $1", [matchId]);
-          await client.query("UPDATE rooms SET status = 'completed', finished_at = now() WHERE id = $1", [match.rows[0].room_id]);
-          await clearRoomFriendCodes(client, match.rows[0].room_id);
-          return { status: "confirmed" };
+          if (match.rows[0].room_id) {
+            await client.query("UPDATE rooms SET status = 'completed', finished_at = now() WHERE id = $1", [match.rows[0].room_id]);
+            await clearRoomFriendCodes(client, match.rows[0].room_id);
+            return { status: "confirmed" };
+          }
+          const tournament = await applyTournamentMatchResult(client, match.rows[0], report.rows[0].winner_id, "confirm");
+          return { status: "confirmed", tournament };
         });
         return json(res, 200, result);
       }
@@ -671,14 +965,16 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
       const current = assertUser(user);
       if (!current.is_moderator) throw new HttpError(403, "moderator_required", "Acesso reservado à moderação.");
       const result = await pool.query(
-        `SELECT d.id, d.reason, d.created_at, d.match_id, m.room_id, r.name AS room_name,
+        `SELECT d.id, d.reason, d.created_at, d.match_id, m.room_id, m.tournament_id,
+                COALESCE(r.name, t.name) AS event_name,
                 report.winner_id, report.note, reporter.handle AS reporter_handle, opener.handle AS opened_by_handle
-           FROM disputes d JOIN matches m ON m.id = d.match_id JOIN rooms r ON r.id = m.room_id
+           FROM disputes d JOIN matches m ON m.id = d.match_id
+           LEFT JOIN rooms r ON r.id = m.room_id LEFT JOIN tournaments t ON t.id = m.tournament_id
            JOIN match_reports report ON report.match_id = m.id JOIN users reporter ON reporter.id = report.reporter_id
            JOIN users opener ON opener.id = d.opened_by
           WHERE d.status = 'open' ORDER BY d.created_at LIMIT 100`,
       );
-      return json(res, 200, { disputes: result.rows.map((row) => ({ id: row.id, reason: row.reason, createdAt: row.created_at, matchId: row.match_id, roomId: row.room_id, roomName: row.room_name, winnerId: row.winner_id, note: row.note, reporterHandle: row.reporter_handle, openedByHandle: row.opened_by_handle })) });
+      return json(res, 200, { disputes: result.rows.map((row) => ({ id: row.id, reason: row.reason, createdAt: row.created_at, matchId: row.match_id, roomId: row.room_id, tournamentId: row.tournament_id, eventType: row.tournament_id ? "tournament" : "room", eventName: row.event_name, winnerId: row.winner_id, note: row.note, reporterHandle: row.reporter_handle, openedByHandle: row.opened_by_handle })) });
     }
 
     const resolveMatch = pathname.match(/^\/api\/moderation\/disputes\/([0-9a-f-]+)\/resolve$/i);
@@ -690,20 +986,33 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
       const resolution = typeof body.resolution === "string" ? body.resolution.trim() : "";
       if (!["confirm", "void"].includes(decision) || resolution.length < 1 || resolution.length > 500) throw new HttpError(400, "invalid_resolution", "Escolha confirmar ou anular e registre uma justificativa de até 500 caracteres.");
       const result = await transaction(pool, async (client) => {
-        const dispute = await client.query("SELECT d.*, m.room_id, m.status AS match_status, m.id AS match_id FROM disputes d JOIN matches m ON m.id = d.match_id WHERE d.id = $1 FOR UPDATE OF d, m", [resolveMatch[1]]);
+        const matchReference = await client.query(
+          "SELECT m.tournament_id FROM disputes d JOIN matches m ON m.id = d.match_id WHERE d.id = $1",
+          [resolveMatch[1]],
+        );
+        if (matchReference.rows[0]?.tournament_id) {
+          // Usa a mesma ordem de bloqueio da confirmação comum.
+          await client.query("SELECT id FROM tournaments WHERE id = $1 FOR UPDATE", [matchReference.rows[0].tournament_id]);
+        }
+        const dispute = await client.query("SELECT d.*, m.room_id, m.tournament_id, m.round_number, m.bracket_slot, m.status AS match_status, m.id AS match_id FROM disputes d JOIN matches m ON m.id = d.match_id WHERE d.id = $1 FOR UPDATE OF d, m", [resolveMatch[1]]);
         if (!dispute.rowCount || dispute.rows[0].status !== "open" || dispute.rows[0].match_status !== "disputed") throw new HttpError(404, "dispute_not_found", "Contestação não encontrada ou já resolvida.");
         const row = dispute.rows[0];
         const report = await client.query("SELECT winner_id FROM match_reports WHERE match_id = $1", [row.match_id]);
         const finalStatus = decision === "confirm" ? "confirmed" : "void";
         await client.query("UPDATE disputes SET status = $1, resolution = $2, moderator_id = $3, resolved_at = now() WHERE id = $4", [finalStatus, resolution, current.id, resolveMatch[1]]);
         await client.query("UPDATE matches SET status = $1, resolved_at = now() WHERE id = $2", [finalStatus, row.match_id]);
-        await client.query("UPDATE rooms SET status = 'completed', finished_at = now() WHERE id = $1", [row.room_id]);
-        await clearRoomFriendCodes(client, row.room_id);
+        let tournament = null;
+        if (row.room_id) {
+          await client.query("UPDATE rooms SET status = 'completed', finished_at = now() WHERE id = $1", [row.room_id]);
+          await clearRoomFriendCodes(client, row.room_id);
+        } else {
+          tournament = await applyTournamentMatchResult(client, row, report.rows[0]?.winner_id, decision);
+        }
         await client.query(
-          "INSERT INTO moderation_events (actor_id, room_id, target_user_id, action, reason) VALUES ($1, $2, $3, $4, $5)",
-          [current.id, row.room_id, row.opened_by, `resolve_dispute_${decision}`, resolution],
+          "INSERT INTO moderation_events (actor_id, room_id, tournament_id, target_user_id, action, reason) VALUES ($1, $2, $3, $4, $5, $6)",
+          [current.id, row.room_id, row.tournament_id, row.opened_by, `resolve_dispute_${decision}`, resolution],
         );
-        return { status: finalStatus, winnerId: decision === "confirm" ? report.rows[0]?.winner_id : null };
+        return { status: finalStatus, winnerId: decision === "confirm" ? report.rows[0]?.winner_id : null, tournament };
       });
       return json(res, 200, result);
     }
@@ -728,6 +1037,86 @@ async function clearRoomFriendCodes(client, roomId) {
   );
 }
 
+async function clearTournamentFriendCodes(client, tournamentId) {
+  await client.query(
+    `UPDATE tournament_members SET friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
+      WHERE tournament_id = $1`,
+    [tournamentId],
+  );
+}
+
+async function clearExpiredTournamentFriendCodes(pool, tournamentId = null) {
+  const parameters = tournamentId ? [tournamentId] : [];
+  const eventFilter = tournamentId ? "t.id = $1 AND" : "";
+  await pool.query(
+    `UPDATE tournament_members member
+        SET friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
+       FROM tournaments t
+      WHERE member.tournament_id = t.id AND ${eventFilter}
+        (member.friend_code_created_at < now() - interval '7 days' OR t.status IN ('completed', 'cancelled'))`,
+    parameters,
+  );
+}
+
+async function applyTournamentMatchResult(client, match, winnerId, decision) {
+  const matchId = match.id || match.match_id;
+  const tournamentResult = await client.query("SELECT * FROM tournaments WHERE id = $1 FOR UPDATE", [match.tournament_id]);
+  if (!tournamentResult.rowCount) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+  const tournament = tournamentResult.rows[0];
+
+  if (decision === "void") {
+    if (!["completed", "cancelled"].includes(tournament.status)) {
+      await client.query(
+        `UPDATE tournaments SET status = 'cancelled', champion_id = NULL, finished_at = now(), invite_expires_at = now(), bracket_version = bracket_version + 1
+          WHERE id = $1`,
+        [tournament.id],
+      );
+      await client.query("UPDATE matches SET status = 'void', resolved_at = COALESCE(resolved_at, now()) WHERE tournament_id = $1 AND id <> $2 AND status IN ('scheduled', 'awaiting_confirmation')", [tournament.id, matchId]);
+      await clearTournamentFriendCodes(client, tournament.id);
+      return { status: "cancelled", championId: null, bracketVersion: tournament.bracket_version + 1 };
+    }
+    return { status: tournament.status, championId: tournament.champion_id, bracketVersion: tournament.bracket_version };
+  }
+
+  if (tournament.status !== "in_progress") {
+    return { status: tournament.status, championId: tournament.champion_id, bracketVersion: tournament.bracket_version };
+  }
+
+  if (match.round_number === 1) {
+    const semifinals = await client.query(
+      `SELECT m.bracket_slot, m.status, report.winner_id
+         FROM matches m LEFT JOIN match_reports report ON report.match_id = m.id
+        WHERE m.tournament_id = $1 AND m.round_number = 1 ORDER BY m.bracket_slot`,
+      [tournament.id],
+    );
+    if (semifinals.rowCount === 2 && semifinals.rows.every((row) => row.status === "confirmed" && row.winner_id)) {
+      const final = await client.query(
+        `INSERT INTO matches (tournament_id, round_number, bracket_slot, player_a_id, player_b_id)
+         VALUES ($1, 2, 0, $2, $3)
+         ON CONFLICT (tournament_id, round_number, bracket_slot) WHERE tournament_id IS NOT NULL DO NOTHING
+         RETURNING id`,
+        [tournament.id, semifinals.rows[0].winner_id, semifinals.rows[1].winner_id],
+      );
+      await client.query("UPDATE tournaments SET bracket_version = bracket_version + 1 WHERE id = $1", [tournament.id]);
+      const finalId = final.rows[0]?.id || (await client.query("SELECT id FROM matches WHERE tournament_id = $1 AND round_number = 2 AND bracket_slot = 0", [tournament.id])).rows[0]?.id;
+      return { status: "in_progress", championId: null, bracketVersion: tournament.bracket_version + 1, finalMatchId: finalId };
+    }
+    return { status: "in_progress", championId: null, bracketVersion: tournament.bracket_version };
+  }
+
+  if (match.round_number === 2) {
+    await client.query(
+      `UPDATE tournaments SET status = 'completed', champion_id = $2, finished_at = now(), invite_expires_at = now(), bracket_version = bracket_version + 1
+        WHERE id = $1`,
+      [tournament.id, winnerId],
+    );
+    await clearTournamentFriendCodes(client, tournament.id);
+    return { status: "completed", championId: winnerId, bracketVersion: tournament.bracket_version + 1 };
+  }
+
+  return { status: tournament.status, championId: tournament.champion_id, bracketVersion: tournament.bracket_version };
+}
+
 if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
   const pool = createPool();
   const server = createApiServer({ pool });
@@ -741,6 +1130,11 @@ if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
       `UPDATE room_members rm SET friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
         WHERE rm.friend_code_created_at < now() - interval '7 days'
            OR EXISTS (SELECT 1 FROM rooms r WHERE r.id = rm.room_id AND r.status IN ('completed', 'cancelled'))`,
+    ).catch(() => {});
+    pool.query(
+      `UPDATE tournament_members tm SET friend_code_ciphertext = NULL, friend_code_nonce = NULL, friend_code_tag = NULL, friend_code_created_at = NULL
+        WHERE tm.friend_code_created_at < now() - interval '7 days'
+           OR EXISTS (SELECT 1 FROM tournaments t WHERE t.id = tm.tournament_id AND t.status IN ('completed', 'cancelled'))`,
     ).catch(() => {});
   };
   cleanupExpiredData();

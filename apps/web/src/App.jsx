@@ -11,6 +11,9 @@ const UsagePage = lazy(() => import("./pages/UsagePage.jsx").then((module) => ({
 const RoomsPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomsPage })));
 const RoomJoinPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomJoinPage })));
 const RoomDetailPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomDetailPage })));
+const TournamentsPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentsPage })));
+const TournamentJoinPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentJoinPage })));
+const TournamentDetailPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentDetailPage })));
 
 function NotFoundPage() {
   return (
@@ -36,6 +39,9 @@ export default function App() {
           <Route path="/rooms" element={<RoomsPage />} />
           <Route path="/rooms/join" element={<RoomJoinPage />} />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
+          <Route path="/tournaments" element={<TournamentsPage />} />
+          <Route path="/tournaments/join" element={<TournamentJoinPage />} />
+          <Route path="/tournaments/:tournamentId" element={<TournamentDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

@@ -37,6 +37,7 @@ after(async () => {
     const ids = testUsers.rows.map((row) => row.id);
     if (ids.length) {
       await pool.query("DELETE FROM teams WHERE owner_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM tournaments WHERE host_id = ANY($1::uuid[])", [ids]);
       await pool.query("DELETE FROM rooms WHERE host_id = ANY($1::uuid[])", [ids]);
       await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [ids]);
     }
@@ -157,6 +158,137 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   await request(`/api/matches/${confirmationMatch.body.matchId}/report`, { method: "POST", cookie: host.cookie, body: { winnerId: host.id } });
   assert.equal((await request(`/api/matches/${confirmationMatch.body.matchId}/confirm`, { method: "POST", cookie: guest.cookie, body: {} })).body.status, "confirmed");
   assert.equal((await request(`/api/rooms/${confirmationId}`, { cookie: guest.cookie })).body.room.status, "completed");
+});
+
+test("private four-person tournament enforces entry, check-in, bracket and moderated results", { skip: !enabled }, async () => {
+  const stamp = Date.now();
+  const host = await user(`t-host-${stamp}`);
+  const playerA = await user(`t-a-${stamp}`);
+  const playerB = await user(`t-b-${stamp}`);
+  const playerC = await user(`t-c-${stamp}`);
+  const outsider = await user(`t-out-${stamp}`);
+  const moderator = await user(`t-mod-${stamp}`);
+  await pool.query("UPDATE users SET is_moderator = true WHERE id = $1", [moderator.id]);
+
+  assert.equal((await request("/api/tournaments")).response.status, 401);
+  const created = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles local" } });
+  assert.equal(created.response.status, 201);
+  assert.equal(created.body.tournament.status, "open");
+  const tournamentId = created.body.tournament.id;
+  const inviteToken = new URL(created.body.inviteUrl).hash.slice(1);
+  for (const entrant of [playerA, playerB, playerC]) {
+    assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: entrant.cookie, body: { inviteToken } })).response.status, 200);
+  }
+  assert.equal((await request(`/api/tournaments/${tournamentId}/leave`, { method: "POST", cookie: playerC.cookie, body: {} })).response.status, 200);
+  assert.equal((await request("/api/tournaments", { cookie: playerC.cookie })).body.tournaments.some((tournament) => tournament.id === tournamentId), false);
+  assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: playerC.cookie, body: { inviteToken } })).response.status, 200);
+  assert.equal((await request(`/api/tournaments/${tournamentId}/leave`, { method: "POST", cookie: host.cookie, body: {} })).response.status, 409);
+  assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: outsider.cookie, body: { inviteToken } })).response.status, 409);
+  assert.equal((await request(`/api/tournaments/${tournamentId}`, { cookie: outsider.cookie })).response.status, 404);
+  assert.equal((await request(`/api/tournaments/${tournamentId}/close`, { method: "POST", cookie: host.cookie, body: {} })).response.status, 409);
+
+  for (const entrant of [host, playerA, playerB, playerC]) {
+    assert.equal((await request(`/api/tournaments/${tournamentId}/check-in`, { method: "POST", cookie: entrant.cookie, body: {} })).body.status, "checked_in");
+  }
+  assert.equal((await request(`/api/tournaments/${tournamentId}/close`, { method: "POST", cookie: playerA.cookie, body: {} })).response.status, 404);
+  const [racingLeave, racingClose] = await Promise.all([
+    request(`/api/tournaments/${tournamentId}/leave`, { method: "POST", cookie: playerC.cookie, body: {} }),
+    request(`/api/tournaments/${tournamentId}/close`, { method: "POST", cookie: host.cookie, body: {} }),
+  ]);
+  const afterRace = await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie });
+  if (afterRace.body.tournament.status === "locked") {
+    assert.equal(racingLeave.response.status, 409);
+    assert.equal(afterRace.body.members.length, 4);
+  } else {
+    assert.equal(afterRace.body.tournament.status, "open");
+    assert.equal(racingLeave.response.status, 200);
+    assert.equal(racingClose.response.status, 409);
+    assert.equal((await request("/api/tournaments/join", { method: "POST", cookie: playerC.cookie, body: { inviteToken } })).response.status, 200);
+    assert.equal((await request(`/api/tournaments/${tournamentId}/check-in`, { method: "POST", cookie: playerC.cookie, body: {} })).body.status, "checked_in");
+    assert.equal((await request(`/api/tournaments/${tournamentId}/close`, { method: "POST", cookie: host.cookie, body: {} })).body.status, "locked");
+  }
+  const shared = await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code: "1234-5678-9012" } });
+  assert.equal(shared.response.status, 200);
+  const encrypted = await pool.query("SELECT friend_code_ciphertext FROM tournament_members WHERE tournament_id = $1 AND user_id = $2", [tournamentId, host.id]);
+  assert.equal(encrypted.rows[0].friend_code_ciphertext.includes(Buffer.from("1234-5678-9012")), false);
+  assert.equal((await request(`/api/tournaments/${tournamentId}`, { cookie: outsider.cookie })).response.status, 404);
+  const started = await request(`/api/tournaments/${tournamentId}/start`, { method: "POST", cookie: host.cookie, body: {} });
+  assert.equal(started.response.status, 200);
+  assert.equal(started.body.status, "in_progress");
+  assert.equal(started.body.matchIds.length, 2);
+  assert.equal((await request(`/api/tournaments/${tournamentId}/start`, { method: "POST", cookie: host.cookie, body: {} })).body.matchIds.length, 2);
+
+  const tournamentView = await request(`/api/tournaments/${tournamentId}`, { cookie: playerA.cookie });
+  assert.equal(tournamentView.response.status, 200);
+  assert.equal(tournamentView.body.matches.length, 2);
+  assert.equal(tournamentView.body.members.find((member) => member.id === host.id).friendCode, "1234-5678-9012");
+  assert.equal((await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "DELETE", cookie: host.cookie })).response.status, 200);
+  assert.equal((await request(`/api/tournaments/${tournamentId}`, { cookie: playerA.cookie })).body.members.find((member) => member.id === host.id).friendCode, null);
+  assert.equal((await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code: "1234-5678-9012" } })).response.status, 200);
+  const seeds = tournamentView.body.members.map((member) => member.seed).sort();
+  assert.deepEqual(seeds, [1, 2, 3, 4]);
+  const semis = tournamentView.body.matches;
+  const cookiesById = new Map([[host.id, host.cookie], [playerA.id, playerA.cookie], [playerB.id, playerB.cookie], [playerC.id, playerC.cookie]]);
+  const seedByUser = new Map(tournamentView.body.members.map((member) => [member.id, member.seed]));
+  assert.deepEqual(semis.map((match) => [seedByUser.get(match.playerA.id), seedByUser.get(match.playerB.id)].sort((a, b) => a - b)), [[1, 4], [2, 3]]);
+
+  const disputedSemi = semis[0];
+  assert.equal((await request(`/api/matches/${disputedSemi.id}/report`, { method: "POST", cookie: cookiesById.get(disputedSemi.playerA.id), body: { winnerId: disputedSemi.playerA.id, note: "Relato manual" } })).body.status, "awaiting_confirmation");
+  assert.equal((await request(`/api/matches/${disputedSemi.id}/confirm`, { method: "POST", cookie: cookiesById.get(disputedSemi.playerA.id), body: {} })).response.status, 409);
+  assert.equal((await request(`/api/matches/${disputedSemi.id}/dispute`, { method: "POST", cookie: cookiesById.get(disputedSemi.playerB.id), body: { reason: "O placar relatado precisa de revisão." } })).response.status, 201);
+  assert.equal((await request("/api/moderation/disputes", { cookie: outsider.cookie })).response.status, 403);
+  const queue = await request("/api/moderation/disputes", { cookie: moderator.cookie });
+  const queued = queue.body.disputes.find((dispute) => dispute.matchId === disputedSemi.id);
+  assert.equal(queued.eventName, "Doubles local");
+  assert.equal(queued.eventType, "tournament");
+  assert.equal(queued.tournamentId, tournamentId);
+  const disputeId = (await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie })).body.matches.find((match) => match.id === disputedSemi.id).dispute.id;
+  const otherSemi = semis[1];
+  assert.equal((await request(`/api/matches/${otherSemi.id}/report`, { method: "POST", cookie: cookiesById.get(otherSemi.playerA.id), body: { winnerId: otherSemi.playerB.id } })).body.status, "awaiting_confirmation");
+  const [moderatorResolution, playerConfirmation] = await Promise.all([
+    request(`/api/moderation/disputes/${disputeId}/resolve`, { method: "POST", cookie: moderator.cookie, body: { decision: "confirm", resolution: "Os participantes confirmaram o resultado relatado." } }),
+    request(`/api/matches/${otherSemi.id}/confirm`, { method: "POST", cookie: cookiesById.get(otherSemi.playerB.id), body: {} }),
+  ]);
+  assert.equal(moderatorResolution.body.status, "confirmed");
+  assert.equal(playerConfirmation.body.tournament.status, "in_progress");
+  const withFinal = await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie });
+  assert.equal(withFinal.body.matches.length, 3);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM matches WHERE tournament_id = $1 AND round_number = 2", [tournamentId])).rows[0].count, 1);
+  const final = withFinal.body.matches.find((match) => match.roundNumber === 2);
+  assert.ok(final);
+  assert.equal((await request(`/api/matches/${final.id}/report`, { method: "POST", cookie: cookiesById.get(final.playerA.id), body: { winnerId: final.playerA.id } })).body.status, "awaiting_confirmation");
+  const completed = await request(`/api/matches/${final.id}/confirm`, { method: "POST", cookie: cookiesById.get(final.playerB.id), body: {} });
+  assert.equal(completed.body.tournament.status, "completed");
+  assert.equal(completed.body.tournament.championId, final.playerA.id);
+  const finished = await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie });
+  assert.equal(finished.body.tournament.status, "completed");
+  assert.equal(finished.body.matches.length, 3);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND friend_code_ciphertext IS NOT NULL", [tournamentId])).rows[0].count, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM moderation_events WHERE tournament_id = $1 AND action = 'resolve_dispute_confirm'", [tournamentId])).rows[0].count, 1);
+
+  const cancelledCreation = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles cancelado" } });
+  const cancelledId = cancelledCreation.body.tournament.id;
+  const cancelledToken = new URL(cancelledCreation.body.inviteUrl).hash.slice(1);
+  for (const entrant of [playerA, playerB, playerC]) await request("/api/tournaments/join", { method: "POST", cookie: entrant.cookie, body: { inviteToken: cancelledToken } });
+  for (const entrant of [host, playerA, playerB, playerC]) await request(`/api/tournaments/${cancelledId}/check-in`, { method: "POST", cookie: entrant.cookie, body: {} });
+  assert.equal((await request(`/api/tournaments/${cancelledId}/close`, { method: "POST", cookie: host.cookie, body: {} })).response.status, 200);
+  assert.equal((await request(`/api/tournaments/${cancelledId}/start`, { method: "POST", cookie: host.cookie, body: {} })).response.status, 200);
+  assert.equal((await request(`/api/tournaments/${cancelledId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code: "1234-5678-9012" } })).response.status, 200);
+  const cancelledView = await request(`/api/tournaments/${cancelledId}`, { cookie: host.cookie });
+  const contestedMatch = cancelledView.body.matches[0];
+  assert.equal((await request(`/api/matches/${contestedMatch.id}/report`, { method: "POST", cookie: cookiesById.get(contestedMatch.playerA.id), body: { winnerId: contestedMatch.playerA.id } })).response.status, 200);
+  assert.equal((await request(`/api/matches/${contestedMatch.id}/dispute`, { method: "POST", cookie: cookiesById.get(contestedMatch.playerB.id), body: { reason: "O relato precisa ser anulado." } })).response.status, 201);
+  const cancelledMatchView = await request(`/api/tournaments/${cancelledId}`, { cookie: host.cookie });
+  const cancelledDispute = cancelledMatchView.body.matches.find((match) => match.id === contestedMatch.id).dispute;
+  const voided = await request(`/api/moderation/disputes/${cancelledDispute.id}/resolve`, { method: "POST", cookie: moderator.cookie, body: { decision: "void", resolution: "Sem confirmação independente; evento encerrado." } });
+  assert.equal(voided.body.status, "void");
+  assert.equal(voided.body.tournament.status, "cancelled");
+  const cancelledFinalState = await request(`/api/tournaments/${cancelledId}`, { cookie: host.cookie });
+  assert.equal(cancelledFinalState.body.tournament.status, "cancelled");
+  assert.ok(cancelledFinalState.body.matches.every((match) => match.status === "void"));
+  assert.equal(cancelledFinalState.body.members.find((member) => member.id === host.id).friendCode, null);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND friend_code_ciphertext IS NOT NULL", [cancelledId])).rows[0].count, 0);
+  assert.equal((await pool.query("SELECT count(*)::int AS count FROM moderation_events WHERE tournament_id = $1 AND action = 'resolve_dispute_void'", [cancelledId])).rows[0].count, 1);
 });
 
 test("API rejects writes from another origin", { skip: !enabled }, async () => {

@@ -36,6 +36,13 @@ export function RoomsPage() {
         navigate(`/rooms/${roomId}`, { replace: true });
         return;
       }
+      const pendingTournamentInvite = session.user ? window.sessionStorage.getItem("spinda_pending_tournament_invite") : null;
+      if (pendingTournamentInvite) {
+        const { tournamentId } = await communityRequest("/tournaments/join", { method: "POST", body: { inviteToken: pendingTournamentInvite } });
+        window.sessionStorage.removeItem("spinda_pending_tournament_invite");
+        navigate(`/tournaments/${tournamentId}`, { replace: true });
+        return;
+      }
       const roomList = session.user ? await communityRequest("/rooms") : { rooms: [] };
       setRooms(roomList.rooms);
     } catch (caught) {
@@ -64,6 +71,18 @@ export function RoomsPage() {
             })
             .catch((caught) => {
               if (["invalid_invite", "invite_not_found"].includes(caught.code)) window.sessionStorage.removeItem("spinda_pending_invite");
+              if (active) setError(caught.message);
+            });
+        }
+        const pendingTournamentInvite = session.user ? window.sessionStorage.getItem("spinda_pending_tournament_invite") : null;
+        if (pendingTournamentInvite) {
+          communityRequest("/tournaments/join", { method: "POST", body: { inviteToken: pendingTournamentInvite } })
+            .then(({ tournamentId }) => {
+              window.sessionStorage.removeItem("spinda_pending_tournament_invite");
+              if (active) navigate(`/tournaments/${tournamentId}`, { replace: true });
+            })
+            .catch((caught) => {
+              if (caught.status >= 400 && caught.status < 500) window.sessionStorage.removeItem("spinda_pending_tournament_invite");
               if (active) setError(caught.message);
             });
         }
@@ -178,7 +197,7 @@ function ModeratorQueue({ onResolved }) {
     <section className="community-rooms-card panel-frame" aria-labelledby="moderation-title">
       <div className="section-heading"><h2 id="moderation-title">Contestações para revisar</h2><button className="text-button" type="button" onClick={load}>Atualizar</button></div>
       <ErrorNotice>{error}</ErrorNotice>
-      {disputes.length ? <ul className="community-room-list">{disputes.map((dispute) => <li key={dispute.id}><div><strong>{dispute.roomName}</strong><span>{dispute.reason}</span></div><div className="community-row-actions"><button className="button button-primary button-small" disabled={busyId === dispute.id} onClick={() => resolve(dispute, "confirm")}>Confirmar relato</button><button className="button button-outline button-small" disabled={busyId === dispute.id} onClick={() => resolve(dispute, "void")}>Anular</button></div></li>)}</ul> : <p className="community-empty">Nenhuma contestação pendente.</p>}
+      {disputes.length ? <ul className="community-room-list">{disputes.map((dispute) => <li key={dispute.id}><div><strong>{dispute.eventName}</strong><span>{dispute.eventType === "tournament" ? "Torneio" : "Sala"} · {dispute.reason}</span></div><div className="community-row-actions"><button className="button button-primary button-small" disabled={busyId === dispute.id} onClick={() => resolve(dispute, "confirm")}>Confirmar relato</button><button className="button button-outline button-small" disabled={busyId === dispute.id} onClick={() => resolve(dispute, "void")}>Anular</button></div></li>)}</ul> : <p className="community-empty">Nenhuma contestação pendente.</p>}
     </section>
   );
 }

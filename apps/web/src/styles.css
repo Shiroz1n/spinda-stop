@@ -958,6 +958,22 @@ select,
 .account-team-row span { color: var(--muted); font-size: 0.75rem; }
 .account-team-row .text-button { font-size: 0.78rem; }
 .account-team-row .account-team-visibility { min-width: 0; width: 100%; }
+.tournament-invite-panel { margin-bottom: 16px; }
+.tournament-detail-grid { align-items: start; }
+.tournament-bracket { display: grid; gap: 16px; }
+.tournament-round { display: grid; align-content: start; gap: 10px; }
+.tournament-round h3 { padding-bottom: 7px; border-bottom: 1px solid var(--line); color: var(--fire-ink); }
+.tournament-match-card { min-width: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); background: var(--surface-alt); }
+.tournament-match-players { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; margin: 0; font-weight: 800; }
+.tournament-match-players span { min-width: 0; overflow-wrap: anywhere; }
+.tournament-match-players span:last-child { text-align: right; }
+.tournament-match-status { width: fit-content; max-width: 100%; padding: 4px 7px; border: 1px solid var(--gold); background: #f8edc8; overflow-wrap: anywhere; }
+.tournament-match-status.status-confirmed { border-color: var(--green); background: #e5efdb; color: #214a32; }
+.tournament-match-status.status-disputed, .tournament-match-status.status-void { border-color: var(--coral-dark); background: #f8e2d7; color: #7b211d; }
+.tournament-match-card .community-match-form { margin-top: 2px; }
+.tournament-match-card .community-match-actions { gap: 10px; }
+.tournament-match-card .community-match-actions > .button { justify-self: start; }
+.tournament-match-card .community-muted { margin: 0; }
 
 @media (max-width: 760px) {
   .community-dashboard, .community-room-grid { grid-template-columns: 1fr; }
@@ -971,6 +987,10 @@ select,
   .invite-copy-row .button, .community-create-form .button, .team-account-actions .button { width: 100%; }
   .community-room-panel .section-heading { flex-direction: column; }
   .community-room-panel .section-heading > span { max-width: 100%; }
+  .tournament-match-card { padding: 10px; }
+  .tournament-match-players { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .tournament-match-players b { display: none; }
+  .tournament-match-players span:last-child { text-align: left; }
   .account-team-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
   .account-team-row > div, .account-team-row .account-team-visibility { grid-column: 1 / -1; }
   .account-team-row > button:nth-of-type(1), .account-team-row > button:nth-of-type(2) { grid-column: 1; justify-self: start; }

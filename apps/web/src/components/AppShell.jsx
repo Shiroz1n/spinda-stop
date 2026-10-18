@@ -8,6 +8,7 @@ const navigation = [
   { to: "/builder", label: "Construtor" },
   { to: "/calculator", label: "Dano" },
   { to: "/rooms", label: "Salas" },
+  { to: "/tournaments", label: "Torneios" },
 ];
 
 export function AppShell({ children }) {

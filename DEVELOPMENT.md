@@ -1,6 +1,6 @@
 # Desenvolvimento
 
-O frontend usa React, Vite, JavaScript e Tailwind. O domínio fica em funções sem dependência de React. A fase comunitária só adiciona API e banco quando contas, torneios e salas entrarem no escopo.
+O frontend usa React, Vite, JavaScript e Tailwind. O domínio fica em funções sem dependência de React. Contas, salas e torneios usam uma API e banco separados do frontend.
 
 ## Antes de começar
 
@@ -23,7 +23,7 @@ Use uma branch por mudança. Se mudar interface, confira uma largura mobile e um
 
 ## API comunitária
 
-Contas e salas usam Node.js, PostgreSQL 16 e OAuth do GitHub. Nenhum segredo ou banco de produção fica no repositório.
+Contas, salas e torneios usam Node.js, PostgreSQL 16 e OAuth do GitHub. Nenhum segredo ou banco de produção fica no repositório.
 
 1. Copie `.env.example` para `.env` e preencha `DATABASE_URL`, `APP_ORIGIN`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e `FRIEND_CODE_ENCRYPTION_KEY`.
 2. Em um terminal, inicie o PostgreSQL local: `docker compose up -d db`.

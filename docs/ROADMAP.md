@@ -15,6 +15,6 @@ O trabalho está dividido por entregas revisáveis. Nenhum PR deve tratar tempor
 | 8 — Calculadora | Tela de dano, campos de combate, regras do motor e casos de referência reproduzíveis | PR #8; resultados e limites documentados, não valida legalidade do set |
 | 9 — Contratos das fontes | `all.json`, `ratingHistory` e `megas` observados; usos registrados por fonte e captura | PR #20/#21; `ladder-cutoffs` permanece documentado sem UI, sem significado futuro confirmado |
 | 10 — Contas e salas | OAuth, equipes explícitas privadas/públicas e sala privada de duas pessoas | PR #22 em revisão; PostgreSQL 16, convites, check-in, resultados, contestação e moderação |
-| 11 — Torneios | Grupo com check-in, chaveamento versionado, resultado e contestação | PR próprio seguinte; depende do fluxo de sala, partidas no jogo e confirmação manual |
+| 11 — Torneios | Torneio privado de quatro pessoas com check-in, chaveamento, resultado e contestação | PR #23 em revisão; duas semifinais e uma final, sem replay depois de anulação |
 
-A matriz e a disponibilidade real dos campos ficam em [COMPETITIVE_COVERAGE.md](COMPETITIVE_COVERAGE.md). A calculadora não deriva dano de percentuais de Usage. O modelo comunitário está em [COMMUNITY_MODEL.md](COMMUNITY_MODEL.md); salas e torneios não fazem parte da integração de dados competitivos.
+A matriz e a disponibilidade real dos campos ficam em [COMPETITIVE_COVERAGE.md](COMPETITIVE_COVERAGE.md). A calculadora não deriva dano de percentuais de Usage. O modelo comunitário está em [COMMUNITY_MODEL.md](COMMUNITY_MODEL.md); torneios organizam pessoas, não partidas dentro do jogo.
