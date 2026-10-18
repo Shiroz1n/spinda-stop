@@ -133,6 +133,14 @@ function formatPercent(value) {
   return `${value.toFixed(1).replace(".", ",")}%`;
 }
 
+function formatRolls(rolls) {
+  return rolls.join(" · ");
+}
+
+function formatStatLine(pokemon, side) {
+  return statFields.map(([key, label]) => `${label} ${pokemon.stats[key]} (${side.statPoints[key]} SP)`).join(" · ");
+}
+
 export function DamageCalculatorPage() {
   const location = useLocation();
   const [form, setForm] = useState(() => initialForm(location.search));
@@ -158,6 +166,9 @@ export function DamageCalculatorPage() {
 
   const result = calculation.result;
   const isStatusMove = result?.move.category === "Status";
+  const hitSummary = result?.hasParentalBondFollowUp
+    ? "1 acerto + golpe adicional de Parental Bond"
+    : result ? `${result.hits} ${result.hits === 1 ? "acerto" : "acertos"}` : "";
   return (
     <div className="page-wrap damage-page">
       <div className="page-heading-row damage-heading">
@@ -243,7 +254,7 @@ export function DamageCalculatorPage() {
             <div>
               <p className="page-label">Resultado · {result.gameType}</p>
               <h2 id="damage-result-heading">{result.attacker.name} usa {result.move.name}</h2>
-              <p className="form-hint">Contra {result.defender.name} · nível 50 · {result.hits} {result.hits === 1 ? "acerto" : "acertos"}</p>
+                <p className="form-hint">Contra {result.defender.name} · nível 50 · {hitSummary}</p>
             </div>
             {!isStatusMove && <div className="damage-result-range"><strong>{result.min}–{result.max}</strong><span>de dano</span></div>}
           </div>
@@ -253,8 +264,31 @@ export function DamageCalculatorPage() {
             <>
               <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
               {result.isSpread && <p className="damage-spread-note">Redutor de golpe em área aplicado para Doubles. O valor representa dano a um alvo.</p>}
-              {result.hitRanges.length > 1 && <p className="damage-spread-note">Faixa por acerto: {result.hitRanges.map(([min, max], index) => `${index + 1}: ${min}–${max}`).join(" · ")}</p>}
-              {result.rolls?.length === 16 && <p className="damage-rolls-label">16 variações de dano: {result.rolls.join(" · ")}</p>}
+              {result.hitRanges.length > 1 && <p className="damage-spread-note">{result.hasParentalBondFollowUp ? "Faixas do golpe principal e do golpe adicional:" : "Faixa por acerto:"} {result.hitRanges.map(([min, max], index) => `${result.rollGroupLabels[index]} ${min}–${max}`).join(" · ")}</p>}
+              {result.rolls?.length === 16 && <div className="damage-rolls"><h3>16 resultados de dano</h3><ol>{result.rolls.map((roll, index) => <li key={`${roll}-${index}`}>{roll}</li>)}</ol></div>}
+              {result.rollGroups.length > 1 && result.rollGroups.every((group) => group.length === 16) && (
+                <details className="damage-multihit-rolls">
+                  <summary>{result.hasParentalBondFollowUp ? "Ver 16 resultados de cada golpe de Parental Bond" : "Ver 16 resultados de cada acerto"}</summary>
+                  {result.rollGroups.map((group, index) => <p key={index}><strong>{result.rollGroupLabels[index]}:</strong> {formatRolls(group)}</p>)}
+                  <p className="form-hint">A faixa total soma as faixas de cada golpe/acerto. Este motor não enumera aqui todas as combinações possíveis.</p>
+                </details>
+              )}
+              {result.koProbabilities && <div className="damage-ko-note">
+                <h3>Probabilidade condicional de nocaute</h3>
+                <p>OHKO: {formatPercent((result.koProbabilities.ohko.successes / result.koProbabilities.ohko.total) * 100)} ({result.koProbabilities.ohko.successes}/16).</p>
+                <p>2HKO: {formatPercent((result.koProbabilities.twoHit.successes / result.koProbabilities.twoHit.total) * 100)} ({result.koProbabilities.twoHit.successes}/256).</p>
+                <small>Condicionada aos acertos, ao crítico selecionado e ao mesmo cenário em ambos os golpes. Ignora precisão e mudanças entre turnos; não representa a chance real de vencer a partida.</small>
+              </div>}
+              <details className="damage-breakdown" open>
+                <summary>O que entrou neste cálculo</summary>
+                <div className="damage-breakdown-stats">
+                  <p><strong>Atacante:</strong> {formatStatLine(result.attacker, form.attacker)}</p>
+                  <p><strong>Alvo:</strong> {formatStatLine(result.defender, form.defender)}</p>
+                </div>
+                <h3>Modificadores identificados pelo motor</h3>
+                <ul>{result.activeModifiers.map((modifier, index) => <li key={`${modifier.label}-${index}`}><strong>{modifier.label}:</strong> {modifier.factor}</li>)}</ul>
+                <p className="form-hint">Habilidades, itens e condições só aparecem quando o motor os registrou neste cenário. Quando o resultado não expõe o fator numérico, mostramos o efeito pelo nome sem estimá-lo.</p>
+              </details>
               {result.max === 0 && <p className="damage-spread-note">Neste cenário, o golpe não causa dano. Pode haver imunidade, proteção ou um efeito especial.</p>}
             </>
           )}

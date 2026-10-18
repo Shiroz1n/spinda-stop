@@ -43,6 +43,162 @@ test("Doubles aplica o dano em área para Earthquake, Singles não", () => {
   assert.deepEqual([singles.min, singles.max], [75, 88]);
   assert.deepEqual([doubles.min, doubles.max], [55, 66]);
   assert.equal(doubles.isSpread, true);
+  assert.ok(doubles.activeModifiers.some(({ label, factor }) => label === "Golpe em área" && factor === "0,75× no dano base"));
+});
+
+test("o alvo único não recebe o redutor de golpe em área em Doubles", () => {
+  const input = { attacker: side("Garchomp"), defender: side("Garchomp"), move: "Shadow Claw" };
+  const singles = calculateChampionsDamage({ ...input, gameType: "Singles" });
+  const doubles = calculateChampionsDamage({ ...input, gameType: "Doubles" });
+
+  assert.equal(doubles.isSpread, false);
+  assert.deepEqual([doubles.min, doubles.max], [singles.min, singles.max]);
+});
+
+test("converte Stat Points em stats de nível 50 no caso cruzado com OP.GG", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2 },
+    }),
+    gameType: "Singles",
+    move: "Earthquake",
+  });
+
+  assert.deepEqual(result.attacker.stats, { hp: 185, atk: 182, def: 115, spa: 90, spd: 105, spe: 169 });
+  assert.deepEqual([result.min, result.max], [90, 106]);
+});
+
+test("reproduz o caso OP.GG com Life Orb, Reflect e nature diferente", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", {
+      nature: "Modest",
+      ability: "Rough Skin",
+      item: "Life Orb",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    gameType: "Singles",
+    move: "Earthquake",
+    defenderSide: { isReflect: true },
+  });
+
+  assert.deepEqual(result.attacker.stats, { hp: 185, atk: 163, def: 115, spa: 110, spd: 105, spe: 154 });
+  assert.deepEqual([result.min, result.max], [53, 62]);
+  assert.ok(result.activeModifiers.some(({ label, factor }) => label === "Item do atacante" && factor.startsWith("Life Orb")));
+  assert.ok(result.activeModifiers.some(({ label, factor }) => label === "Reflect" && factor.startsWith("0,5×")));
+});
+
+test("reproduz a forma Mega de Garchomp e a faixa pública com Reflect", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp-Mega", {
+      nature: "Modest",
+      ability: "Sand Force",
+      item: "Garchompite",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    gameType: "Singles",
+    move: "Earthquake",
+    defenderSide: { isReflect: true },
+  });
+
+  assert.deepEqual(result.attacker.stats, { hp: 185, atk: 199, def: 135, spa: 154, spd: 115, spe: 144 });
+  assert.deepEqual([result.min, result.max], [49, 58]);
+});
+
+test("reproduz a faixa Doubles pública do Earthquake contra um alvo", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2 },
+    }),
+    gameType: "Doubles",
+    move: "Earthquake",
+  });
+
+  assert.deepEqual([result.min, result.max], [67, 79]);
+  assert.equal(result.rolls.length, 16);
+  assert.deepEqual(result.rolls, [67, 67, 69, 69, 70, 70, 72, 72, 73, 73, 75, 75, 76, 76, 78, 79]);
+  assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: { successes: 0, total: 256 } });
+});
+
+test("identifica os modificadores de campo que o motor realmente aplicou", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", { ability: "Rough Skin", statPoints: { atk: 32 } }),
+    defender: side("Garchomp"),
+    gameType: "Doubles",
+    move: "Earthquake",
+    attackerSide: { isHelpingHand: true },
+    defenderSide: { isReflect: true, isFriendGuard: true },
+  });
+  const modifiers = Object.fromEntries(result.activeModifiers.map(({ label, factor }) => [label, factor]));
+
+  assert.equal(modifiers["Golpe em área"], "0,75× no dano base");
+  assert.equal(modifiers["Helping Hand"], "1,5× no poder base");
+  assert.equal(modifiers.Reflect, "2732/4096 (~0,667×) no dano final");
+  assert.equal(modifiers["Friend Guard"], "0,75× no dano final");
+  assert.equal(modifiers.STAB, "1,5×");
+});
+
+test("crítico é mostrado somente quando o motor o aplicou", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp"),
+    move: "Shadow Claw",
+    critical: true,
+  });
+
+  assert.ok(result.activeModifiers.some(({ label }) => label === "Crítico aplicado"));
+
+  const canceled = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp", { ability: "Battle Armor" }),
+    move: "Shadow Claw",
+    critical: true,
+  });
+  assert.equal(canceled.activeModifiers.some(({ label }) => label === "Crítico aplicado"), false);
+});
+
+test("Dragon Claw com crítico bate a faixa pública e informa o fator configurado", () => {
+  const input = {
+    attacker: side("Garchomp", { nature: "Modest", statPoints: { hp: 2, atk: 32, spe: 32 } }),
+    defender: side("Garchomp", { nature: "Modest", statPoints: { hp: 2, atk: 32, spe: 32 } }),
+    move: "Dragon Claw",
+    gameType: "Singles",
+  };
+  const normal = calculateChampionsDamage(input);
+  const critical = calculateChampionsDamage({ ...input, critical: true });
+
+  assert.deepEqual([normal.min, normal.max], [128, 152]);
+  assert.deepEqual([critical.min, critical.max], [192, 228]);
+  assert.ok(critical.activeModifiers.some(({ label, factor }) => label === "Crítico aplicado" && factor === "1,5× no dano base"));
 });
 
 test("golpe multi-hit usa apenas quantidades permitidas pela entrada do motor", () => {
@@ -59,7 +215,68 @@ test("golpe multi-hit usa apenas quantidades permitidas pela entrada do motor", 
 
   assert.equal(result.hits, 2);
   assert.equal(result.hitRanges.length, 2);
+  assert.equal(result.rollGroups.length, 2);
+  assert.ok(result.rollGroups.every((rolls) => rolls.length === 16));
+  assert.deepEqual(result.rollGroupLabels, ["Acerto 1", "Acerto 2"]);
+  assert.equal(result.rolls, null);
+  assert.equal(result.koProbabilities, null);
   assert.ok(result.min > 0);
+});
+
+test("Parental Bond identifica o golpe adicional sem classificá-lo como acerto configurado", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Kangaskhan-Mega", { ability: "Parental Bond", item: "Kangaskhanite" }),
+    defender: side("Garchomp"),
+    move: "Double-Edge",
+    hits: 1,
+  });
+
+  assert.equal(result.hasParentalBondFollowUp, true);
+  assert.deepEqual(result.rollGroupLabels, ["Golpe principal", "Golpe adicional de Parental Bond"]);
+  assert.equal(result.koProbabilities, null);
+});
+
+test("Proteção zerada e Proteção atravessada exibem semânticas diferentes", () => {
+  const blocked = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp"),
+    move: "Close Combat",
+    defenderSide: { isProtected: true },
+  });
+  const pierced = calculateChampionsDamage({
+    attacker: side("Garchomp", { ability: "Unseen Fist" }),
+    defender: side("Garchomp"),
+    move: "Close Combat",
+    defenderSide: { isProtected: true },
+  });
+
+  assert.deepEqual([blocked.min, blocked.max], [0, 0]);
+  assert.ok(blocked.activeModifiers.some(({ label }) => label === "Proteção"));
+  assert.ok(pierced.min > 0);
+  assert.ok(pierced.activeModifiers.some(({ label, factor }) => label === "Proteção atravessada" && factor === "0,25× no dano final"));
+});
+
+test("a chance condicional de 2HKO reproduz 237/256 no caso cruzado com OP.GG", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", {
+      nature: "Jolly",
+      ability: "Rough Skin",
+      item: "Garchompite Z",
+      statPoints: { hp: 2 },
+    }),
+    move: "Earthquake",
+    gameType: "Singles",
+  });
+
+  assert.deepEqual(result.rolls, [90, 91, 91, 93, 94, 94, 96, 97, 99, 99, 100, 102, 102, 103, 105, 106]);
+  assert.equal(result.defender.stats.hp, 185);
+  assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: { successes: 237, total: 256 } });
 });
 
 test("valida espécie e Stat Points antes de calcular", () => {
