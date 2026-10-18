@@ -178,7 +178,7 @@ async function runViewport(viewportName, viewport) {
   await search.fill("Garchomp");
   await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeoutMs: 10_000 });
   await page.locator(".pokemon-card-title").first().click();
-  await page.getByRole("heading", { name: /Garchomp/ }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByPlaceholder("Buscar por nome, forma ou número").fill("spindastop-no-match-457");
