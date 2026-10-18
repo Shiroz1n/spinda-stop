@@ -69,3 +69,27 @@ O [run visual #18](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122085
 O [run visual #19](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122383830) terminou com `passed`. O artefato contém 46 imagens, 23 por viewport, e 26 observações por viewport. O relatório marcou zero overflow, zero falhas e zero violações axe. Foram capturadas a ficha de Garchomp com as formas Mega e a falha isolada de `/megas.json`; ambas foram abertas e conferidas em desktop e mobile. A falha ficou clara, com ação de nova tentativa e sem esconder a ficha principal. O [artefato](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122383830/artifacts/12134493450) expira em 01/11/2026.
 
 Esta rodada verificou interface em viewport Chromium simulado. Não substitui aparelho físico, teste em 320 px, zoom do sistema ou leitor de tela.
+
+## PR #22 — contas e salas privadas
+
+O [run visual #25](https://github.com/Shiroz1n/spinda-stop/actions/runs/39125761848) passou com 70 observações, 32 capturas por viewport (64 PNGs), zero overflow, zero falhas e zero violações axe. O roteiro abriu Pokédex, ficha, builder, Usage das duas fontes, histórico, matchups, ladder, calculadora e os fluxos de conta, equipe pública/privada e sala, incluindo estados vazios, erros, convite e confirmação.
+
+| Viewport | Capturas | Observações | Overflow | Violações axe |
+|---|---:|---:|---:|---:|
+| Desktop — 1440 × 960 | 32 | 35 | 0 px | 0 |
+| Mobile simulado — 390 × 844 | 32 | 35 | 0 px | 0 |
+
+As imagens finais foram conferidas depois de corrigir o corte do controle de visibilidade da equipe salva. O [artefato](https://github.com/Shiroz1n/spinda-stop/actions/runs/39125761848/artifacts/12136490304) fica disponível até 01/11/2026.
+
+## PR #23 — torneios privados
+
+O [run visual #26](https://github.com/Shiroz1n/spinda-stop/actions/runs/39127077428) passou com 84 observações, 39 capturas por viewport (78 PNGs), zero overflow, zero falhas e zero violações axe. Além das telas verificadas no PR #22, abriu listagem vazia e com erro, convite, login, semifinais, final e conclusão do torneio.
+
+| Viewport | Capturas | Observações | Overflow | Violações axe |
+|---|---:|---:|---:|---:|
+| Desktop — 1440 × 960 | 39 | 42 | 0 px | 0 |
+| Mobile simulado — 390 × 844 | 39 | 42 | 0 px | 0 |
+
+O fluxo de teclado confirmou link de salto, foco de 3 px nos links e troca de fonte com `Enter`. Conferi manualmente as capturas de semifinais em desktop e mobile, Pokédex desktop, builder mobile, Usage filtrado desktop e calculadora mobile; não encontrei corte ou quebra de layout nessas telas. O [artefato da execução](https://github.com/Shiroz1n/spinda-stop/actions/runs/39127077428/artifacts/12136701660) contém o relatório e as imagens e expira em 01/11/2026.
+
+Esta inspeção usa Chromium e viewport mobile simulado de 390 × 844. Não cobre aparelho físico, 320 px, zoom do sistema nem leitor de tela. O resultado de axe não substitui essa avaliação manual.
