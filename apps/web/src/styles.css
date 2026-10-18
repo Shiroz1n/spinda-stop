@@ -869,7 +869,7 @@ a:hover { color: var(--coral-dark); }
 .damage-result-heading { align-items: center; }
 .damage-result-range { min-width: 144px; padding: 14px; border: 2px solid #173745; background: #f3d36c; color: #173745; }
 .damage-result-range strong { color: #173745; font-size: clamp(1.8rem, 3vw, 2.5rem); }
-.damage-result-range span { color: #40545b; }
+.damage-result-range span { color: #173745; }
 .damage-result > h3, .damage-result .damage-breakdown h3 { color: #16485e; }
 .damage-rolls li { border-color: #bdd1c8; background: #fffef8; }
 .damage-comparison-results { gap: 14px; }
