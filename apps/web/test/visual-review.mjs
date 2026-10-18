@@ -157,6 +157,22 @@ async function safeCapture(page, viewport, name, options) {
   }
 }
 
+async function warmVisibleListSprites(page, selector, viewportHeight = 800) {
+  const maxScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  for (let y = 0; y <= maxScroll; y += Math.max(240, Math.floor(viewportHeight * 0.75))) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
+    await page.waitForTimeout(60);
+  }
+  await page.waitForFunction((imageSelector) => [...document.querySelectorAll(imageSelector)].every((image) => image.complete), selector, { timeout: 15_000 }).catch(() => {});
+  const spriteState = await page.locator(selector).evaluateAll((images) => ({
+    total: images.length,
+    loaded: images.filter((image) => image.complete && image.naturalWidth > 0).length,
+    failed: images.filter((image) => image.complete && image.naturalWidth === 0).length,
+  }));
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  return spriteState;
+}
+
 async function waitForEither(page, selector, timeout = 35_000) {
   try {
     await page.locator(selector).first().waitFor({ state: "visible", timeout: timeout });
@@ -333,7 +349,7 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
-  await safeCapture(page, viewportName, "pokedex", { audit: true });
+  await safeCapture(page, viewportName, "pokedex", { audit: true, fullPage: viewport.width > 720 });
   const initialCardCount = await page.locator(".pokemon-card").count();
   const catalogCount = Number((await page.locator(".results-line strong").innerText()).replace(/\D/g, ""));
   observations.push({ viewport: viewportName, name: "pokedex-progressive-loading", initialCardCount, catalogCount });
@@ -345,7 +361,11 @@ async function runViewport(viewportName, viewport) {
   if (loadedCardCount <= initialCardCount || loadedCardCount >= catalogCount) {
     failures.push(`${viewportName}: o carregamento progressivo não adicionou um lote limitado de Pokémon.`);
   }
-  await safeCapture(page, viewportName, "pokedex-loaded-more");
+  const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art img", viewport.height);
+  observations.push({ viewport: viewportName, name: "pokedex-loaded-batch-sprites", ...dexSpriteState });
+  await safeCapture(page, viewportName, "pokedex-loaded-more", { fullPage: viewport.width > 720 });
+  await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
   const firstSpeciesStats = await page.locator(".quick-stats").first().innerText();
   if (firstSpeciesStats.includes("—")) failures.push(`${viewportName}: a Pokédex mostra stats que o catálogo não fornece.`);
   const search = page.getByPlaceholder("Buscar por nome, forma ou número");
@@ -373,10 +393,10 @@ async function runViewport(viewportName, viewport) {
   })));
   observations.push({ viewport: viewportName, name: "pokedex-form-sprites-ready", sprites: formSpriteStates });
   await page.evaluate(() => window.scrollTo(0, 0));
-  await safeCapture(page, viewportName, "pokedex-filtered");
+  await safeCapture(page, viewportName, "pokedex-filtered", { fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-  await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
+  await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   const returnedDexState = await page.evaluate(() => ({
@@ -391,7 +411,7 @@ async function runViewport(viewportName, viewport) {
   }
   await search.fill("spindastop-no-match-457");
   await page.locator(".empty-state-panel").waitFor({ state: "visible", timeout: 10_000 });
-  await safeCapture(page, viewportName, "pokedex-empty");
+  await safeCapture(page, viewportName, "pokedex-empty", { fullPage: false });
   await page.getByRole("button", { name: "Limpar busca e filtros" }).click();
   await dexTypeFilter.selectOption("water");
   await page.waitForFunction(() => document.querySelectorAll(".pokemon-card").length > 12, null, { timeout: 10_000 });
@@ -511,7 +531,7 @@ async function runViewport(viewportName, viewport) {
   if (viewport.width <= 420 && slotLayoutMetrics.some((slot) => slot.lineCount > 1)) {
     failures.push(`${viewportName}: os nomes dos seis Pokémon devem permanecer legíveis em uma linha nos slots mobile.`);
   }
-  await safeCapture(page, viewportName, "builder-six-members", { audit: true });
+  await safeCapture(page, viewportName, "builder-six-members", { audit: true, fullPage: viewport.width > 720 });
   await page.evaluate(() => window.scrollTo(0, 0));
   const firstFoldSlots = await page.locator(".team-slot").evaluateAll((elements) => elements.filter((element) => {
     const rect = element.getBoundingClientRect();
@@ -552,8 +572,10 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".team-slot").first().click();
   if (!(await page.locator(".points-section").evaluate((details) => details.open))) await page.locator(".points-section > summary").click();
   if (await page.locator("#stat-spe").inputValue() !== "17") failures.push(`${viewportName}: aplicar a prévia de Speed não salvou o SP no set selecionado.`);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await safeCapture(page, viewportName, "builder-six-speed-vs-mega-garchomp-z", { audit: true });
+  await page.locator(".builder-speed-panel").scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "builder-six-speed-vs-mega-garchomp-z", { audit: true, fullPage: false });
+  await page.locator(".builder-speed-row").last().scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "builder-six-speed-last-member", { fullPage: false });
   await page.locator(".builder-secondary-actions > summary").click();
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
@@ -602,7 +624,7 @@ async function runViewport(viewportName, viewport) {
   if (await page.locator(".usage-index-note").count()) {
     await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
   }
-  await safeCapture(page, viewportName, "usage-battle-data", { audit: true });
+  await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
   if (await page.locator(".usage-index-note").count()) {
     const usageCategory = page.locator(".usage-category-tabs .usage-category-tab").filter({ hasText: "Golpes" }).first();
     await usageCategory.click();
@@ -643,7 +665,7 @@ async function runViewport(viewportName, viewport) {
     const usageSearch = page.locator(".usage-browser-panel input[type=search]");
     await usageSearch.fill("spindastop-no-match-457");
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
-    await safeCapture(page, viewportName, "usage-empty");
+    await safeCapture(page, viewportName, "usage-empty", { fullPage: false });
     await usageSearch.fill("Garchomp");
     await page.locator(".usage-more-filters > summary").click();
     const sourceFilters = [
@@ -663,7 +685,7 @@ async function runViewport(viewportName, viewport) {
     if (!filteredSpecies.some((name) => name.includes("Garchomp"))) {
       failures.push("As facetas combinadas não preservaram o Garchomp compatível com os dados publicados.");
     }
-    await safeCapture(page, viewportName, "usage-filtered");
+    await safeCapture(page, viewportName, "usage-filtered", { fullPage: false });
     if (viewportName === "desktop") {
       const filterSelectors = [
         ".usage-browser-panel input[type=search]",
@@ -687,7 +709,7 @@ async function runViewport(viewportName, viewport) {
     await usageSearch.fill("Garchomp");
     await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
     await waitForEither(page, ".usage-snapshot-picker, .usage-no-snapshots, .usage-error", 35_000);
-    await safeCapture(page, viewportName, "usage-history");
+    await safeCapture(page, viewportName, "usage-history", { fullPage: false });
   }
 
   const metaRollButton = page.getByRole("button", { name: "MetaRoll", exact: true });
@@ -715,7 +737,7 @@ async function runViewport(viewportName, viewport) {
   if (await page.locator(".metaroll-capture-note").count()) {
     await waitForEither(page, ".metaroll-provenance, .usage-error", 35_000);
   }
-  await safeCapture(page, viewportName, "usage-metaroll", { audit: true });
+  await safeCapture(page, viewportName, "usage-metaroll", { audit: true, fullPage: false });
   if (await page.locator(".metaroll-layout .usage-more-filters > summary").count()) {
     await page.locator(".metaroll-layout .usage-more-filters > summary").click();
     const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
@@ -749,15 +771,15 @@ async function runViewport(viewportName, viewport) {
     } else if (await page.locator(".metaroll-mega-card .usage-error").count()) {
       failures.push(`${viewportName}: o endpoint de formas Mega falhou na conferência visual.`);
     }
-    await safeCapture(page, viewportName, "usage-metaroll-megas", { audit: true });
-    await safeCapture(page, viewportName, "usage-matchups-history");
+    await safeCapture(page, viewportName, "usage-metaroll-megas", { audit: true, fullPage: false });
+    await safeCapture(page, viewportName, "usage-matchups-history", { fullPage: false });
     await page.getByRole("button", { name: "Ladder de jogadores" }).click();
     await waitForEither(page, ".metaroll-ladder-capture, .usage-error", 35_000);
-    await safeCapture(page, viewportName, "usage-ladder", { audit: true });
+    await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
     await page.getByRole("button", { name: "Espécies" }).click();
     await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
-    await safeCapture(page, viewportName, "usage-metaroll-empty");
+    await safeCapture(page, viewportName, "usage-metaroll-empty", { fullPage: false });
   }
 
   const errorPage = await context.newPage();
@@ -835,7 +857,8 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("Buscar na lista").fill("Garchomp");
   await page.locator(".speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".speed-result-row").filter({ hasText: "Mega Garchomp Z" }).count() < 1) failures.push(`${viewportName}: Speed Tiers não manteve a forma Mega Garchomp Z na busca.`);
-  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true });
+  await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true, fullPage: false });
 
   await captureCommunityState(context, viewport, viewportName, "room");
   await captureCommunityState(context, viewport, viewportName, "tournament");

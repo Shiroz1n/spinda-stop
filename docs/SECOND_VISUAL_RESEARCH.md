@@ -70,13 +70,14 @@ O script `apps/web/test/visual-review.mjs` grava um conjunto por viewport: `desk
 - `*-usage-battle-data-moves.png` e `*-usage-metaroll-category.png`;
 - `*-builder-six-members-first-fold.png` e `*-builder-six-members.png`;
 - `*-builder-six-speed-vs-mega-garchomp-z.png` para os seis cálculos e o sprite da forma adversária;
+- `*-builder-six-speed-last-member.png` para conferir o restante da lista em telas estreitas;
 - `*-builder-empty-speed-target.png` para a ação de escolher alvo antes da comparação e `*-builder-speed-shortcut` no `inspection.json` para verificar a navegação pelo atalho;
 - `*-calculator-comparison.png`, `*-calculator-comparison-rolls.png`, `*-calculator-one-v-many.png` e `*-calculator-lucario-z-vs-absol-z.png`;
 - `*-speed-tiers-mega-garchomp-z.png` para busca e forma específica na tabela;
 - `*-room-state-flow.png` e `*-tournament-state-flow.png` para exercitar os estados de resposta;
 - `*-room-live-first-fold.png` e `*-tournament-live-first-fold.png` para mostrar as salas e o torneio criados no PostgreSQL efêmero, antes dos controles secundários.
 
-Para sala/torneio, `*-state-flow.png` usa fixtures com formato de resposta da API; as capturas `*-live-first-fold.png` usam salas e torneios criados no PostgreSQL efêmero, com participantes reais do teste, estado e próxima ação no topo antes dos formulários. A sequência completa de convite, check-in, partida, resultado, confirmação, chaveamento e final também usa PostgreSQL efêmero. O roteiro registra cada modo no `inspection.json`.
+As capturas mobile das tarefas principais são de viewport, em pontos de rolagem selecionados; assim a navegação fixa aparece no lugar real e não fica colada no meio de uma imagem longa. As capturas desktop da Pokédex continuam em página completa. Para sala/torneio, `*-state-flow.png` usa fixtures com formato de resposta da API; as capturas `*-live-first-fold.png` usam salas e torneios criados no PostgreSQL efêmero, com participantes reais do teste, estado e próxima ação no topo antes dos formulários. A sequência completa de convite, check-in, partida, resultado, confirmação, chaveamento e final também usa PostgreSQL efêmero. O roteiro registra cada modo no `inspection.json`. Antes da captura longa da Pokédex, o roteiro percorre os lotes carregados para que os sprites com `loading="lazy"` tenham a chance de aparecer; o produto continua carregando a lista conforme o usuário rola.
 
 ## Limites e verificação
 
