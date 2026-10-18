@@ -3,6 +3,7 @@ import { BrandMark } from "./BrandMark.jsx";
 
 const navigation = [
   { to: "/dex", label: "Pokédex" },
+  { to: "/usage", label: "Usage" },
   { to: "/builder", label: "Construtor" },
 ];
 

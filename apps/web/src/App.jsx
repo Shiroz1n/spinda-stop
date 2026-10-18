@@ -6,6 +6,7 @@ const BuilderPage = lazy(() => import("./pages/BuilderPage.jsx").then((module) =
 const DexDetailPage = lazy(() => import("./pages/DexDetailPage.jsx").then((module) => ({ default: module.DexDetailPage })));
 const DexPage = lazy(() => import("./pages/DexPage.jsx").then((module) => ({ default: module.DexPage })));
 const HomePage = lazy(() => import("./pages/HomePage.jsx").then((module) => ({ default: module.HomePage })));
+const UsagePage = lazy(() => import("./pages/UsagePage.jsx").then((module) => ({ default: module.UsagePage })));
 
 function NotFoundPage() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/dex" element={<DexPage />} />
           <Route path="/dex/:slug" element={<DexDetailPage />} />
+          <Route path="/usage" element={<UsagePage />} />
           <Route path="/builder" element={<BuilderPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

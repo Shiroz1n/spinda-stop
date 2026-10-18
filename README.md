@@ -7,15 +7,16 @@ Uma oficina independente para explorar Pokémon, montar times e, mais adiante, o
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
+- Explorar Usage de Doubles por espécie, tipo e categoria, com dados da API Pokémon Champions Battle Data.
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
-As APIs de uso competitivo foram avaliadas, mas ainda não estão ligadas ao app. Os limites, termos e lacunas de amostra estão em [APIs de dados competitivos](docs/META_SOURCES.md).
+Usage mostra a fonte e o período que a API informa. “Current” é o rótulo da fonte; não confirma um regulamento oficial. Os percentuais não vêm com denominador conhecido e não são tratados como porcentagem de partidas. MetaRoll segue documentada como alternativa separada, sem mistura de números.
 
 ## Próximas partes
 
 - Análise de tipos e legalidade por regulamento.
-- Dados competitivos com fonte, período e tamanho da amostra.
+- Mais fontes competitivas, quando seus campos, cobertura e condições estiverem confirmados.
 - Matchups e calculadora de dano com casos de referência.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 

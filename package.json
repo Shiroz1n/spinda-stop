@@ -14,7 +14,7 @@
     "build": "npm run build --workspace @spinda-stop/web",
     "preview": "npm run preview --workspace @spinda-stop/web",
     "lint": "eslint .",
-    "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js",
+    "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js",
     "data:sync": "npm run sync --workspace @spinda-stop/data"
   },
   "devDependencies": {
