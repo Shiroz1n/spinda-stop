@@ -323,6 +323,13 @@ p { max-width: 72ch; }
 .empty-state { margin: 14px 0; color: var(--muted); }
 
 .usage-page { max-width: 1480px; }
+.usage-source-switcher { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding-top: 24px; padding-bottom: 0; }
+.usage-source-switch-copy .page-label { margin-bottom: 3px; }
+.usage-source-switch-copy p:last-child { margin: 0; color: var(--muted); font-size: 0.84rem; }
+.usage-source-switch { display: flex; flex: 0 0 auto; gap: 5px; padding: 4px; border: 1px solid var(--ink); border-radius: 9px; background: var(--surface-alt); }
+.usage-source-switch button { min-height: 40px; padding: 7px 12px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--muted); font-size: 0.83rem; font-weight: 800; }
+.usage-source-switch button:hover { color: var(--ink); }
+.usage-source-switch button.is-active { border-color: var(--ink); background: var(--ink); color: var(--surface); }
 .usage-heading { align-items: center; margin-bottom: 22px; }
 .usage-heading h1 { margin-bottom: 8px; }
 .usage-edition-mark { display: inline-flex; align-items: center; min-height: 38px; padding: 7px 11px; border: 1px solid var(--ink); border-radius: 8px; background: #f1e6bd; color: var(--ink); font-size: 0.78rem; font-weight: 850; letter-spacing: 0.08em; }
@@ -419,6 +426,43 @@ p { max-width: 72ch; }
 .usage-empty p { color: var(--muted); }
 .usage-empty-compact { min-height: 90px; padding: 12px 0; color: var(--muted); }
 .usage-empty-compact p { margin: 0; }
+.metaroll-page { padding-top: 23px; }
+.metaroll-source-banner { border-left-color: var(--blue-dark); }
+.metaroll-capture-note { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px 16px; margin: 9px 0 16px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-alt); color: var(--ink); font-size: 0.82rem; }
+.metaroll-capture-note span { display: grid; gap: 3px; }
+.metaroll-capture-note b { color: var(--muted); font-size: 0.7rem; }
+.metaroll-capture-note p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.76rem; }
+.metaroll-layout { grid-template-columns: minmax(285px, 0.72fr) minmax(0, 1.8fr); }
+.metaroll-detail-panel { padding: clamp(16px, 2.6vw, 25px); }
+.metaroll-provenance { margin-bottom: 14px; }
+.metaroll-rank-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-bottom: 15px; }
+.metaroll-rank-summary > div { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-alt); }
+.metaroll-rank-summary span { color: var(--muted); font-size: 0.73rem; font-weight: 750; }
+.metaroll-rank-summary strong { font-size: 0.91rem; }
+.metaroll-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.metaroll-card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #fffdf5; }
+.metaroll-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.metaroll-card-heading h3 { margin: 0; font-size: 1rem; }
+.metaroll-card-heading > span { color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.metaroll-card-note { margin: 7px 0 0; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
+.metaroll-empty { margin: 12px 0 3px; color: var(--muted); font-size: 0.82rem; }
+.metaroll-list { display: grid; gap: 1px; margin: 0; padding: 5px 0 0; list-style: none; }
+.metaroll-list-row { padding: 7px 0; border-top: 1px solid #e5e0cc; }
+.metaroll-row-top { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 6px; margin-bottom: 5px; }
+.metaroll-row-rank { color: var(--muted); font-size: 0.73rem; font-weight: 800; }
+.metaroll-row-top > strong { overflow-wrap: anywhere; font-size: 0.82rem; }
+.metaroll-row-percent { color: var(--ink); font-size: 0.74rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.metaroll-row-top .usage-spread { grid-template-columns: repeat(6, minmax(27px, 1fr)); }
+.metaroll-row-top .usage-spread small { font-size: 0.54rem; }
+.metaroll-row-top .usage-spread b { font-size: 0.66rem; }
+.metaroll-history-section { margin-top: 24px; padding-top: 20px; border-top: 2px solid var(--line); }
+.metaroll-rank-history { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 18px; padding: 0; list-style: none; }
+.metaroll-rank-history li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-alt); font-size: 0.72rem; }
+.metaroll-rank-history time { color: var(--muted); }
+.metaroll-history-usage { margin-top: 15px; }
+.metaroll-history-usage > .page-label { margin-bottom: 3px; }
+.metaroll-history-usage h3 { margin-bottom: 6px; font-size: 1.08rem; }
+.metaroll-history-usage > .metaroll-profile-grid { margin-top: 12px; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
@@ -448,6 +492,9 @@ p { max-width: 72ch; }
   .home-data-strip div:last-child { grid-column: 1 / -1; }
   .home-next-step { grid-template-columns: 1fr; align-items: start; gap: 12px; padding-top: 28px; }
   .usage-heading { gap: 10px; }
+  .usage-source-switcher { align-items: flex-start; flex-direction: column; gap: 11px; padding-top: 19px; }
+  .usage-source-switch { width: 100%; }
+  .usage-source-switch button { flex: 1; }
   .usage-edition-mark { align-self: flex-start; }
   .usage-source-banner { grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 12px; }
   .usage-source-icon { width: 36px; height: 36px; }
@@ -462,6 +509,9 @@ p { max-width: 72ch; }
   .usage-provenance-notes { grid-template-columns: 1fr; }
   .usage-category-tabs { flex-wrap: nowrap; overflow-x: auto; margin-right: -4px; padding: 2px 4px 5px 0; scrollbar-width: thin; }
   .usage-category-tab { flex: 0 0 auto; }
+  .metaroll-page { padding-top: 18px; }
+  .metaroll-capture-note { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metaroll-rank-history { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .usage-row-main { grid-template-columns: 1fr; gap: 8px; }
   .usage-row-value { padding-left: 42px; }
   .dex-toolbar { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
@@ -505,6 +555,10 @@ p { max-width: 72ch; }
   .usage-species-button { grid-template-columns: minmax(0, 1fr) 50px; padding-inline: 6px; }
   .usage-list-caption { font-size: 0.67rem; }
   .usage-detail-panel { padding: 14px; }
+  .metaroll-profile-grid { grid-template-columns: 1fr; }
+  .metaroll-rank-summary { grid-template-columns: 1fr; }
+  .metaroll-rank-history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metaroll-row-top .usage-spread { grid-template-columns: repeat(3, minmax(36px, 1fr)); }
   .usage-detail-heading { gap: 9px; }
   .usage-format-stamp { min-height: 27px; padding-inline: 7px; font-size: 0.7rem; }
   .usage-spread { grid-template-columns: repeat(3, minmax(38px, 1fr)); }
