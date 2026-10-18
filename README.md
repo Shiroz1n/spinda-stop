@@ -43,6 +43,7 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
+- [Registro da revisão visual](docs/VISUAL_REVIEW.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
 - [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)
 - [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md)
