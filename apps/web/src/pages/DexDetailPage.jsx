@@ -2,16 +2,18 @@ import { Link, useParams } from "react-router";
 import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
+import { PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 
 const STAT_LABELS = [
-  ["hp", "HP"],
-  ["atk", "Attack"],
-  ["def", "Defense"],
-  ["spa", "Special Attack"],
-  ["spd", "Special Defense"],
-  ["spe", "Speed"],
+  ["hp", "HP"], ["atk", "Attack"], ["def", "Defense"],
+  ["spa", "Sp. Atk"], ["spd", "Sp. Def"], ["spe", "Speed"],
 ];
+
+function formLabel(pokemon) {
+  if (pokemon.formId === "default") return "Forma padrão";
+  return pokemon.formName || pokemon.formId.replaceAll("-", " ");
+}
 
 export function DexDetailPage() {
   const { slug = "" } = useParams();
@@ -20,38 +22,59 @@ export function DexDetailPage() {
 
   if (!pokemon) {
     return (
-      <section className="page-wrap narrow-page">
-        <p className="page-label">Catálogo geral</p>
-        <h1>Essa entrada não está no catálogo.</h1>
+      <section className="page-wrap not-found-page">
+        <div className="not-found-mark" aria-hidden="true">?</div>
+        <p className="page-label">Pokédex</p>
+        <h1>Essa forma não está no catálogo.</h1>
         <Link className="button button-primary" to="/dex">Voltar à Pokédex</Link>
       </section>
     );
   }
 
   const total = STAT_LABELS.reduce((sum, [key]) => sum + (pokemon.stats[key] ?? 0), 0);
+  const forms = dexData.pokemon.filter((entry) => entry.speciesId === pokemon.speciesId);
+
   return (
     <div className="page-wrap detail-page">
-      <Link className="back-link" to="/dex">
-        <svg className="back-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M15 10H5m0 0 4-4m-4 4 4 4" /></svg>
-        Voltar à Pokédex
-      </Link>
-      <section className="detail-heading panel-frame">
-        <div className="detail-number">{formatNationalNumber(pokemon.speciesId)}</div>
-        <div className="detail-title">
-          <p className="page-label">Dados gerais · geração {pokemon.generation || "—"}</p>
-          <h1>{pokemon.name}</h1>
-          {pokemon.formName && <p>{pokemon.speciesName} · {pokemon.formName}</p>}
-          <div className="type-list">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</div>
+      <Link className="back-link" to="/dex"><span aria-hidden="true">←</span> Pokédex</Link>
+
+      <section className="detail-heading" aria-labelledby="pokemon-title">
+        <div className="detail-stage-art">
+          <span className="detail-spark detail-spark-one" aria-hidden="true">✦</span>
+          <span className="detail-spark detail-spark-two" aria-hidden="true">✧</span>
+          <PokemonSprite pokemon={pokemon} name={pokemon.name} size={200} priority />
+          <span className="detail-number">{formatNationalNumber(pokemon.speciesId)}</span>
         </div>
-        <span className="unknown-chip detail-status">Champions: desconhecido</span>
+        <div className="detail-title">
+          <p className="page-label">PokéAPI · geração {pokemon.generation || "—"}</p>
+          <h1 id="pokemon-title">{pokemon.name}</h1>
+          <p className="detail-form-label">{pokemon.speciesName} <span>·</span> {formLabel(pokemon)}</p>
+          <div className="type-list detail-types">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</div>
+          <div className="detail-hero-actions">
+            <Link className="button button-primary" to={`/usage?pokemon=${encodeURIComponent(pokemon.name)}`}>Tendências de Doubles</Link>
+            <Link className="button button-outline" to="/builder" state={{ pokemonSlug: pokemon.slug }}>Adicionar ao time</Link>
+          </div>
+          <p className="detail-data-caption">Dados gerais da espécie; disponibilidade no jogo depende do regulamento.</p>
+        </div>
       </section>
 
-      <div className="detail-grid">
-        <section className="panel-frame detail-panel">
-          <div className="section-heading">
-            <h2>Stats base gerais</h2>
-            <span>Total {total}</span>
+      {forms.length > 1 ? (
+        <section className="detail-forms" aria-labelledby="forms-heading">
+          <div className="section-heading"><h2 id="forms-heading">Formas de {pokemon.speciesName}</h2><span>{forms.length}</span></div>
+          <div className="form-switcher">
+            {forms.map((form) => (
+              <Link className={`form-option${form.slug === pokemon.slug ? " is-current" : ""}`} to={`/dex/${form.slug}`} aria-current={form.slug === pokemon.slug ? "page" : undefined} key={form.slug}>
+                <PokemonSprite pokemon={form} name={form.name} size={56} decorative />
+                <span>{form.name}</span>
+              </Link>
+            ))}
           </div>
+        </section>
+      ) : null}
+
+      <div className="detail-grid">
+        <section className="panel-frame detail-panel" aria-labelledby="stats-heading">
+          <div className="section-heading"><h2 id="stats-heading">Stats base</h2><span>Total {total}</span></div>
           <ul className="stat-list">
             {STAT_LABELS.map(([key, label]) => {
               const value = pokemon.stats[key] ?? 0;
@@ -64,24 +87,20 @@ export function DexDetailPage() {
               );
             })}
           </ul>
-          <p className="form-hint">São valores de referência da PokéAPI; não calculam stats do Pokémon Champions.</p>
+          <p className="form-hint">Referência geral da PokéAPI; não representa o stat final do Pokémon Champions.</p>
         </section>
 
-        <section className="panel-frame detail-panel">
-          <div className="section-heading"><h2>Ficha</h2><span>PokéAPI</span></div>
+        <section className="panel-frame detail-panel" aria-labelledby="profile-heading">
+          <div className="section-heading"><h2 id="profile-heading">Dados da espécie</h2><span>PokéAPI</span></div>
           <dl className="detail-facts">
             <div><dt>Espécie</dt><dd>{pokemon.speciesName}</dd></div>
-            <div><dt>Forma</dt><dd>{pokemon.formName || "Padrão"}</dd></div>
+            <div><dt>Forma</dt><dd>{formLabel(pokemon)}</dd></div>
             <div><dt>Altura</dt><dd>{(pokemon.height / 10).toLocaleString("pt-BR")} m</dd></div>
             <div><dt>Peso</dt><dd>{(pokemon.weight / 10).toLocaleString("pt-BR")} kg</dd></div>
             <div><dt>Habilidades gerais</dt><dd>{pokemon.abilities.map((ability) => `${ability.name}${ability.hidden ? " (oculta)" : ""}`).join(", ") || "Sem dado"}</dd></div>
           </dl>
-          <p className="unknown-note">Compatibilidade com formato e regulamento não consultada.</p>
+          <a className="source-link" href={dexData.metadata.sourceUrl} target="_blank" rel="noreferrer">Revisão da fonte ↗</a>
         </section>
-      </div>
-      <div className="detail-actions">
-        <Link className="button button-primary" to="/builder" state={{ pokemonSlug: pokemon.slug }}>Adicionar ao time</Link>
-        <a className="source-link" href={dexData.metadata.sourceUrl} target="_blank" rel="noreferrer">Ver revisão da fonte</a>
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import dexData from "@spinda-stop/data/pokedex";
+import { PokemonSprite } from "./PokemonSprite.jsx";
 import { communityRequest } from "../data/communityApi.js";
 
 export function TeamAccountPanel({ onLoad, onSave }) {
@@ -91,7 +93,19 @@ export function TeamAccountPanel({ onLoad, onSave }) {
           <div className="account-team-list" aria-label="Equipes salvas na conta">
             {state.teams.length ? state.teams.map((saved) => (
               <div className="account-team-row" key={saved.id}>
-                <div><strong>{saved.name}</strong><span>{saved.visibility === "public" ? "Pública" : "Privada"}</span></div>
+                <div className="account-team-summary"><strong>{saved.name}</strong><span>{saved.visibility === "public" ? "Pública" : "Privada"}</span></div>
+                <div className="account-team-sprites" role="list" aria-label={`Integrantes de ${saved.name}`}>
+                  {(saved.data?.members || []).slice(0, 6).map((member, index) => {
+                    const pokemon = dexData.pokemon.find((entry) => entry.slug === member?.pokemonId);
+                    return (
+                      <span className="account-team-member" role="listitem" key={`${saved.id}-${index}`}>
+                        {pokemon
+                          ? <PokemonSprite pokemon={pokemon} name={pokemon.name} size={44} />
+                          : <span className="account-team-empty" role="img" aria-label={`Posição ${index + 1} vazia`} />}
+                      </span>
+                    );
+                  })}
+                </div>
                 <button className="button button-outline button-small" type="button" disabled={busy} onClick={() => onLoad(saved.data)}>Carregar</button>
                 <label className="sr-only" htmlFor={`team-visibility-${saved.id}`}>Visibilidade de {saved.name}</label>
                 <select className="text-input account-team-visibility" id={`team-visibility-${saved.id}`} value={savedVisibility[saved.id] || saved.visibility} onChange={(event) => setSavedVisibility((current) => ({ ...current, [saved.id]: event.target.value }))}>

@@ -6,6 +6,7 @@ import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
 import natureData from "@spinda-stop/data/natures";
 import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
+import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { buildDamageCalculatorSearch } from "../data/damageCalculator.js";
@@ -276,6 +277,7 @@ export function BuilderPage() {
                   aria-pressed={selectedSlot === index}
                   onClick={() => entry ? setSelectedSlot(index) : chooseForSlot(index)}
                 >
+                  <span className="team-slot-art">{entry ? <PokemonSprite pokemon={entry} name={entry.name} size={64} decorative /> : <span className="team-slot-empty" aria-hidden="true">+</span>}</span>
                   <span className="slot-number">{String(index + 1).padStart(2, "0")}</span>
                   <span className="slot-copy"><b>{entry?.name ?? "Vazio"}</b><small>{entry ? (entry.formName || "Posição configurável") : "Escolher espécie"}</small></span>
                   {entry && <span className="type-list slot-types">{entry.types.map((type) => <TypeTag key={type} type={type} />)}</span>}
@@ -298,13 +300,13 @@ export function BuilderPage() {
           ) : (
             <section className="set-editor panel-frame" aria-labelledby="active-member-title">
               <div className="set-editor-heading">
+                <PokemonSprite pokemon={selectedPokemon} name={selectedPokemon.name} size={112} priority decorative className="set-editor-art" />
                 <div>
                   <p className="page-label">Posição {selectedSlot + 1} · set geral</p>
                   <h2 id="active-member-title">{selectedPokemon.name}</h2>
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
-                  <p className="form-hint builder-usage-hint">A consulta mostra tendências da fonte sem alterar este set.</p>
-                  <p className="form-hint builder-usage-hint">A calculadora abre em nível 50 e pode levar os sets dos dois lados. O cálculo começa pelo primeiro golpe preenchido do atacante.</p>
+                  <p className="form-hint builder-usage-hint">Tendências abrem em outra tela. A calculadora começa no nível 50 e usa o primeiro golpe preenchido.</p>
                 </div>
                 <div className="set-heading-actions">
                   <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>
@@ -336,7 +338,10 @@ export function BuilderPage() {
                 </datalist>
 
                 <label className="field-label" htmlFor="member-item">Item</label>
-                <input id="member-item" className="text-input" value={selectedMember.item} maxLength={100} onChange={(event) => updateMember({ item: event.target.value })} placeholder="Digite um item" />
+                <div className="item-input-row">
+                  <ItemSprite name={selectedMember.item} size={32} />
+                  <input id="member-item" className="text-input" value={selectedMember.item} maxLength={100} onChange={(event) => updateMember({ item: event.target.value })} placeholder="Digite um item" />
+                </div>
 
                 <label className="field-label" htmlFor="member-nature">Nature</label>
                 <input id="member-nature" className="text-input" list={natureListId} value={selectedMember.nature} maxLength={100} onChange={(event) => updateMember({ nature: event.target.value })} placeholder="Escolha ou digite" />
@@ -374,8 +379,6 @@ export function BuilderPage() {
       </section>
 
       <p className="form-message" role="status" aria-live="polite">{message}</p>
-      <p className="builder-footnote">Esta etapa guarda os campos do time e exporta um formato próprio. Não calcula dano nem confirma legalidade.</p>
-
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
     </div>
   );
