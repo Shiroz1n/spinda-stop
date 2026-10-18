@@ -1,12 +1,12 @@
 # APIs de dados competitivos
 
-Revisão feita em 18/10/2026. Nenhuma dessas APIs está integrada ao app. Os percentuais abaixo precisam continuar ligados à sua fonte; não somar, tirar média nem tratar respostas diferentes como uma única amostra.
+Revisão feita em 18/10/2026. O piloto de Usage usa Pokémon Champions Battle Data em Doubles; MetaRoll continua como alternativa separada. Percentuais ficam ligados à sua fonte: não somar, tirar média nem tratar respostas diferentes como uma única amostra.
 
 ## Decisão
 
-MetaRoll é a opção mais clara para um piloto de Doubles: cada resposta identifica formato, temporada e hora da captura. Ainda assim, os percentuais de uso não vêm com o total de partidas ou jogadores que os gerou. Por isso, não vamos mostrá-los no app até decidir como explicar essa ausência e testar uma resposta real.
+O primeiro piloto usa Pokémon Champions Battle Data porque a API responde às rotas públicas de Doubles e suas regras permitem projetos comunitários com atribuição. A tela mostra a origem e o período devolvido pela API. Os dados passam pelo navegador e por um adaptador que pode ser substituído.
 
-Pokémon Champions Battle Data pode complementar a pesquisa, pois publica dados atuais e snapshots diários de Singles e Doubles. A API não documenta o denominador das porcentagens nem associa cada linha a um regulamento oficial. O guia também declara os dados como sujeitos a mudanças e disponibilidade sem garantia. Antes de qualquer integração, precisamos confirmar acesso e a relação entre as temporadas exibidas e o regulamento do jogo.
+MetaRoll permanece documentada como fonte alternativa. Seus dados não entram nesta tela e nunca serão combinados com Pokémon Champions Battle Data.
 
 ## Pokémon Champions Battle Data
 
@@ -22,11 +22,13 @@ Documentação: [guia da API](https://championsbattledata.com/api_guide) · [reg
 
 **Formato e período.** A API distingue Singles de Doubles. A pasta atual aponta para os dados mais recentes; snapshots datados aparecem por temporada e dia, no formato `DD_MM_YYYY`. A página do projeto diz que a coleta é refeita diariamente. O endpoint permite buscar até 31 dias e consultar temporadas arquivadas. O guia usa identificadores como `M4` e `M5`, mas não explica a correspondência de cada um com um regulamento oficial. O endpoint não documenta um campo de regulamento.
 
-**Amostra.** Os exemplos trazem porcentagens, mas o guia não informa total de partidas, jogadores ou aparições por porcentagem. Não chamar isso de taxa de vitórias nem comparar como se o tamanho da amostra fosse conhecido.
+**Teste real.** Em 18/10/2026, `GET /api` respondeu com o índice, `generatedAt: 2026-10-17T15:27:09.479Z`, 263 entradas e o rótulo `defaultSeason: Current`. `GET /api/battle/Doubles/garchomp` respondeu com `format: Doubles`, `season: Current`, `date: null`, o caminho de origem do CSV e linhas de golpes, itens, parceiros, naturezas, Stat Points e habilidades. A resposta não trouxe tamanho de amostra ou regulamento. A documentação declara CORS para apps em outros domínios; esta execução confirmou as rotas públicas, mas não a chamada dentro de uma prévia local do app.
 
-**Limites e termos.** Não há limite público fixo, mas o acesso pode ser limitado ou revogado se causar problemas ao serviço. Cache razoável é permitido; não usar o cache para manter um espelho permanente. É permitido uso pessoal, comunitário e comercial. Projetos públicos precisam atribuir os dados a Pokémon Champions Battle Data e incluir um link. É proibido revender ou redistribuir os dados como serviço, dump, API concorrente ou feed sem autorização escrita. A fonte é não oficial; o uso não concede direito sobre marcas ou conteúdo de Pokémon.
+**Amostra.** As linhas trazem percentuais, mas a API não informa o total de partidas, jogadores ou aparições que os gerou. A interface mantém o valor como publicado e deixa essa lacuna visível. Não chama isso de taxa de vitórias nem de porcentagem de partidas.
 
-**Ponto a validar.** O guia informa CORS para apps no navegador. Em uma tentativa anterior de leitura direta, `/api/pokemon/pikachu` respondeu 403 e `/api/battle/Doubles/garchomp` expirou. Ainda não confirmamos uma resposta real acessível daqui.
+**Limites e termos.** As [regras de uso](https://championsbattledata.com/api-rules/) permitem projetos pessoais, comunitários, sem fins lucrativos e comerciais. Um projeto público precisa atribuir a fonte com link. Cache razoável é permitido, mas não pode virar espelho, arquivo ou substituto permanente. Também é proibido revender ou redistribuir as respostas como serviço, dump, API concorrente ou feed sem autorização escrita. Não há limite público fixo; a fonte pode limitar ou revogar o acesso se houver problemas de serviço. O app mantém até 16 respostas por cinco minutos na memória da página e usa `cache: no-store`; não grava nem publica as respostas.
+
+**Limites da tela.** O índice usa o rótulo `Current`; a API não confirma que ele corresponda a um regulamento oficial. A resposta de Garchomp não incluiu data de snapshot. A tela não inventa período, amostra ou métrica ausente. Se uma rota falhar ou mudar, mostra erro e opção de nova tentativa; não substitui a resposta por dados armazenados localmente.
 
 ## MetaRoll
 
@@ -54,10 +56,9 @@ Cada observação futura deve carregar, no mínimo, `sourceId`, `sourceUrl`, for
 
 Uma tela pode comparar fontes lado a lado, com seus rótulos e períodos, mas não deve juntá-las num único percentual. Não associar nature e spread do MetaRoll, nem derivar uma taxa de vitória de percentuais de uso.
 
-## O que falta antes de integrar
+## O que falta para ampliar o piloto
 
-- Confirmar leitura dos endpoints a partir do app e verificar estrutura, CORS e estabilidade de uma captura real.
-- Confirmar como cada temporada do Battle Data se relaciona com o regulamento do jogo.
-- Decidir se a falta do denominador é aceitável para o produto e como será mostrada para quem consulta.
-- Guardar a fonte e a captura na interface em cada estatística; preservar amostras e formatos separados.
-- Revalidar atribuição, cache e termos no momento da integração. Não armazenar snapshots do Battle Data como arquivo permanente.
+- Confirmar a chamada CORS em uma prévia visual acessível, pois o navegador local deste ambiente não conseguiu alcançar o servidor Vite.
+- Confirmar se a fonte passa a fornecer data, tamanho de amostra ou um vínculo verificável entre temporada e regulamento. Até lá, os campos seguem ausentes.
+- Testar snapshots diários e temporadas encerradas em uma etapa separada, sem chamar os rótulos M1–M7 de regulamentos.
+- Revisar atribuição e cache se os termos da API mudarem. Manter MetaRoll em uma fonte distinta caso seja integrada no futuro.

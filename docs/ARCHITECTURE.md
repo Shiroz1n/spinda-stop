@@ -15,3 +15,9 @@ O editor não depende de uma conta nem de servidor. Um rascunho fica no navegado
 Contas, eventos, pareamentos e resultados precisam de API, autorização por recurso e transações. A escolha entre Fastify, PostgreSQL, OAuth e hospedagem fica para essa etapa. O frontend não guarda segredos nem acessa banco diretamente.
 
 O fornecedor de dados competitivos fica atrás de uma interface `MetaProvider`. Isso permite desligar uma fonte ou mostrar cobertura parcial sem misturar dados de formatos e temporadas diferentes.
+
+## Uso competitivo
+
+O piloto de Usage fica em `apps/web/src/data/usage/providers/`. A tela depende do contrato do provedor (`loadIndex` e `loadPokemonUsage`), enquanto o adaptador Pokémon Champions Battle Data faz as chamadas e normaliza apenas os campos usados pela interface. Outra fonte pode implementar o mesmo contrato sem entrar nos componentes.
+
+O navegador lê `/api` e, para a espécie selecionada, `/api/battle/Doubles/{showdownId}`. A resposta fica em cache somente na memória por cinco minutos, com até 16 entradas; o navegador não grava uma cópia HTTP. Não há endpoint próprio do Spinda Stop nem arquivo espelho. MetaRoll continua fora deste provedor.
