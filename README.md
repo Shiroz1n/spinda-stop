@@ -10,6 +10,7 @@ A interface usa uma paleta quente, bordas quadradas e detalhes pixel art própri
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Simular dano em nível 50 para Singles ou Doubles, comparar cenários e ver rolls, modificadores e Stat Points usados pelo motor.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
+- Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar uma sala privada de duas pessoas com convite, check-in e resultado confirmado manualmente.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
 - Conferir cenários representativos da calculadora contra os rolls do simulador Pokémon Showdown fixado; essa checagem valida concordância entre implementações, não uma partida real no jogo.
 
@@ -23,7 +24,7 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Eventos comunitários com inscrição, pareamento e confirmação de resultados.
 
-As partidas continuam acontecendo dentro do jogo. O site organiza equipes e eventos; não cria partidas ou serviços oficiais do Pokémon Champions.
+As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API de contas e salas precisa de PostgreSQL e OAuth do GitHub configurados pelo operador.
 
 ## Rodar localmente
 
@@ -35,6 +36,8 @@ npm run dev
 ```
 
 Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da PokéAPI e guardado localmente. Depois de instalar, rode `npm run lint`, `npm test` e `npm run build` para conferir o projeto.
+
+Para testar contas e salas localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige PostgreSQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com PostgreSQL 16.
 
 ## Documentação
 
@@ -51,6 +54,7 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 - [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md)
 - [Segurança e privacidade](docs/SECURITY.md)
 - [Próximas etapas](docs/ROADMAP.md)
+- [Contas, salas, privacidade e torneios](docs/COMMUNITY_MODEL.md)
 
 ## Licenças
 

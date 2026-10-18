@@ -55,3 +55,17 @@ npm run dev
 ```
 
 Abra o endereço impresso pelo Vite. Para reproduzir as capturas automatizadas, rode `npx playwright install chromium` e `npm run visual:review`.
+
+## PR #19 — cenários da calculadora
+
+O [run visual #17](https://github.com/Shiroz1n/spinda-stop/actions/runs/39121625423) conferiu a comparação de cenários em desktop e mobile simulado. Foram 24 observações por viewport, sem overflow, violações axe ou falhas do roteiro. A captura registra as diferenças entre golpe em área e alvo único e os rolls da comparação. O [artefato](https://github.com/Shiroz1n/spinda-stop/actions/runs/39121625423/artifacts/12134655923) fica disponível por 14 dias.
+
+## PR #20 — histórico de rating
+
+O [run visual #18](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122085195) passou com 24 observações por viewport, sem overflow, violações axe ou falhas. O gráfico foi inspecionado em desktop e mobile e manteve a oscilação publicada, sem suavizar os valores. O [artefato](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122085195/artifacts/12135071093) guarda as imagens e o relatório por 14 dias.
+
+## PR #21 — formas Mega da MetaRoll
+
+O [run visual #19](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122383830) terminou com `passed`. O artefato contém 46 imagens, 23 por viewport, e 26 observações por viewport. O relatório marcou zero overflow, zero falhas e zero violações axe. Foram capturadas a ficha de Garchomp com as formas Mega e a falha isolada de `/megas.json`; ambas foram abertas e conferidas em desktop e mobile. A falha ficou clara, com ação de nova tentativa e sem esconder a ficha principal. O [artefato](https://github.com/Shiroz1n/spinda-stop/actions/runs/39122383830/artifacts/12134493450) expira em 01/11/2026.
+
+Esta rodada verificou interface em viewport Chromium simulado. Não substitui aparelho físico, teste em 320 px, zoom do sistema ou leitor de tela.

@@ -20,6 +20,19 @@ const server = spawn(process.execPath, [
   join(root, "node_modules/vite/bin/vite.js"), "preview",
   "--host", "127.0.0.1", "--port", "4173", "--strictPort",
 ], { cwd: join(root, "apps/web"), stdio: "inherit" });
+const apiServer = process.env.DATABASE_URL ? spawn(process.execPath, [
+  join(root, "apps/api/src/server.js"),
+], {
+  cwd: root,
+  stdio: "inherit",
+  env: {
+    ...process.env,
+    APP_ENV: "test",
+    APP_ORIGIN: baseUrl,
+    API_HOST: "127.0.0.1",
+    API_PORT: "8787",
+  },
+}) : null;
 
 async function waitForServer() {
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -33,6 +46,21 @@ async function waitForServer() {
     await delay(500);
   }
   throw new Error("A prévia Vite não respondeu em 30 segundos.");
+}
+
+async function waitForApi() {
+  if (!apiServer) return;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (apiServer.exitCode !== null) throw new Error("A API comunitária terminou antes de ficar pronta.");
+    try {
+      const response = await fetch(`${baseUrl}/api/health`);
+      if (response.ok) return;
+    } catch {
+      // A API ainda está inicializando.
+    }
+    await delay(500);
+  }
+  throw new Error("A API comunitária não respondeu em 30 segundos.");
 }
 
 async function waitForUsage(page, selector = ".usage-index-note, .usage-index-error") {
@@ -102,6 +130,16 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
   await safeCapture(page, viewportName, "home", { audit: true });
+
+  await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Salas privadas" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  await safeCapture(page, viewportName, "rooms-signed-out", { audit: true });
+  const unavailablePage = await context.newPage();
+  await unavailablePage.route("**/api/auth/status", (route) => route.abort());
+  await unavailablePage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+  await unavailablePage.locator(".community-auth-card .community-error").waitFor({ state: "visible", timeoutMs: 10_000 });
+  await safeCapture(unavailablePage, viewportName, "rooms-api-error", { audit: true });
+  await unavailablePage.close();
   await page.keyboard.press("Tab");
   const firstFocus = await page.evaluate(() => ({
     className: document.activeElement?.className,
@@ -294,6 +332,87 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeoutMs: 10_000 });
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true });
 
+  if (process.env.DATABASE_URL) {
+    const signIn = await context.request.post(`${baseUrl}/api/test/session`, {
+      headers: { Origin: baseUrl },
+      data: { handle: `visual-${viewportName}` },
+    });
+    if (!signIn.ok()) {
+      failures.push(`${viewportName}: a sessão de teste para a sala não foi criada (${signIn.status()}).`);
+    } else {
+      await signIn.json();
+      await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "rooms-empty", { audit: true });
+      await page.getByLabel("Nome da sala").fill("Revisão visual");
+      await page.getByRole("button", { name: "Criar sala privada" }).click();
+      await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeoutMs: 10_000 });
+      const inviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
+      await safeCapture(page, viewportName, "rooms-invite", { audit: true });
+
+      const guestContext = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
+      const guestPage = await guestContext.newPage();
+      guestPage.on("pageerror", (error) => pageErrors.push(error.message));
+      const inviteToken = new URL(inviteUrl).hash.slice(1);
+      await guestPage.goto(`${baseUrl}/rooms/join#${inviteToken}`, { waitUntil: "networkidle" });
+      await guestPage.getByRole("heading", { name: "Entrar na sala" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(guestPage, viewportName, "rooms-join-signin", { audit: true });
+      const inviteHeldInTab = await guestPage.evaluate(() => window.sessionStorage.getItem("spinda_pending_invite")?.length > 0 && !window.location.hash);
+      if (!inviteHeldInTab) failures.push(`${viewportName}: o convite sem login não foi preservado fora da URL.`);
+      const guestSession = await guestContext.request.post(`${baseUrl}/api/test/session`, {
+        headers: { Origin: baseUrl },
+        data: { handle: `visual-guest-${viewportName}` },
+      });
+      if (!guestSession.ok()) failures.push(`${viewportName}: a sessão de convidado para a sala não foi criada.`);
+      const guest = guestSession.ok() ? await guestSession.json() : null;
+      await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+      await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await guestPage.getByRole("button", { name: "Fazer check-in" }).click();
+      await page.getByRole("button", { name: "Fazer check-in" }).click();
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByRole("button", { name: "Fechar inscrições" }).click();
+      await page.getByRole("button", { name: "Iniciar sala" }).click();
+      await page.getByRole("heading", { name: "Resultado" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.getByLabel("Vencedor informado").selectOption(guest?.user?.id || "");
+      await page.getByRole("button", { name: "Registrar resultado" }).click();
+      await guestPage.reload({ waitUntil: "networkidle" });
+      await guestPage.getByRole("button", { name: "Confirmar resultado" }).click();
+      await guestPage.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await safeCapture(page, viewportName, "rooms-complete", { audit: true });
+      await safeCapture(guestPage, viewportName, "rooms-confirm-result", { audit: true });
+      await guestContext.close();
+
+      await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
+      await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeoutMs: 10_000 });
+      const teamSaveResponses = [];
+      page.on("response", (response) => {
+        if (response.url().includes("/api/teams") && response.request().method() === "POST") {
+          teamSaveResponses.push(response.status());
+        }
+      });
+      await page.getByRole("button", { name: "Salvar cópia na conta" }).click();
+      await waitForEither(page, ".account-team-row, .community-inline-error", 10_000);
+      if (!(await page.locator(".account-team-row").count())) {
+        const accountText = await page.locator(".team-account-panel").innerText();
+        failures.push(`${viewportName}: não foi possível salvar uma cópia do time (POST ${teamSaveResponses.join(",") || "sem resposta"}): ${accountText.slice(0, 180)}`);
+        await safeCapture(page, viewportName, "builder-account-save-error", { audit: true });
+      }
+      if (await page.locator(".account-team-row").count()) {
+        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeoutMs: 10_000 });
+        await safeCapture(page, viewportName, "builder-account-team", { audit: true });
+        await page.locator(".account-team-visibility").first().selectOption("public");
+        await page.getByRole("button", { name: "Atualizar" }).last().click();
+        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+        await safeCapture(page, viewportName, "builder-account-public", { audit: true });
+      }
+    }
+  }
+
   if (pageErrors.length) failures.push(`${viewportName}: erros no app: ${pageErrors.join(" | ")}`);
   await context.close();
 }
@@ -301,6 +420,7 @@ async function runViewport(viewportName, viewport) {
 let browser;
 try {
   await waitForServer();
+  await waitForApi();
   browser = await chromium.launch({ headless: true });
   for (const [name, viewport] of [
     ["desktop", { width: 1440, height: 960 }],
@@ -325,5 +445,6 @@ try {
   if (failures.length || accessibilityIssues.length) process.exitCode = 1;
 } finally {
   if (browser) await browser.close();
+  if (apiServer) apiServer.kill("SIGTERM");
   server.kill("SIGTERM");
 }

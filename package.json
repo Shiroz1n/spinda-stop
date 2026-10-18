@@ -4,6 +4,7 @@
   "type": "module",
   "workspaces": [
     "apps/web",
+    "apps/api",
     "packages/domain",
     "packages/data"
   ],
@@ -15,8 +16,10 @@
     "preview": "npm run preview --workspace @spinda-stop/web",
     "visual:review": "npm run build && node apps/web/test/visual-review.mjs",
     "lint": "eslint .",
-    "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js",
+    "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js apps/api/test/*.test.js",
     "validate:damage-oracle": "node scripts/validate-damage-oracle.mjs",
+    "api:migrate": "node --env-file-if-exists=.env apps/api/src/migrate.js",
+    "api:start": "node --env-file-if-exists=.env apps/api/src/server.js",
     "data:sync": "npm run sync --workspace @spinda-stop/data"
   },
   "devDependencies": {

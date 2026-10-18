@@ -1,72 +1,70 @@
-# Modelo comunitário
+# Contas, salas e torneios
 
-Este documento define o primeiro recorte de contas, equipes, salas e torneios. As partidas continuam acontecendo no Pokémon Champions; o Spinda Stop só organiza participantes e resultados informados por eles. Não existe integração com o jogo.
+As partidas continuam acontecendo no Pokémon Champions. O Spinda Stop organiza participantes e relatos que eles enviam voluntariamente; não acessa o jogo nem confirma partidas por conta própria.
 
-## Regras de produto
+## Primeiro fluxo
 
-- Uma sala inicial é privada, tem convite e aceita de 2 a 8 participantes. Listagem pública de salas fica para depois.
-- A inscrição e o check-in são ações explícitas. O host pode fechar a entrada e iniciar a sala.
-- Um resultado é informado por um participante. O adversário confirma ou contesta; uma contestação exige decisão de moderador e motivo registrado.
-- O código de amizade é opcional, nunca é importado do jogo, nunca aparece em equipe pública e não é necessário para entrar ou jogar.
-- O participante escolhe compartilhar o código naquela sala. Ele fica visível apenas para os participantes da sala, pode ser removido e expira quando a sala termina ou após sete dias.
-- Equipes e salas são privadas por padrão. Publicar uma equipe requer uma ação separada e não publica a conta, o código de amizade ou as salas do usuário.
-- Não guardamos e-mail, senha do jogo, senha do usuário, senha de sala ou credenciais da Nintendo. A primeira autenticação proposta é OAuth do GitHub.
+O primeiro recorte usa uma sala privada de duas pessoas. O host cria o convite, ambos se inscrevem e fazem check-in, o host fecha as inscrições e inicia a sala. Uma pessoa relata o vencedor; a outra confirma ou contesta. Uma contestação exige ação de moderador e justificativa. Torneios e salas maiores ficam em PR separado.
 
-## Entidades PostgreSQL
+Equipes da conta são cópias do rascunho do builder. A pessoa escolhe `private` ou `public` ao salvar; a opção inicial é privada. Carregar uma cópia para o builder é uma ação explícita e não altera a versão salva. O servidor valida a estrutura do arquivo, mas não legalidade, compatibilidade de golpes ou regulamento.
 
-| Tabela | Campos mínimos | Regras |
+O código de amizade é opcional. A pessoa o compartilha por ação própria, só fica visível aos membros inscritos, pode removê-lo e é apagado quando a sala termina ou após sete dias. Não é lido do jogo e nunca aparece em uma equipe pública. O armazenamento usa AES-256-GCM; sem a chave de ambiente, a função fica desativada.
+
+## Modelo PostgreSQL
+
+| Tabela | Responsabilidade | Proteção principal |
 |---|---|---|
-| `users` | `id`, `provider`, `provider_subject`, `handle`, `created_at`, `disabled_at` | `provider + provider_subject` únicos. Não armazenar e-mail por padrão. |
-| `sessions` | `id`, `user_id`, `token_hash`, `expires_at`, `created_at` | O cookie contém token aleatório; o banco guarda somente seu hash. |
-| `teams` | `id`, `owner_id`, `name`, `visibility`, `data_json`, `schema_version`, `created_at`, `updated_at` | `visibility` começa como `private`; só o dono edita. Sets mantêm sua forma e Stat Points sem declarar legalidade. |
-| `rooms` | `id`, `host_id`, `name`, `status`, `capacity`, `invite_hash`, `invite_expires_at`, `registration_closes_at`, `created_at`, `finished_at` | Armazenar hash do convite; capacidade entre 2 e 8 no primeiro fluxo. |
-| `room_members` | `room_id`, `user_id`, `status`, `checked_in_at`, `friend_code_ciphertext`, `friend_code_nonce`, `created_at` | Uma inscrição por usuário e sala. Código cifrado com AES-GCM e chave fora do banco; nunca em log. |
-| `matches` | `id`, `room_id`, `round_number`, `player_a_id`, `player_b_id`, `status`, `created_at`, `resolved_at` | Jogadores precisam estar inscritos na mesma sala; não há resultado automático do jogo. |
-| `match_reports` | `id`, `match_id`, `reporter_id`, `winner_id`, `note`, `created_at` | Um relato por participante. Sem upload de imagem nesta fase. |
-| `disputes` | `id`, `match_id`, `opened_by`, `reason`, `status`, `resolution`, `moderator_id`, `created_at`, `resolved_at` | Só o adversário do relato pode contestar; decisão exige moderador e justificativa. |
-| `moderation_events` | `id`, `actor_id`, `room_id`, `target_user_id`, `action`, `reason`, `created_at` | Registro append-only; ações incluem fechar entrada, retirar participante, anular partida e resolver contestação. |
-| `tournaments` | `id`, `room_id`, `format`, `bracket_type`, `bracket_version`, `created_at` | Entra num PR próprio após a sala pequena; chave gerada a partir de quem fez check-in. |
+| `users` | ID interno, provedor, ID do GitHub, handle e flag de moderação | Provedor e ID externos únicos; sem e-mail |
+| `oauth_states` | Hash e expiração de cada `state` de OAuth | Uso único; nunca guardar o estado em claro |
+| `sessions` | Hash do token aleatório e expiração | Cookie `HttpOnly`; revogação no logout |
+| `teams` | Dono, visibilidade, versão e JSON do rascunho | Privada por padrão; só o dono altera ou exclui |
+| `rooms` | Host, nome, estado e convite | Apenas hash do convite; expira em sete dias; duas pessoas nesta etapa |
+| `room_members` | Inscrição, check-in e código cifrado | Chave composta por sala e usuário; ciphertext nunca sai da API |
+| `matches` | Duas pessoas e estado da partida | Participantes verificados em toda ação |
+| `match_reports` | Vencedor e nota informados | Um relato por partida; reenvio conflitante é rejeitado |
+| `disputes` | Motivo e decisão da contestação | Só moderador decide, com justificativa |
+| `moderation_events` | Histórico append-only de decisões | Ator, sala, alvo, ação e motivo registrados |
+| `tournaments` | Configuração de torneio e versão do chaveamento | Entra em migração própria, depois da sala |
 
-Usar chaves estrangeiras, `CHECK` para estados/capacidade, `UNIQUE(room_id, user_id)` e migrações SQL versionadas. Escritas que mudam uma partida ou chave usam transação para impedir duas confirmações concorrentes. Guardar horário em UTC.
+As migrações SQL ficam em `apps/api/migrations/`. IDs são UUIDs; horários são `timestamptz` em UTC. Transições de sala e partida usam transações e bloqueios de linha. O tamanho inicial está limitado a duas pessoas; ampliar o limite exige criar e testar o chaveamento de torneio.
 
-## Estados e permissões
+## Estados e autorização
 
-### Sala e inscrição
+- Sala: `open → locked → in_progress → completed`; o host pode cancelar antes de começar.
+- Membro: `registered → checked_in`; sair só é permitido enquanto a entrada estiver aberta.
+- Partida: `scheduled → awaiting_confirmation → confirmed` ou `disputed → confirmed/void`.
+- Só o host fecha inscrições, inicia ou cancela. Cada pessoa faz seu próprio check-in e pode relatar o vencedor.
+- Só o adversário do relato pode confirmar ou contestar. Moderadores não falam em nome dos jogadores.
+- Um moderador é concedido por operação de banco; não existe ação para usuário se promover.
+- Um membro inscrito pode ver códigos compartilhados na própria sala. Moderadores e visitantes não recebem esses códigos.
+- Nenhum endpoint expõe as respostas brutas das fontes competitivas ou dados privados de outra conta.
 
-`open → locked → in_progress → completed`; o host pode cancelar antes de `completed`. Uma sala `open` aceita entrada por convite. O usuário entra como `registered`, faz check-in para `checked_in` e pode sair enquanto a sala estiver `open`. O host pode impedir novas inscrições, retirar alguém antes do início e iniciar com pelo menos dois participantes que fizeram check-in. Depois de iniciada, o host não edita silenciosamente a lista.
+## Rotas do primeiro recorte
 
-### Resultado
+| Rota | Acesso | Uso |
+|---|---|---|
+| `GET /api/auth/status`, `GET /api/auth/github`, callback e `POST /api/auth/logout` | Público ou usuário atual | OAuth do GitHub e sessão |
+| `GET /api/me` | Público | Descobrir sessão sem expor token |
+| `/api/teams` | Dono | Salvar, listar, editar visibilidade e excluir cópias |
+| `GET /api/teams/public` | Público | Listar equipes que o dono publicou explicitamente |
+| `/api/rooms`, `/api/rooms/join` | Usuário autenticado | Listar salas próprias, criar ou entrar por convite |
+| `/api/rooms/:id/*` | Membro ou host, conforme a ação | Check-in, convite, início, código de amizade e cancelamento |
+| `/api/matches/:id/*` | Participante | Relatar, confirmar ou contestar resultado |
+| `/api/moderation/disputes*` | Moderador | Revisar e decidir contestações |
 
-`scheduled → awaiting_confirmation → confirmed` ou `disputed → confirmed/void`. Um participante envia o vencedor e uma nota curta; o outro confirma ou abre disputa. Só um moderador resolve a disputa. Reenvios idênticos são idempotentes; um segundo resultado conflitante não sobrescreve o primeiro.
-
-### Matriz de acesso
-
-| Ação | Qualquer visitante | Membro da sala | Host | Moderador |
-|---|---:|---:|---:|---:|
-| Ver sala privada | Não | Sim | Sim | Apenas para moderação necessária |
-| Entrar usando convite válido | Não | — | Sim | Sim |
-| Check-in ou saída antes do início | Não | Próprio usuário | Sim | Sim |
-| Ver código de amizade compartilhado | Não | Sim, enquanto inscrito | Sim, como membro | Não por padrão |
-| Fechar entrada/iniciar sala | Não | Não | Sim | Sim |
-| Registrar ou confirmar resultado | Não | Participantes da partida | Se participante | Não em nome de jogador |
-| Contestar resultado | Não | Adversário do relato | Se participante | Não |
-| Resolver disputa ou anular partida | Não | Não | Não | Sim, com justificativa |
-
-Toda rota que altera estado valida usuário autenticado, papel, vínculo com a sala, estado atual e propriedade no servidor. A interface não é controle de autorização.
+As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita CORS. Convite usa token aleatório no fragmento (`#...`) da URL, que o navegador não envia no pedido da página; o hash é removido e o token fica somente na aba até o login terminar. A API não registra corpo, cookie ou URL de pedido.
 
 ## Autenticação e operação
 
-- API Node separada do Vite; PostgreSQL 16+ como fonte de verdade e migrations SQL no repositório.
-- OAuth GitHub Authorization Code com `state` de uso único; não receber nem persistir senha do usuário. Em produção, configurar callback e secrets fora do código.
-- Sessão aleatória em cookie `HttpOnly`, `Secure`, `SameSite=Lax`, duração limitada, hash no banco e rotação ao autenticar. Verificar `Origin`/CSRF em ações mutáveis.
-- Limitar convites inválidos e login por IP/conta; não colocar tokens de convite em analytics ou logs. Guardar somente hash do convite.
-- Criptografar código de amizade no servidor com chave AES-GCM de ambiente/KMS; excluir ciphertext e nonce ao encerrar a sala ou após sete dias. Permitir remoção antes disso.
-- `moderation_events` registra ações sem guardar conteúdo privado desnecessário. Planejar exclusão/exportação de conta antes de abrir cadastro ao público.
-- Banco de produção, OAuth e domínio são configurações futuras; nenhuma migração ou deploy de produção está autorizado por este plano.
+- OAuth Authorization Code do GitHub, com `state` aleatório, salvo como hash e conferido contra cookie de curta duração. O escopo pedido é `read:user`; o token do provedor não é persistido.
+- Só o ID do GitHub e o handle público são guardados. O aplicativo não recebe senha de usuário, e-mail, senha do jogo ou credenciais da Nintendo.
+- Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
+- Convites expiram em sete dias e sua rotação invalida o anterior. Tentativas de login e convite têm limite básico por IP no processo.
+- Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar a sala e por rotina após a validade máxima de sete dias.
+- Em desenvolvimento, o serviço ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. CI usa PostgreSQL 16 efêmero. Banco, OAuth, chave e domínio de produção não foram configurados nem publicados.
 
-## Ordem de implementação
+O rate limit é local ao processo e não basta para uma implantação com múltiplas instâncias. Antes de abrir cadastro em produção, configurar limite distribuído, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
 
-1. PR de arquitetura e contratos (este documento).
-2. PR de sala pequena: migrations, login OAuth, equipes privadas, sala com convite, inscrição, check-in, código opcional cifrado, partida, confirmação/disputa e moderação mínima. Testes de permissões e transições antes de integrar o banco real.
-3. PR de torneios: inscrições/check-in, chaveamento versionado, rodadas, partidas e progresso, reusando resultados e moderação.
-4. Só depois: salas públicas, pareamento, uploads de evidência e recursos sociais.
+## Próximas partes
+
+O PR seguinte amplia o fluxo para torneios: inscrição e check-in de grupo, chaveamento versionado, rodadas, registro de resultado, contestação e progresso. A chave deriva apenas de quem fez check-in e não representa integração com o jogo. Salas públicas, uploads de evidência e pareamento automático ficam fora do primeiro torneio.
