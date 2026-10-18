@@ -378,6 +378,8 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("button", { name: "Registrar resultado" }).click();
       await guestPage.reload({ waitUntil: "networkidle" });
       await guestPage.getByRole("button", { name: "Confirmar resultado" }).click();
+      await guestPage.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+      await page.reload({ waitUntil: "networkidle" });
       await page.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
       await safeCapture(page, viewportName, "rooms-complete", { audit: true });
       await safeCapture(guestPage, viewportName, "rooms-confirm-result", { audit: true });
