@@ -14,6 +14,8 @@ Equipes da conta são cópias do rascunho do builder. A pessoa escolhe `private`
 
 O código de amizade é opcional. A pessoa o compartilha por ação própria, só fica visível aos membros inscritos do evento, pode removê-lo e é apagado quando a sala ou torneio termina ou após sete dias. Um processo horário apaga códigos vencidos no servidor ativo; a leitura também limpa o evento em questão. Não é lido do jogo e nunca aparece em uma equipe pública. O armazenamento usa AES-256-GCM; sem a chave de ambiente, a função fica desativada.
 
+O compartilhamento de Pokémon também é opcional e separado da visibilidade da equipe salva. A pessoa escolhe uma equipe da própria conta dentro da sala ou torneio. Só os seis IDs de espécie e forma são copiados para o evento, e apenas integrantes ativos conseguem lê-los; golpes, itens, habilidades, naturezas, pontos e nome privado da equipe não saem do registro do dono. A pessoa pode substituir ou remover o compartilhamento. O snapshot é limpo quando o evento termina ou quando a pessoa deixa a inscrição.
+
 ## Modelo PostgreSQL
 
 | Tabela | Responsabilidade | Proteção principal |
@@ -23,9 +25,9 @@ O código de amizade é opcional. A pessoa o compartilha por ação própria, s�
 | `sessions` | Hash do token aleatório e expiração | Cookie `HttpOnly`; revogação no logout |
 | `teams` | Dono, visibilidade, versão e JSON do rascunho | Privada por padrão; só o dono altera ou exclui |
 | `rooms` | Host, nome, estado e convite | Apenas hash do convite; expira em sete dias; duas pessoas nesta etapa |
-| `room_members` | Inscrição, check-in e código cifrado | Chave composta por sala e usuário; ciphertext nunca sai da API |
+| `room_members` | Inscrição, check-in, código cifrado e snapshot de espécies/formas compartilhado | Chave composta por sala e usuário; código cifrado não sai da API; equipe privada só aparece por ação do dono |
 | `tournaments` | Host, estado, convite, versão do chaveamento e campeão | Capacidade fixa de quatro; convite guardado só como hash |
-| `tournament_members` | Inscrição, check-in, seed e código cifrado | Acesso privado aos membros; código limpo após sete dias ou ao terminar |
+| `tournament_members` | Inscrição, check-in, seed, código cifrado e snapshot de espécies/forms compartilhado | Acesso restrito ao evento; código expira em sete dias e equipe termina com a inscrição ou evento |
 | `matches` | Duas pessoas, rodada, vaga no chaveamento e estado | Cada partida pertence a uma sala ou torneio; participantes verificados em toda ação |
 | `match_reports` | Vencedor e nota informados | Um relato por partida; reenvio conflitante é rejeitado |
 | `disputes` | Motivo e decisão da contestação | Só moderador decide, com justificativa |
@@ -55,9 +57,9 @@ As migrações SQL ficam em `apps/api/migrations/`. IDs são UUIDs; horários s�
 | `/api/teams` | Dono | Salvar, listar, editar visibilidade e excluir cópias |
 | `GET /api/teams/public` | Público | Listar equipes que o dono publicou explicitamente |
 | `/api/rooms`, `/api/rooms/join` | Usuário autenticado | Listar salas próprias, criar ou entrar por convite |
-| `/api/rooms/:id/*` | Membro ou host, conforme a ação | Check-in, convite, início, código de amizade e cancelamento |
+| `/api/rooms/:id/*` | Membro ou host, conforme a ação | Check-in, convite, início, código de amizade, compartilhar/remover equipe e cancelamento |
 | `/api/tournaments`, `/api/tournaments/join` | Usuário autenticado | Listar, criar ou entrar em torneio privado por convite |
-| `/api/tournaments/:id/*` | Membro ou host, conforme a ação | Consultar chave, check-in, sair, fechar, iniciar, cancelar e compartilhar código |
+| `/api/tournaments/:id/*` | Membro ou host, conforme a ação | Consultar chave, check-in, sair, fechar, iniciar, cancelar, compartilhar/remover equipe e código de amizade |
 | `/api/matches/:id/*` | Participante | Relatar, confirmar ou contestar resultado |
 | `/api/moderation/disputes*` | Moderador | Revisar e decidir contestações |
 

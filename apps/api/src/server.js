@@ -158,6 +158,19 @@ function validateTeamName(name) {
   return name.trim();
 }
 
+function sharedRosterFromTeam(data) {
+  const validation = validateTeamPayload(data);
+  if (!validation.ok) throw new HttpError(409, "team_invalid", "Salve a equipe novamente antes de compartilhá-la.");
+  if (!validation.value.members.some(Boolean)) throw new HttpError(409, "team_empty", "Adicione ao menos um Pokémon à equipe antes de compartilhá-la.");
+  return validation.value.members.map((member) => member && ({
+    pokemonId: member.pokemonId,
+    speciesId: member.speciesId,
+    speciesSlug: member.speciesSlug,
+    formId: member.formId,
+    formSlug: member.formSlug,
+  }));
+}
+
 function createRateLimiter({ limit = 24, windowMs = 15 * 60 * 1000 } = {}) {
   const attempts = new Map();
   return (req, key) => {
@@ -474,7 +487,8 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
         const tournament = tournamentResult.rows[0];
         const members = await pool.query(
           `SELECT u.id, u.handle, tm.status, tm.seed, tm.checked_in_at,
-                  tm.friend_code_ciphertext, tm.friend_code_nonce, tm.friend_code_tag
+                  tm.friend_code_ciphertext, tm.friend_code_nonce, tm.friend_code_tag,
+                  tm.shared_roster_json
              FROM tournament_members tm JOIN users u ON u.id = tm.user_id
             WHERE tm.tournament_id = $1 AND tm.status IN ('registered', 'checked_in')
             ORDER BY tm.seed NULLS LAST, tm.created_at`,
@@ -506,7 +520,7 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
               `tournament:${tournamentId}:${member.id}`,
             );
           }
-          return { id: member.id, handle: member.handle, status: member.status, seed: member.seed, checkedInAt: member.checked_in_at, friendCode };
+          return { id: member.id, handle: member.handle, status: member.status, seed: member.seed, checkedInAt: member.checked_in_at, friendCode, sharedRoster: member.shared_roster_json };
         });
         const matches = matchRows.rows.map((row) => ({
           id: row.id,
@@ -527,6 +541,38 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
           members: memberData,
           matches,
         });
+      }
+
+      if (method === "PUT" && action === "shared-team") {
+        const body = await readJson(req);
+        if (!isUuid(body.teamId)) throw new HttpError(400, "invalid_team", "Escolha uma equipe salva nesta conta.");
+        await transaction(pool, async (client) => {
+          const membership = await client.query(
+            `SELECT t.status AS tournament_status, tm.status AS member_status
+               FROM tournaments t JOIN tournament_members tm ON tm.tournament_id = t.id
+              WHERE t.id = $1 AND tm.user_id = $2 FOR UPDATE OF t, tm`,
+            [tournamentId, current.id],
+          );
+          if (!membership.rowCount || !["registered", "checked_in"].includes(membership.rows[0].member_status)) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+          if (["completed", "cancelled"].includes(membership.rows[0].tournament_status)) throw new HttpError(409, "tournament_finished", "O torneio já terminou.");
+          const team = await client.query("SELECT data_json FROM teams WHERE id = $1 AND owner_id = $2", [body.teamId, current.id]);
+          if (!team.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada nesta conta.");
+          const roster = sharedRosterFromTeam(team.rows[0].data_json);
+          await client.query(
+            "UPDATE tournament_members SET shared_roster_json = $1::jsonb, shared_roster_updated_at = now() WHERE tournament_id = $2 AND user_id = $3",
+            [JSON.stringify(roster), tournamentId, current.id],
+          );
+        });
+        return json(res, 200, { shared: true });
+      }
+
+      if (method === "DELETE" && action === "shared-team") {
+        const result = await pool.query(
+          "UPDATE tournament_members SET shared_roster_json = NULL, shared_roster_updated_at = NULL WHERE tournament_id = $1 AND user_id = $2 RETURNING tournament_id",
+          [tournamentId, current.id],
+        );
+        if (!result.rowCount) throw new HttpError(404, "tournament_not_found", "Torneio não encontrado.");
+        return json(res, 200, { shared: false });
       }
 
       if (method === "POST" && action === "invite") {
@@ -734,7 +780,9 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
         if (!roomResult.rowCount || !membership.rowCount || !["registered", "checked_in"].includes(membership.rows[0].status)) throw new HttpError(404, "room_not_found", "Sala não encontrada.");
         const room = roomResult.rows[0];
         const members = await pool.query(
-          `SELECT u.id, u.handle, rm.status, rm.checked_in_at, rm.friend_code_ciphertext, rm.friend_code_nonce, rm.friend_code_tag
+          `SELECT u.id, u.handle, rm.status, rm.checked_in_at,
+                  rm.friend_code_ciphertext, rm.friend_code_nonce, rm.friend_code_tag,
+                  rm.shared_roster_json
              FROM room_members rm JOIN users u ON u.id = rm.user_id
             WHERE rm.room_id = $1 AND rm.status IN ('registered', 'checked_in') ORDER BY rm.created_at`,
           [roomId],
@@ -768,9 +816,41 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
               `${roomId}:${member.id}`,
             );
           }
-          return { id: member.id, handle: member.handle, status: member.status, checkedInAt: member.checked_in_at, friendCode };
+          return { id: member.id, handle: member.handle, status: member.status, checkedInAt: member.checked_in_at, friendCode, sharedRoster: member.shared_roster_json };
         });
         return json(res, 200, { room: roomSummary(room), currentUser: { id: current.id, role: room.host_id === current.id ? "host" : "member", memberStatus: membership.rows[0].status }, members: memberData, match });
+      }
+
+      if (method === "PUT" && action === "shared-team") {
+        const body = await readJson(req);
+        if (!isUuid(body.teamId)) throw new HttpError(400, "invalid_team", "Escolha uma equipe salva nesta conta.");
+        await transaction(pool, async (client) => {
+          const membership = await client.query(
+            `SELECT r.status AS room_status, rm.status AS member_status
+               FROM rooms r JOIN room_members rm ON rm.room_id = r.id
+              WHERE r.id = $1 AND rm.user_id = $2 FOR UPDATE OF r, rm`,
+            [roomId, current.id],
+          );
+          if (!membership.rowCount || !["registered", "checked_in"].includes(membership.rows[0].member_status)) throw new HttpError(404, "room_not_found", "Sala não encontrada.");
+          if (["completed", "cancelled"].includes(membership.rows[0].room_status)) throw new HttpError(409, "room_finished", "A sala já terminou.");
+          const team = await client.query("SELECT data_json FROM teams WHERE id = $1 AND owner_id = $2", [body.teamId, current.id]);
+          if (!team.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada nesta conta.");
+          const roster = sharedRosterFromTeam(team.rows[0].data_json);
+          await client.query(
+            "UPDATE room_members SET shared_roster_json = $1::jsonb, shared_roster_updated_at = now() WHERE room_id = $2 AND user_id = $3",
+            [JSON.stringify(roster), roomId, current.id],
+          );
+        });
+        return json(res, 200, { shared: true });
+      }
+
+      if (method === "DELETE" && action === "shared-team") {
+        const result = await pool.query(
+          "UPDATE room_members SET shared_roster_json = NULL, shared_roster_updated_at = NULL WHERE room_id = $1 AND user_id = $2 RETURNING room_id",
+          [roomId, current.id],
+        );
+        if (!result.rowCount) throw new HttpError(404, "room_not_found", "Sala não encontrada.");
+        return json(res, 200, { shared: false });
       }
 
       if (method === "POST" && action === "invite") {

@@ -86,6 +86,49 @@ async function capture(page, viewport, name, { audit = false } = {}) {
   if (overflow > 1) failures.push(`${viewport}/${name} tem ${overflow}px de overflow horizontal.`);
 
   if (audit) {
+    const contrast = await page.evaluate(() => {
+      const luminance = (value) => {
+        const [red, green, blue] = value.match(/[0-9.]+/g).slice(0, 3).map(Number).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const ratio = (foreground, background) => {
+        const values = [luminance(foreground), luminance(background)].sort((left, right) => right - left);
+        return Number(((values[0] + 0.05) / (values[1] + 0.05)).toFixed(2));
+      };
+      const visible = (element) => {
+        const style = getComputedStyle(element);
+        return element.getClientRects().length > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      };
+      const opaqueBackground = (element) => {
+        for (let current = element; current; current = current.parentElement) {
+          const color = getComputedStyle(current).backgroundColor;
+          const channels = color.match(/[0-9.]+/g) || [];
+          const alpha = channels.length > 3 ? Number(channels[3]) : 1;
+          if (alpha >= 0.99) return color;
+        }
+        return getComputedStyle(document.documentElement).backgroundColor;
+      };
+      const checks = [
+        ["navegação desktop", ".site-header .primary-nav .nav-link:not(.is-active)"],
+        ["navegação mobile", ".mobile-primary-nav .mobile-nav-link:not(.is-active)"],
+        ["atribuição no rodapé", ".site-footer a"],
+      ];
+      return checks.flatMap(([label, textSelector]) => {
+        const text = [...document.querySelectorAll(textSelector)].find(visible);
+        if (!text) return [];
+        const foregroundColor = getComputedStyle(text).color;
+        const backgroundColor = opaqueBackground(text);
+        return [{ label, ratio: ratio(foregroundColor, backgroundColor), foregroundColor, backgroundColor }];
+      });
+    });
+    observations.push({ viewport, name, contrast });
+    for (const check of contrast) {
+      if (check.ratio < 4.5) failures.push(`${viewport}/${name}: contraste ${check.ratio}:1 em ${check.label}.`);
+    }
+
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -252,6 +295,25 @@ async function runViewport(viewportName, viewport) {
       failures.push("As facetas combinadas não preservaram o Garchomp compatível com os dados publicados.");
     }
     await safeCapture(page, viewportName, "usage-filtered");
+    if (viewportName === "desktop") {
+      const filterSelectors = [
+        ".usage-browser-panel input[type=search]",
+        '.usage-filters .usage-filter-field:has-text("Tipo") select',
+        '.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select',
+        '.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select',
+        '.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select',
+      ];
+      const beforeRefresh = await Promise.all(filterSelectors.map((selector) => page.locator(selector).inputValue()));
+      await page.locator(".usage-index-note button").click();
+      await page.locator(".usage-index-note button").filter({ hasText: "Atualizar agora" }).waitFor({ state: "visible", timeout: 35_000 });
+      const afterRefresh = await Promise.all(filterSelectors.map((selector) => page.locator(selector).inputValue()));
+      if (JSON.stringify(afterRefresh) !== JSON.stringify(beforeRefresh)) {
+        failures.push("Usage perdeu a busca ou os filtros durante a atualização manual.");
+      }
+      if (!(await page.locator(".usage-species-button.is-selected").innerText()).includes("Garchomp")) {
+        failures.push("Usage mudou a espécie selecionada durante a atualização manual.");
+      }
+    }
     await page.getByRole("button", { name: "Limpar filtros" }).click();
     await usageSearch.fill("Garchomp");
     await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
@@ -341,6 +403,17 @@ async function runViewport(viewportName, viewport) {
       failures.push(`${viewportName}: a sessão de teste para a sala não foi criada (${signIn.status()}).`);
     } else {
       const hostSession = await signIn.json();
+      const shareableTeam = { ...exportedTeam, name: "Time compartilhado" };
+      const savedTeamResponse = await context.request.post(`${baseUrl}/api/teams`, {
+        headers: { Origin: baseUrl },
+        data: { visibility: "private", data: shareableTeam },
+      });
+      let sharedTeamId = "";
+      if (!savedTeamResponse.ok()) {
+        failures.push(`${viewportName}: não foi possível preparar a equipe para testar o compartilhamento (${savedTeamResponse.status()}).`);
+      } else {
+        sharedTeamId = (await savedTeamResponse.json()).team.id;
+      }
       await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-empty", { audit: true });
@@ -348,6 +421,12 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("button", { name: "Criar sala privada" }).click();
       await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
+      if (sharedTeamId) {
+        await page.locator(".event-team-sharing-controls select").selectOption(sharedTeamId);
+        await page.getByRole("button", { name: "Compartilhar", exact: true }).click();
+        await page.getByRole("img", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await safeCapture(page, viewportName, "rooms-shared-roster-host", { audit: true });
+      }
       const inviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       await safeCapture(page, viewportName, "rooms-invite", { audit: true });
 
@@ -368,6 +447,10 @@ async function runViewport(viewportName, viewport) {
       const guest = guestSession.ok() ? await guestSession.json() : null;
       await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
       await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
+      if (sharedTeamId) {
+        await guestPage.getByRole("img", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await safeCapture(guestPage, viewportName, "rooms-shared-roster-guest", { audit: true });
+      }
       await guestPage.getByRole("button", { name: "Fazer check-in" }).click();
       await page.getByRole("button", { name: "Fazer check-in" }).click();
       await page.reload({ waitUntil: "networkidle" });
@@ -488,11 +571,12 @@ async function runViewport(viewportName, viewport) {
         await safeCapture(page, viewportName, "builder-account-save-error", { audit: true });
       }
       if (await page.locator(".account-team-row").count()) {
-        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeout: 10_000 });
+        const accountTeamRow = page.locator(".account-team-row").first();
+        await accountTeamRow.waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-team", { audit: true });
-        await page.locator(".account-team-visibility").first().selectOption("public");
-        await page.getByRole("button", { name: "Atualizar" }).last().click();
-        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeout: 10_000 });
+        await accountTeamRow.locator(".account-team-visibility").selectOption("public");
+        await accountTeamRow.getByRole("button", { name: "Atualizar" }).click();
+        await accountTeamRow.locator(".account-team-summary span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-public", { audit: true });
       }
     }
@@ -507,10 +591,13 @@ try {
   await waitForServer();
   await waitForApi();
   browser = await chromium.launch({ headless: true });
-  for (const [name, viewport] of [
+  const viewports = [
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
-  ]) {
+    ["mobile-320", { width: 320, height: 760 }],
+    ["zoom200", { width: 720, height: 960 }],
+  ];
+  for (const [name, viewport] of viewports) {
     try {
       await runViewport(name, viewport);
     } catch (error) {
@@ -520,6 +607,11 @@ try {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    viewports: viewports.map(([name, viewport]) => ({
+      name,
+      cssWidth: viewport.width,
+      zoomEquivalent: name === "zoom200" ? "720 CSS px viewport, equivalent to 200% zoom from 1440 CSS px" : null,
+    })),
     status: failures.length || accessibilityIssues.length ? "needs-review" : "passed",
     observations,
     accessibilityIssues,
