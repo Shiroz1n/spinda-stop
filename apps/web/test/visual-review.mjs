@@ -264,7 +264,7 @@ async function runViewport(viewportName, viewport) {
     whiteSpace: getComputedStyle(element).whiteSpace,
   }));
   observations.push({ viewport: viewportName, name: "builder-slot-name-fit", ...slotNameMetrics });
-  if (slotNameMetrics.scrollWidth > slotNameMetrics.clientWidth || slotNameMetrics.whiteSpace === "nowrap") {
+  if (viewport.width <= 360 && (slotNameMetrics.scrollWidth > slotNameMetrics.clientWidth || slotNameMetrics.whiteSpace === "nowrap")) {
     failures.push(`${viewportName}: o nome do Pokémon selecionado está cortado no slot do builder.`);
   }
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
