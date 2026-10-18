@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { createEmptyTeam, createTeamMember, parseTeam, serializeTeam } from "@spinda-stop/domain";
+import { addPokemonToDraft, createEmptyTeam, createTeamMember, parseTeam, serializeTeam } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
@@ -39,15 +39,18 @@ function createInitialDraft(pokemonSlug) {
   const pokemon = pokemonWithDetails(pokemonSlug);
   if (!pokemon) return { team, selectedSlot: 0, message: "" };
 
-  const existingSlot = team.members.findIndex((member) => member?.pokemonId === pokemonSlug);
-  const emptySlot = team.members.findIndex((member) => member === null);
-  const selectedSlot = existingSlot >= 0 ? existingSlot : emptySlot >= 0 ? emptySlot : 0;
-  const members = [...team.members];
-  members[selectedSlot] = createTeamMember(pokemon);
+  const result = addPokemonToDraft(team, pokemon);
+  const slotLabel = result.selectedSlot + 1;
+  const messages = {
+    added: `${pokemon.name} adicionado à posição ${slotLabel}.`,
+    existing: `${pokemon.name} já está na posição ${slotLabel}. O set existente foi mantido.`,
+    full: "O time está cheio. Escolha uma posição no construtor antes de substituir alguém.",
+  };
+
   return {
-    team: { ...team, members },
-    selectedSlot,
-    message: `${pokemon.name} adicionado à posição ${selectedSlot + 1}.`,
+    team: result.team,
+    selectedSlot: result.selectedSlot,
+    message: messages[result.status] || "",
   };
 }
 

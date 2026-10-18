@@ -28,6 +28,26 @@ export function createTeamMember(pokemon) {
   };
 }
 
+export function addPokemonToDraft(team, pokemon) {
+  if (!pokemon) return { team, selectedSlot: 0, status: "missing" };
+
+  const existingSlot = team.members.findIndex((member) => member?.pokemonId === pokemon.slug);
+  if (existingSlot >= 0) {
+    return { team, selectedSlot: existingSlot, status: "existing" };
+  }
+
+  const emptySlot = team.members.findIndex((member) => member === null);
+  if (emptySlot < 0) return { team, selectedSlot: 0, status: "full" };
+
+  const members = [...team.members];
+  members[emptySlot] = createTeamMember(pokemon);
+  return {
+    team: { ...team, members },
+    selectedSlot: emptySlot,
+    status: "added",
+  };
+}
+
 export function searchPokemon(pokemon, query = "", filters = {}) {
   const normalizedQuery = normalizeText(query.trim());
   const { type = "", generation = "" } = filters;
