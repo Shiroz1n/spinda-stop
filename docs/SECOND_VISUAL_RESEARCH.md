@@ -48,9 +48,10 @@ O script `apps/web/test/visual-review.mjs` grava um conjunto por viewport: `desk
 - `*-usage-battle-data-moves.png` e `*-usage-metaroll-category.png`;
 - `*-builder-six-members-first-fold.png` e `*-builder-six-members.png`;
 - `*-calculator-comparison.png` e `*-calculator-comparison-rolls.png`;
-- `*-room-state-flow.png` e `*-tournament-state-flow.png`.
+- `*-room-state-flow.png` e `*-tournament-state-flow.png` para exercitar os estados de resposta;
+- `*-room-live-first-fold.png` e `*-tournament-live-first-fold.png` para mostrar as salas e o torneio criados no PostgreSQL efêmero, antes dos controles secundários.
 
-Para sala/torneio, as capturas de hierarquia usam fixtures com formato de resposta da API; a sequência completa de convite, check-in, partida, resultado, confirmação, chaveamento e final usa PostgreSQL efêmero do workflow. O roteiro registra cada modo no `inspection.json`.
+Para sala/torneio, `*-state-flow.png` usa fixtures com formato de resposta da API; as capturas `*-live-first-fold.png` usam salas e torneios criados no PostgreSQL efêmero, com participantes reais do teste, estado e próxima ação no topo antes dos formulários. A sequência completa de convite, check-in, partida, resultado, confirmação, chaveamento e final também usa PostgreSQL efêmero. O roteiro registra cada modo no `inspection.json`.
 
 ## Limites e verificação
 
