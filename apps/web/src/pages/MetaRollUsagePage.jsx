@@ -16,6 +16,14 @@ const distributionSections = [
   ["spreads", "Stat Points"],
 ];
 
+const profileTabs = [
+  ["summary", "Resumo"],
+  ...distributionSections,
+  ["mega", "Formas Mega"],
+  ["matchups", "Matchups"],
+  ["history", "Histórico"],
+];
+
 const filters = [
   ["moves", "Golpe"],
   ["items", "Item"],
@@ -210,6 +218,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   const [megaRetry, setMegaRetry] = useState(0);
   const megaForceKey = useRef("");
   const [selectedUsageDate, setSelectedUsageDate] = useState("");
+  const [activeProfileSection, setActiveProfileSection] = useState("summary");
   const [view, setView] = useState("species");
   const entryRequestKey = `${season || "current"}|${selectedId || ""}|${entryRetry}`;
   const megaRequestKey = `${season || "current"}|${selectedId || ""}|${megaRetry}`;
@@ -564,20 +573,26 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                             ? "não inferida"
                             : "sinalização incompleta"}</strong></div>
                     </div>
-                    <div className="metaroll-profile-grid">
-                      {distributionSections.map(([key, label]) => (
-                        <DistributionCard
-                          key={key}
-                          title={label}
-                          rows={entry.distributions[key]}
-                          spread={key === "spreads"}
-                          pokemonRows={key === "teammates"}
-                          note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Distribuição de Stat Points, sem natureza associada." : ""}
-                        />
+                    <nav className="usage-category-tabs metaroll-profile-tabs" aria-label="Seções da ficha MetaRoll">
+                      {profileTabs.map(([key, label]) => (
+                        <button key={key} className={activeProfileSection === key ? "usage-category-tab is-active" : "usage-category-tab"} type="button" aria-pressed={activeProfileSection === key} onClick={() => setActiveProfileSection(key)}>{label}</button>
                       ))}
-                    </div>
+                    </nav>
 
-                    <MegaFormsCard
+                    {activeProfileSection === "summary" ? (
+                      <div className="metaroll-profile-grid metaroll-profile-summary">
+                        {distributionSections.filter(([key]) => ["moves", "items", "abilities", "teammates"].includes(key)).map(([key, label]) => (
+                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 3)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Parceiros listados pela fonte." : "Principais linhas desta captura."} />
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {distributionSections.some(([key]) => key === activeProfileSection) ? (() => {
+                      const [key, label] = distributionSections.find(([sectionKey]) => sectionKey === activeProfileSection);
+                      return <div className="metaroll-profile-grid"><DistributionCard title={label} rows={entry.distributions[key]} spread={key === "spreads"} pokemonRows={key === "teammates"} note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Distribuição de Stat Points, sem natureza associada." : ""} /></div>;
+                    })() : null}
+
+                    {activeProfileSection === "mega" ? <MegaFormsCard
                       state={currentMegaState}
                       rows={selectedMegaRows}
                       onRetry={() => {
@@ -585,10 +600,10 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                         megaForceKey.current = `${season || "current"}|${selectedId}|${nextRetry}`;
                         setMegaRetry(nextRetry);
                       }}
-                    />
+                    /> : null}
 
-                    <section className="metaroll-matchups-section">
-                      <div className="usage-category-heading"><div><p className="page-label">Relações publicadas</p><h3>Matchups</h3></div><span>MetaRoll</span></div>
+                    {activeProfileSection === "matchups" ? <section className="metaroll-matchups-section">
+                      <div className="usage-category-heading"><div><h3>Matchups</h3></div><span>MetaRoll</span></div>
                       {entry.matchups ? (
                         <>
                           <div className="metaroll-matchups-grid">
@@ -600,10 +615,10 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                           <p className="metaroll-matchups-note">As listas são parciais e ordenadas pela fonte. As contagens se alinham às espécies e são jogos ganhos ou perdidos, não o total de partidas do confronto. Percentuais de golpes pertencem às vitórias ou derrotas correspondentes; não são taxa de vitória.</p>
                         </>
                       ) : <p className="metaroll-empty">Esta captura não publicou dados de matchups para a espécie.</p>}
-                    </section>
+                    </section> : null}
 
-                    <section className="metaroll-history-section">
-                      <div className="usage-category-heading"><div><p className="page-label">Histórico da temporada</p><h3>Posição e distribuições diárias</h3></div><span>{entry.rankHistory.length} dias de ranking</span></div>
+                    {activeProfileSection === "history" ? <section className="metaroll-history-section">
+                      <div className="usage-category-heading"><div><h3>Posição e distribuições diárias</h3></div><span>{entry.rankHistory.length} dias de ranking</span></div>
                       {entry.rankHistory.length > 0 ? (
                         <ol className="metaroll-rank-history">
                           {entry.rankHistory.map((point) => <li key={point.date}><time dateTime={point.date}>{point.date}</time><strong>{point.rank === null ? "sem posição" : "#" + point.rank}</strong></li>)}
@@ -617,7 +632,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                           {selectedHistory ? <HistoryUsageCard record={selectedHistory} /> : null}
                         </>
                       ) : <p className="metaroll-empty">A fonte não publicou histórico diário de uso para esta ficha.</p>}
-                    </section>
+                    </section> : null}
                   </>
                 ) : null}
               </>

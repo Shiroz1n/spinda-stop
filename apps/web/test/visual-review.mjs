@@ -10,6 +10,7 @@ import { chromium } from "playwright";
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, "artifacts/visual-review"));
 const baseUrl = "http://127.0.0.1:4173";
+const spindaFaviconUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png";
 const observations = [];
 const failures = [];
 const accessibilityIssues = [];
@@ -172,6 +173,25 @@ async function runViewport(viewportName, viewport) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+  if (viewportName === "desktop") {
+    const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
+    assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");
+    const faviconImage = await page.evaluate(async (src) => {
+      const image = new Image();
+      image.src = src;
+      try {
+        await Promise.race([
+          image.decode(),
+          new Promise((_, reject) => window.setTimeout(() => reject(new Error("tempo esgotado")), 10_000)),
+        ]);
+        return { complete: image.complete, width: image.naturalWidth, height: image.naturalHeight };
+      } catch (error) {
+        return { complete: image.complete, width: image.naturalWidth, height: image.naturalHeight, error: error.message };
+      }
+    }, declaredFavicon);
+    observations.push({ viewport: viewportName, name: "spinda-favicon", href: declaredFavicon, ...faviconImage });
+    assert.ok(faviconImage.complete && faviconImage.width > 0 && faviconImage.height > 0, `o navegador não conseguiu exibir o favicon remoto: ${faviconImage.error || "imagem vazia"}`);
+  }
   await safeCapture(page, viewportName, "home", { audit: true });
 
   await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });

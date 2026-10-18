@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { createPokemonSpriteLookup } from "../data/pokemonSprites.js";
-import { calculateChampionsDamage, cloneDamageScenario, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
+import { calculateChampionsDamage, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
 
 const statFields = [
   ["hp", "HP"], ["atk", "Atk"], ["def", "Def"],
@@ -48,6 +48,17 @@ function initialForm(search) {
     critical: false,
     attackerSide: { isHelpingHand: false },
     defenderSide: { isReflect: false, isLightScreen: false, isAuroraVeil: false, isFriendGuard: false, isProtected: false },
+  };
+}
+
+function applyScenarioOverrides(base, overrides) {
+  return {
+    ...base,
+    ...overrides,
+    attacker: { ...base.attacker, ...overrides.attacker },
+    defender: { ...base.defender, ...overrides.defender },
+    attackerSide: { ...base.attackerSide, ...overrides.attackerSide },
+    defenderSide: { ...base.defenderSide, ...overrides.defenderSide },
   };
 }
 
@@ -236,7 +247,7 @@ function DamageResultPanel({ calculation, form, label }) {
             <small>Alvo começa no HP máximo. Valores condicionados aos acertos, ao crítico selecionado e ao mesmo cenário; ignoram precisão e chance de crítico. Não são chance de vencer a partida.</small>
           </div>}
           {result.koProbabilityNotes.length > 0 && <p className="damage-spread-note">{result.koProbabilityNotes.join(" ")}</p>}
-          <details className="damage-breakdown" open>
+          <details className="damage-breakdown">
             <summary>O que entrou neste cálculo</summary>
             <div className="damage-breakdown-stats">
               <p><strong>Atacante:</strong> {formatStatLine(result.attacker, form.attacker)}</p>
@@ -264,8 +275,12 @@ function DamageResultPanel({ calculation, form, label }) {
 export function DamageCalculatorPage() {
   const location = useLocation();
   const [form, setForm] = useState(() => initialForm(location.search));
-  const [comparison, setComparison] = useState({ enabled: false, form: null });
-  const comparisonForm = comparison.enabled ? comparison.form : null;
+  const [comparison, setComparison] = useState({ enabled: false, overrides: {} });
+  const [comparisonAspect, setComparisonAspect] = useState("move");
+  const comparisonForm = useMemo(
+    () => comparison.enabled ? applyScenarioOverrides(form, comparison.overrides) : null,
+    [comparison.enabled, comparison.overrides, form],
+  );
   const moveData = getDamageMove(form.move);
   const availableHits = moveData ? getHitOptions(moveData) : [1];
   const showSpreadTargetCount = form.gameType === "Doubles" && moveData?.category !== "Status" && isSpreadTargetMove(moveData);
@@ -298,9 +313,9 @@ export function DamageCalculatorPage() {
   const announcementText = comparison.enabled
     ? [
       resultAnnouncement("Cenário A", calculation),
-      comparisonForm?.move.trim()
+      Object.keys(comparison.overrides).length > 0 && comparisonForm?.move.trim()
         ? resultAnnouncement("Cenário B", comparisonCalculation)
-        : "Cenário B: escolha um golpe para comparar.",
+        : "Cenário B: escolha uma variação para comparar.",
     ].join(" ")
     : resultAnnouncement("Resultado", calculation);
   const [announcement, setAnnouncement] = useState("");
@@ -324,24 +339,27 @@ export function DamageCalculatorPage() {
   }
   function handleComparisonMoveChange(value) {
     const move = getDamageMove(value);
-    setComparison((current) => ({
-      ...current,
-      form: current.form && {
-        ...current.form,
-        move: value,
-        hits: move ? getHitOptions(move)[0] : 1,
-        targetsHit: isSpreadTargetMove(move) ? Math.max(2, Math.min(current.form.targetsHit || 2, getSpreadTargetLimit(move))) : 1,
-      },
-    }));
+    setComparison((current) => {
+      const scenario = applyScenarioOverrides(form, current.overrides);
+      return {
+        ...current,
+        overrides: {
+          ...current.overrides,
+          move: value,
+          hits: move ? getHitOptions(move)[0] : 1,
+          targetsHit: isSpreadTargetMove(move) ? Math.max(2, Math.min(scenario.targetsHit || 2, getSpreadTargetLimit(move))) : 1,
+        },
+      };
+    });
   }
   function updateComparison(key, value) {
-    setComparison((current) => ({ ...current, form: current.form && { ...current.form, [key]: value } }));
+    setComparison((current) => ({ ...current, overrides: { ...current.overrides, [key]: value } }));
   }
   function updateComparisonSide(key, value) {
-    setComparison((current) => ({ ...current, form: current.form && { ...current.form, [key]: { ...current.form[key], ...value } } }));
+    setComparison((current) => ({ ...current, overrides: { ...current.overrides, [key]: { ...current.overrides[key], ...value } } }));
   }
   function updateComparisonFieldSide(key, value) {
-    updateComparison(key, { ...comparisonForm[key], ...value });
+    setComparison((current) => ({ ...current, overrides: { ...current.overrides, [key]: { ...current.overrides[key], ...value } } }));
   }
   return (
     <div className="page-wrap damage-page">
@@ -428,67 +446,40 @@ export function DamageCalculatorPage() {
             label="Comparar com outro cenário"
             checked={comparison.enabled}
             onChange={(enabled) => setComparison(enabled
-              ? { enabled: true, form: cloneDamageScenario(form) }
-              : { enabled: false, form: comparison.form })}
+              ? { enabled: true, overrides: {} }
+              : { enabled: false, overrides: comparison.overrides })}
           />
           {comparisonForm && (
             <>
-              <p>O cenário B começa como uma cópia independente do cenário A. Alterá-lo não muda o cenário A nem os sets salvos no construtor.</p>
-              <div className="damage-comparison-fields">
-                <CatalogInput label="Golpe do cenário B" value={comparisonForm.move} onChange={handleComparisonMoveChange} list="damage-move-options" placeholder="Escolha outro golpe" />
+              <p>O cenário B acompanha o A. Escolha o que muda; atacante, alvo e demais condições continuam iguais até você sobrescrevê-los.</p>
+              <div className="damage-comparison-fields damage-comparison-quick">
                 <label className="damage-field">
-                  <span>Formato do cenário B</span>
-                  <select className="text-input" value={comparisonForm.gameType} onChange={(event) => updateComparison("gameType", event.target.value)}>
-                    <option value="Doubles">Doubles</option><option value="Singles">Singles</option>
+                  <span>Variar no cenário B</span>
+                  <select className="text-input" value={comparisonAspect} onChange={(event) => setComparisonAspect(event.target.value)}>
+                    <option value="move">Golpe</option><option value="weather">Clima</option><option value="terrain">Terreno</option><option value="attacker">Atacante</option><option value="defender">Alvo</option>
                   </select>
                 </label>
-                {showComparisonTargetCount && (
-                  <label className="damage-field">
-                    <span>Alvos válidos no golpe B</span>
-                    <select className="text-input" value={Math.min(comparisonForm.targetsHit, getSpreadTargetLimit(comparisonMoveData))} onChange={(event) => updateComparison("targetsHit", Number(event.target.value))}>
-                      {Array.from({ length: getSpreadTargetLimit(comparisonMoveData) }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count}</option>)}
-                    </select>
-                    <span className="form-hint">Conte alvos válidos antes de Proteção; o resultado é por alvo.</span>
-                  </label>
-                )}
-                <label className="damage-field">
-                  <span>Acertos no cenário B</span>
-                  <select className="text-input" value={comparisonAvailableHits.includes(comparisonForm.hits) ? comparisonForm.hits : comparisonAvailableHits[0]} onChange={(event) => updateComparison("hits", Number(event.target.value))}>
-                    {comparisonAvailableHits.map((count) => <option value={count} key={count}>{count}</option>)}
-                  </select>
-                </label>
-                <label className="damage-field">
-                  <span>Clima no cenário B</span>
-                  <select className="text-input" value={comparisonForm.weather} onChange={(event) => updateComparison("weather", event.target.value)}>
-                    <option value="">Sem clima</option>
-                    {damageCalculatorCatalog.weather.map((weather) => <option value={weather} key={weather}>{weather}</option>)}
-                  </select>
-                </label>
-                <label className="damage-field">
-                  <span>Terreno no cenário B</span>
-                  <select className="text-input" value={comparisonForm.terrain} onChange={(event) => updateComparison("terrain", event.target.value)}>
-                    <option value="">Sem terreno</option>
-                    {damageCalculatorCatalog.terrain.map((terrain) => <option value={terrain} key={terrain}>{terrain}</option>)}
-                  </select>
-                </label>
-                <FieldToggle label="Crítico no cenário B" checked={comparisonForm.critical} onChange={(critical) => updateComparison("critical", critical)} />
+                {comparisonAspect === "move" ? <CatalogInput label="Golpe B" value={comparisonForm.move} onChange={handleComparisonMoveChange} list="damage-move-options" placeholder="Buscar golpe" /> : null}
+                {comparisonAspect === "weather" ? <label className="damage-field"><span>Clima B</span><select className="text-input" value={comparisonForm.weather} onChange={(event) => updateComparison("weather", event.target.value)}><option value="">Sem clima</option>{damageCalculatorCatalog.weather.map((weather) => <option value={weather} key={weather}>{weather}</option>)}</select></label> : null}
+                {comparisonAspect === "terrain" ? <label className="damage-field"><span>Terreno B</span><select className="text-input" value={comparisonForm.terrain} onChange={(event) => updateComparison("terrain", event.target.value)}><option value="">Sem terreno</option>{damageCalculatorCatalog.terrain.map((terrain) => <option value={terrain} key={terrain}>{terrain}</option>)}</select></label> : null}
+                {comparisonAspect === "attacker" ? <CatalogInput label="Atacante B" value={comparisonForm.attacker.species} onChange={(value) => updateComparisonSide("attacker", { species: value })} list="damage-comparison-attacker-species-options" placeholder="Buscar Pokémon" /> : null}
+                {comparisonAspect === "defender" ? <CatalogInput label="Alvo B" value={comparisonForm.defender.species} onChange={(value) => updateComparisonSide("defender", { species: value })} list="damage-comparison-defender-species-options" placeholder="Buscar Pokémon" /> : null}
               </div>
-              <div className="damage-input-grid damage-comparison-team" aria-label="Pokémon do cenário B">
-                <SideEditor title="Atacante · cenário B" sideName="comparison-attacker" side={comparisonForm.attacker} onChange={(value) => updateComparisonSide("attacker", value)} />
-                <SideEditor title="Alvo · cenário B" sideName="comparison-defender" side={comparisonForm.defender} onChange={(value) => updateComparisonSide("defender", value)} />
-              </div>
-              <details className="damage-field-advanced">
-                <summary>Condições de campo do cenário B</summary>
+              <details className="damage-field-advanced damage-comparison-advanced">
+                <summary>Ajustes adicionais do cenário B</summary>
+                <div className="damage-comparison-fields">
+                  <label className="damage-field"><span>Formato</span><select className="text-input" value={comparisonForm.gameType} onChange={(event) => updateComparison("gameType", event.target.value)}><option value="Doubles">Doubles</option><option value="Singles">Singles</option></select></label>
+                  {showComparisonTargetCount ? <label className="damage-field"><span>Alvos válidos</span><select className="text-input" value={Math.min(comparisonForm.targetsHit, getSpreadTargetLimit(comparisonMoveData))} onChange={(event) => updateComparison("targetsHit", Number(event.target.value))}>{Array.from({ length: getSpreadTargetLimit(comparisonMoveData) }, (_, index) => index + 1).map((count) => <option value={count} key={count}>{count}</option>)}</select><span className="form-hint">A faixa é por alvo.</span></label> : null}
+                  <label className="damage-field"><span>Acertos</span><select className="text-input" value={comparisonAvailableHits.includes(comparisonForm.hits) ? comparisonForm.hits : comparisonAvailableHits[0]} onChange={(event) => updateComparison("hits", Number(event.target.value))}>{comparisonAvailableHits.map((count) => <option value={count} key={count}>{count}</option>)}</select></label>
+                  <FieldToggle label="Golpe crítico" checked={comparisonForm.critical} onChange={(critical) => updateComparison("critical", critical)} />
+                </div>
+                <div className="damage-input-grid damage-comparison-team" aria-label="Configuração dos lados no cenário B">
+                  <SideEditor title="Atacante B" sideName="comparison-attacker" side={comparisonForm.attacker} onChange={(value) => updateComparisonSide("attacker", value)} />
+                  <SideEditor title="Alvo B" sideName="comparison-defender" side={comparisonForm.defender} onChange={(value) => updateComparisonSide("defender", value)} />
+                </div>
                 <div className="damage-field-conditions">
                   <div><h3>Lado do atacante</h3><FieldToggle label="Helping Hand" checked={comparisonForm.attackerSide.isHelpingHand} onChange={(value) => updateComparisonFieldSide("attackerSide", { isHelpingHand: value })} /></div>
-                  <div>
-                    <h3>Lado do alvo</h3>
-                    <FieldToggle label="Reflect" checked={comparisonForm.defenderSide.isReflect} onChange={(value) => updateComparisonFieldSide("defenderSide", { isReflect: value })} />
-                    <FieldToggle label="Light Screen" checked={comparisonForm.defenderSide.isLightScreen} onChange={(value) => updateComparisonFieldSide("defenderSide", { isLightScreen: value })} />
-                    <FieldToggle label="Aurora Veil" checked={comparisonForm.defenderSide.isAuroraVeil} onChange={(value) => updateComparisonFieldSide("defenderSide", { isAuroraVeil: value })} />
-                    <FieldToggle label="Friend Guard" checked={comparisonForm.defenderSide.isFriendGuard} onChange={(value) => updateComparisonFieldSide("defenderSide", { isFriendGuard: value })} />
-                    <FieldToggle label="Proteção ativa" checked={comparisonForm.defenderSide.isProtected} onChange={(value) => updateComparisonFieldSide("defenderSide", { isProtected: value })} />
-                  </div>
+                  <div><h3>Lado do alvo</h3><FieldToggle label="Reflect" checked={comparisonForm.defenderSide.isReflect} onChange={(value) => updateComparisonFieldSide("defenderSide", { isReflect: value })} /><FieldToggle label="Light Screen" checked={comparisonForm.defenderSide.isLightScreen} onChange={(value) => updateComparisonFieldSide("defenderSide", { isLightScreen: value })} /><FieldToggle label="Aurora Veil" checked={comparisonForm.defenderSide.isAuroraVeil} onChange={(value) => updateComparisonFieldSide("defenderSide", { isAuroraVeil: value })} /><FieldToggle label="Friend Guard" checked={comparisonForm.defenderSide.isFriendGuard} onChange={(value) => updateComparisonFieldSide("defenderSide", { isFriendGuard: value })} /><FieldToggle label="Proteção ativa" checked={comparisonForm.defenderSide.isProtected} onChange={(value) => updateComparisonFieldSide("defenderSide", { isProtected: value })} /></div>
                 </div>
               </details>
             </>
@@ -501,13 +492,13 @@ export function DamageCalculatorPage() {
           <p className="damage-comparison-note" role="note">Comparação lado a lado. Cada cenário mostra seus rolls e modificadores; não compartilha probabilidades entre golpes.</p>
           <div className="damage-comparison-results" aria-label="Comparação dos cenários">
             <DamageResultPanel calculation={calculation} form={form} label="Cenário A · atual" />
-            {comparisonForm?.move.trim() ? (
+            {Object.keys(comparison.overrides).length > 0 && comparisonForm?.move.trim() ? (
               <DamageResultPanel calculation={comparisonCalculation} form={comparisonForm} label="Cenário B · comparação" />
             ) : (
               <section className="damage-comparison-empty panel-frame" role="status">
                 <p className="page-label">Cenário B</p>
-                <h2>Escolha um golpe</h2>
-                <p>O resultado aparecerá aqui quando o golpe do segundo cenário estiver no catálogo.</p>
+                <h2>Escolha uma variação</h2>
+                <p>O resultado aparece aqui quando você alterar o golpe, campo, atacante ou alvo.</p>
               </section>
             )}
           </div>

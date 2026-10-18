@@ -242,6 +242,19 @@ export function TournamentDetailPage() {
   const terminal = ["completed", "cancelled"].includes(tournament.status);
   const allCheckedIn = members.length === 4 && members.every((member) => member.status === "checked_in");
   const ownFriendCode = members.find((member) => member.id === currentUser.id)?.friendCode;
+  const nextStep = terminal
+    ? tournament.status === "completed" ? "Chaveamento e resultados confirmados ficam disponíveis para consulta." : "Este torneio foi cancelado."
+    : tournament.status === "open" && isHost
+      ? allCheckedIn ? "Todos fizeram check-in. Feche as inscrições para preparar o chaveamento." : "Convide as outras pessoas e aguarde o check-in antes de fechar as inscrições."
+      : tournament.status === "open"
+        ? currentUser.memberStatus === "registered" ? "Confirme presença com check-in." : "Aguarde o host completar as inscrições."
+        : tournament.status === "locked" && isHost
+          ? "As inscrições estão fechadas. Sorteie e inicie o chaveamento quando estiverem prontos."
+          : tournament.status === "locked"
+            ? "Aguarde o host iniciar o chaveamento."
+            : matches.some((match) => match.status === "awaiting_confirmation")
+              ? "Há um resultado aguardando confirmação do adversário."
+              : "Consulte a chave e registre o resultado após cada partida.";
 
   return (
     <section className="page-wrap community-page">
@@ -249,6 +262,10 @@ export function TournamentDetailPage() {
         <div><p className="page-label">{isHost ? "Torneio do host" : "Torneio por convite"}</p><h1>{tournament.name}</h1><p className="page-intro">{TOURNAMENT_STATES[tournament.status]} · {participantCount}/4 participantes{tournament.championId ? ` · campeão: ${members.find((member) => member.id === tournament.championId)?.handle || "participante"}` : ""}</p></div>
         <Link className="button button-outline" to="/tournaments">Meus torneios</Link>
       </div>
+      <div className="community-next-step" aria-label="Próxima ação">
+        <strong>{TOURNAMENT_STATES[tournament.status]}</strong><span>{nextStep}</span><a href={tournament.status === "in_progress" ? "#bracket-title" : "#tournament-members-title"}>Abrir etapa <span aria-hidden="true">↓</span></a>
+      </div>
+      <p className="community-game-context">As partidas acontecem no Pokémon Champions; o Spinda Stop organiza participantes e resultados voluntariamente informados.</p>
       <ErrorNotice>{actionError}</ErrorNotice>
       {message ? <p className="community-success" role="status">{message}</p> : null}
 
@@ -256,7 +273,7 @@ export function TournamentDetailPage() {
 
       <div className="community-room-grid tournament-detail-grid">
         <section className="community-room-panel panel-frame" aria-labelledby="tournament-members-title">
-          <div className="section-heading"><h2 id="tournament-members-title">Participantes</h2><span>As partidas acontecem no Pokémon Champions</span></div>
+          <div className="section-heading"><h2 id="tournament-members-title">Participantes</h2><span>{participantCount}/4</span></div>
           <ul className="participant-list">{members.map((member) => <li key={member.id}><div className="participant-card-main"><div><strong>{member.handle}{member.id === tournament.hostId ? " · host" : ""}{member.seed ? ` · seed ${member.seed}` : ""}</strong><span>{MEMBER_STATES[member.status] || member.status}{member.friendCode ? <span className="friend-code-value"> · Código: {member.friendCode}</span> : ""}</span></div><SharedTeamPreview roster={member.sharedRoster} ownerName={member.handle} /></div></li>)}</ul>
           {!terminal ? <EventTeamSharing eventId={tournamentId} eventType="tournament" sharedRoster={members.find((member) => member.id === currentUser.id)?.sharedRoster} onSaved={refresh} /> : null}
           {currentUser.memberStatus === "registered" && tournament.status === "open" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/check-in`, { method: "POST", body: {} })}>Fazer check-in</button> : null}

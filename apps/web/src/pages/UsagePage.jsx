@@ -134,7 +134,7 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry }) {
+function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry, onCategoryChange }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
@@ -227,12 +227,11 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
                   <section className="usage-profile-section" key={item.id}>
                     <div className="usage-category-heading">
                       <div>
-                        <p className="page-label">Distribuição publicada</p>
                         <h3>{item.label}</h3>
                       </div>
-                      <span>{itemRows.length} linhas</span>
+                      <div className="usage-profile-actions"><span>{itemRows.length} linhas</span><button className="text-button" type="button" onClick={() => onCategoryChange(item.id)}>Ver tudo</button></div>
                     </div>
-                    <CategoryRows rows={itemRows} category={item} />
+                    <CategoryRows rows={itemRows.slice(0, 4)} category={item} />
                   </section>
                 );
               })}
@@ -695,6 +694,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               onRetry={() => {
                 refreshUsage(true);
               }}
+              onCategoryChange={setCategoryId}
             />
           </div>
         </div>

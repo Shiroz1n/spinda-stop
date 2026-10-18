@@ -20,7 +20,7 @@ Dados, formulários e textos usam uma sans legível. Press Start 2P fica restrit
 
 ## Identidade, sprites e formas
 
-O cabeçalho usa o sprite `327.png` de Spinda na coleção Black/White de PokeAPI/sprites, fixado na revisão `7a7d66b1620e646f69afd48dc1273da9033ede9c`. Essa imagem oficial da franquia é carregada diretamente do host PokeAPI e não é copiada ao repositório. O favicon e os ícones do app são uma ilustração original feita para o Spinda Stop: rosto claro, orelhas assimétricas e manchas em espiral, em pixel art de 32 × 32. O SVG preserva os pixels como quadrados; PNGs de 32, 180 e 512 px usam ampliação nearest-neighbor. A versão 16 × 16 simplifica o rosto para caber no espaço reduzido. A ilustração foi criada com ImageGen a partir da referência de Spinda e não é uma cópia do sprite oficial. As origens estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
+O cabeçalho e o favicon usam o mesmo sprite `327.png` de Spinda na coleção Black/White de PokeAPI/sprites, fixado na revisão `7a7d66b1620e646f69afd48dc1273da9033ede9c`. O navegador carrega essa imagem pela URL versionada do host; o arquivo não é copiado para o repositório. Os demais sprites também vêm da revisão fixada, com mapeamento explícito de espécies e formas. As origens e os direitos das imagens estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
 
 `PokemonSprite` usa um único mapeamento: ID da PokéAPI para forma base e ID próprio do Pokémon/forma para formas alternativas. Formas Mega, regionais e especiais não herdam a imagem base se a imagem correta não estiver disponível. O fallback mostra uma inicial identificável e informa que o sprite está indisponível. Listas usam carregamento sob demanda e mantêm espaço reservado.
 

@@ -236,18 +236,8 @@ export function BuilderPage() {
         <div>
           <p className="page-label">Construtor local · Doubles</p>
           <h1>Monte seu time</h1>
-          <p className="page-intro">Edite seis posições, salve o rascunho no navegador e exporte um arquivo para levar com você.</p>
+          <p className="page-intro">Seis posições para o seu time de Doubles.</p>
         </div>
-        <div className="builder-actions">
-          <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
-          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
-          <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
-        </div>
-      </div>
-
-      <div className="rules-warning" role="note">
-        <span className="warning-mark">Regras</span>
-        <p><strong>Rascunho sem validação do jogo.</strong> Regras de Stat Points, golpes, habilidades e espécies ainda não foram confirmadas por regulamento.</p>
       </div>
 
       <div className="builder-status-row">
@@ -260,8 +250,6 @@ export function BuilderPage() {
           <span className="save-status"><span className="status-dot" />{saveStatus}</span>
         </div>
       </div>
-
-      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
 
       <section className="builder-workspace">
         <div className="slot-column">
@@ -377,6 +365,25 @@ export function BuilderPage() {
           )}
         </div>
       </section>
+
+      <details className="builder-tools-details">
+        <summary>Importar ou exportar equipe</summary>
+        <div className="builder-actions">
+          <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
+          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
+          <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
+        </div>
+      </details>
+
+      <details className="builder-rules-details">
+        <summary>Limites deste rascunho</summary>
+        <div className="rules-warning" role="note">
+          <span className="warning-mark">Regras</span>
+          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de Stat Points.</p>
+        </div>
+      </details>
+
+      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
 
       <p className="form-message" role="status" aria-live="polite">{message}</p>
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
