@@ -1,6 +1,6 @@
 # Cobertura competitiva das fontes
 
-Inventário conferido em 18/10/2026. O estado da interface abaixo considera PRs #1 e #2. Foram comparados os guias das duas APIs com respostas públicas reais consultadas nessa data. Os exemplos dos guias podem estar atrasados: o índice MetaRoll consultado, por exemplo, trazia 262 Pokémon, enquanto a documentação ainda cita 235.
+Inventário conferido em 18/10/2026. O estado da interface acompanha os PRs #1 a #6, empilhados e ainda sem merge. Foram comparados os guias das duas APIs com respostas públicas reais consultadas nessa data. Os exemplos dos guias podem estar atrasados: o índice MetaRoll consultado, por exemplo, trazia 262 Pokémon, enquanto a documentação ainda cita 235.
 
 ## Campos vistos nas respostas reais
 
@@ -40,7 +40,7 @@ O guia também documenta `dailyBattleDataCsvs` no registro de Pokémon; a captur
 | `/api/v1/megas.json` | O índice anunciava esta rota; a resposta observada continha `entries[]` com `forme`, `id`, `name`, `percent`, `rank`, `stone` |
 | `/api/v1/ladder-cutoffs.json` | O índice anunciava esta rota; a resposta observada continha `cutoffs` e `ranks` |
 
-`all.json` e o conteúdo completo de snapshots arquivados são descritos no guia. O arquivo inteiro não foi enumerado nesta conferência; o guia diz que `all.json` omite os históricos diários individuais. Não usamos seus campos até uma consulta menor confirmar o contrato.
+`all.json` e o conteúdo completo de snapshots arquivados são descritos no guia. O arquivo de 1,3 MB não foi enumerado nesta conferência; a tela MetaRoll usa o contrato documentado e o adaptador valida a lista antes de renderizar. O guia diz que `all.json` omite os históricos diários individuais, por isso a tela busca o endpoint de cada Pokémon ao abrir a ficha.
 
 ## Pokémon Champions Battle Data
 
@@ -134,20 +134,20 @@ Docs: [Champions Usage API](https://metaroll.app/api/v1/docs) · base `https://m
 
 | Campo | O que a fonte entrega | No Spinda Stop | Lacuna ou cuidado |
 |---|---|---|---|
-| `matchups.beats[]`, `losesTo[]` | Espécies associadas a vitórias/derrotas, em ordem de frequência | Nada ainda | Não é uma tabela completa de tipos ou todos os confrontos |
-| `beatsGames[]`, `losesToGames[]` | Jogos ganhos/perdidos alinhados às listas | Nada ainda | São contagens da relação, não total de partidas; algumas posições podem ser `null` |
-| `beatsWith[]`, `beatenBy[]` | Golpes próprios em vitórias e golpes adversários em derrotas | Nada ainda | `percent` é dentro de vitórias/derrotas, não win rate |
+| `matchups.beats[]`, `losesTo[]` | Espécies associadas a vitórias/derrotas, em ordem de frequência | Sim, listas separadas e identificadas como parciais | Não é uma tabela completa de tipos ou todos os confrontos |
+| `beatsGames[]`, `losesToGames[]` | Jogos ganhos/perdidos alinhados às listas | Sim, junto à espécie correspondente | São contagens da relação, não total de partidas; algumas posições podem ser `null` |
+| `beatsWith[]`, `beatenBy[]` | Golpes próprios em vitórias e golpes adversários em derrotas | Sim, em listas distintas | `percent` é dentro de vitórias/derrotas, não win rate |
 
 ### Ladder de jogadores
 
 | Campo | O que a fonte entrega | No Spinda Stop | Lacuna ou cuidado |
 |---|---|---|---|
-| `/ladder.json`: `format`, `ranks`, `capturedAt`, `comparedTo`, `count` | Captura separada do ladder Doubles | Nada ainda | `count` atual da resposta observada: 1000 jogadores |
-| `entries[].rank`, `previousRank`, `id`, `name`, `rating` | Posição, anterior, ID, nome e rating | Nada ainda | Usar `id` para identificar jogador; nomes podem repetir |
-| `wins`, `losses`, `draws`, `battles`, `winRate` | Registro e taxa de vitórias | Nada ainda | A documentação define `battles` e `winRate` como derivados; `winRate = wins / battles` |
-| `country`, `language` | Objetos com `code`, `name`, `flag` e, quando disponível, `iso` | Nada ainda | `country.code` não é ISO de país; agrupar por `name` |
-| `avatar` | Índice de avatar do jogo | Nada ainda | A API não fornece a imagem desse avatar |
-| `ratingHistory` | Campo observado na resposta real, com `at`, `avg`, `n`, `ranks` | Nada ainda | Campo não descrito no guia; sem interpretação até a fonte esclarecer |
+| `/ladder.json`: `format`, `ranks`, `capturedAt`, `comparedTo`, `count` | Captura separada do ladder Doubles | Sim, período e entradas da resposta visíveis | `count` mede jogadores listados, não amostra de Pokémon; a publicação documenta até 1.000 jogadores |
+| `entries[].rank`, `previousRank`, `id`, `name`, `rating` | Posição atual/anterior, ID, nome e rating | Sim | `id` identifica jogador; nomes podem repetir; ausência e `null` em `previousRank` têm significados diferentes |
+| `wins`, `losses`, `draws`, `battles`, `winRate` | Registro e taxa de vitórias | Sim | A documentação define `battles` e `winRate` como derivados; `winRate = wins / battles` |
+| `country`, `language` | Objetos com `code`, `name`, `flag` e, quando disponível, `iso` | Sim, filtros por país e idioma e nomes/flags | `country.code` não é ISO de país; agrupamento e filtro usam nome, nunca o código interno |
+| `avatar` | Índice de avatar do jogo | Sim, exibido como número | A API não fornece a imagem desse avatar |
+| `ratingHistory` | Campo observado na resposta real, com `at`, `avg`, `n`, `ranks` | Não | Campo não descrito no guia; não exibir até a fonte esclarecer a semântica |
 
 ### Campos anunciados mas ainda sem semântica suficiente
 
@@ -163,8 +163,8 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | Filtro por golpe, item e habilidade | Há distribuições por espécie; o índice Battle Data e o arquivo `all.json` MetaRoll publicam esses valores | PR #4 e PR #5 usam apenas valores presentes na fonte selecionada |
 | Parceiros, nature e spreads | As duas fontes fornecem parte ou todos esses campos, com definições diferentes | PR #4 e PR #5 mostram cada fonte em separado |
 | Histórico por temporada/data | Ambas têm snapshots, cada qual com calendário e rótulos próprios | PR #4 e PR #5 mantêm períodos separados |
-| Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #6, separado e rotulado como MetaRoll |
-| Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #6; não usar esse `count` para estatística de Pokémon |
+| Matchups | MetaRoll publica listas parciais e contagens; Battle Data não publica esse campo | PR #6, separado, rotulado e com os limites ao lado dos números |
+| Ladder de jogadores | MetaRoll publica até 1000 entradas; Battle Data não | PR #6, tela e filtros próprios; `count` não é usado como estatística de Pokémon |
 | Aluguel de times/rentals | Nenhuma das duas APIs avaliadas fornece times de aluguel | Sem fonte; fora do escopo competitivo desta integração |
 | Contas, salas e pareamento | Nenhuma das APIs oferece identidade ou salas do Spinda Stop | Etapa comunitária própria |
 | Calculadora de dano | Nenhuma API substitui regras oficiais e um modelo de dano validado | Etapa própria; fontes de uso não serão usadas como fórmula |
@@ -185,7 +185,7 @@ O `index.json` consultado anunciava `megas` e `ladderCutoffs`, ausentes da lista
 | #3 — Matriz de cobertura competitiva | Este inventário de campos, decisão e lacunas do Silph Scope | Documentação; sem dados novos na interface |
 | #4 — Perfil e histórico Battle Data | Facetas de tipo/golpe/item/habilidade, ficha completa por Pokémon, consultas por temporada e snapshots diários | Battle Data; Doubles; dados limitados às respostas disponíveis |
 | #5 — MetaRoll: fichas e histórico | Adaptador próprio; perfil, ranking de espécies, histórico diário e temporadas arquivadas | Captura e atribuição próprias; sem tipo no arquivo |
-| #6 — MetaRoll: matchups e ladder | Matchups publicados e até mil jogadores no ladder Doubles | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
+| #6 — MetaRoll: matchups e ladder | Matchups publicados, top de jogadores e filtros por país/idioma/posição/rating/partidas/taxa | Separados da distribuição de Pokémon; sem ladder de jogadores na Battle Data |
 | #7 — Tendências a partir do time | Acesso do builder à ficha de cada integrante, sem escolher ou preencher um set automaticamente | Navegação contextual para a fonte ativa e seu período |
 | #8 — Calculadora completa | Regras, fórmulas e casos de dano verificados | Não depende de percentuais de usage |
 | #9 — Contas e salas | Identidade, salas, inscrição, pareamento e resultados | Exige decisões de hospedagem, privacidade e moderação |
