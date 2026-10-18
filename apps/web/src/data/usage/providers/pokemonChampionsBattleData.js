@@ -1,6 +1,7 @@
 const API_BASE_URL = "https://championsbattledata.com";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 16;
+const REQUEST_TIMEOUT_MS = 25000;
 const responseCache = new Map();
 const inFlightRequests = new Map();
 
@@ -18,6 +19,18 @@ const FILTER_CATEGORIES = [
   ["held_item", "items"],
   ["ability", "abilities"],
 ];
+
+export function withRequestTimeout(promise, timeoutMs, onTimeout = () => {}) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      onTimeout();
+      reject(new Error("A fonte demorou a responder."));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
 
 export const pokemonChampionsBattleDataSource = Object.freeze({
   id: "pokemon-champions-battle-data",
@@ -106,26 +119,26 @@ async function requestJson(path, force = false) {
 
   const request = (async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
-      const response = await fetch(API_BASE_URL + path, {
+      const dataPromise = fetch(API_BASE_URL + path, {
         headers: { Accept: "application/json" },
         cache: "no-store",
         signal: controller.signal,
+      }).then((response) => {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
       });
-
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const data = await response.json();
+      const data = await withRequestTimeout(dataPromise, REQUEST_TIMEOUT_MS, () => controller.abort());
       rememberResponse(path, data);
       return data;
     } catch (error) {
+      if (error.message === "A fonte demorou a responder.") throw error;
       if (error.name === "AbortError") {
         throw new Error("A fonte demorou a responder.", { cause: error });
       }
       throw error;
     } finally {
-      clearTimeout(timeoutId);
       inFlightRequests.delete(path);
     }
   })();
