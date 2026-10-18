@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -60,7 +60,6 @@ test("converte Stat Points em stats de nível 50 no caso cruzado com OP.GG", () 
     attacker: side("Garchomp", {
       nature: "Jolly",
       ability: "Rough Skin",
-      item: "Garchompite Z",
       statPoints: { hp: 2, atk: 32, spe: 32 },
     }),
     defender: side("Garchomp", {
@@ -146,7 +145,8 @@ test("reproduz a faixa Doubles pública do Earthquake contra um alvo", () => {
   assert.deepEqual([result.min, result.max], [67, 79]);
   assert.equal(result.rolls.length, 16);
   assert.deepEqual(result.rolls, [67, 67, 69, 69, 70, 70, 72, 72, 73, 73, 75, 75, 76, 76, 78, 79]);
-  assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: { successes: 0, total: 256 } });
+  assert.equal(result.koProbabilities, null);
+  assert.ok(result.koProbabilityNotes.some((note) => note.includes("item")));
 });
 
 test("identifica os modificadores de campo que o motor realmente aplicou", () => {
@@ -221,6 +221,35 @@ test("golpe multi-hit usa apenas quantidades permitidas pela entrada do motor", 
   assert.equal(result.rolls, null);
   assert.equal(result.koProbabilities, null);
   assert.ok(result.min > 0);
+
+  const referenceCase = calculateChampionsDamage({
+    attacker: side("Rillaboom", { nature: "Hardy", statPoints: { hp: 2, atk: 32, spe: 32 } }),
+    defender: side("Garchomp", { statPoints: { hp: 2 } }),
+    gameType: "Doubles",
+    move: "Bullet Seed",
+    hits: 5,
+  });
+  assert.deepEqual([referenceCase.min, referenceCase.max], [110, 135]);
+  assert.deepEqual(referenceCase.hitRanges, [[22, 27], [22, 27], [22, 27], [22, 27], [22, 27]]);
+});
+
+test("Sand Force e Sand aplicam a faixa pública de Earthquake em Mega Garchomp", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp-Mega", {
+      nature: "Hardy",
+      ability: "Sand Force",
+      item: "Garchompite",
+      statPoints: { hp: 2, atk: 32, spe: 32 },
+    }),
+    defender: side("Garchomp", { nature: "Hardy", statPoints: { hp: 2 } }),
+    move: "Earthquake",
+    gameType: "Doubles",
+    weather: "Sand",
+  });
+
+  assert.deepEqual([result.min, result.max], [106, 126]);
+  assert.deepEqual(result.attacker.stats, { hp: 185, atk: 222, def: 135, spa: 140, spd: 115, spe: 144 });
+  assert.ok(result.activeModifiers.some(({ label, factor }) => label === "Habilidade do atacante" && factor.startsWith("Sand Force")));
 });
 
 test("Parental Bond identifica o golpe adicional sem classificá-lo como acerto configurado", () => {
@@ -261,13 +290,11 @@ test("a chance condicional de 2HKO reproduz 237/256 no caso cruzado com OP.GG", 
     attacker: side("Garchomp", {
       nature: "Jolly",
       ability: "Rough Skin",
-      item: "Garchompite Z",
       statPoints: { hp: 2, atk: 32, spe: 32 },
     }),
     defender: side("Garchomp", {
       nature: "Jolly",
       ability: "Rough Skin",
-      item: "Garchompite Z",
       statPoints: { hp: 2 },
     }),
     move: "Earthquake",
@@ -277,6 +304,109 @@ test("a chance condicional de 2HKO reproduz 237/256 no caso cruzado com OP.GG", 
   assert.deepEqual(result.rolls, [90, 91, 91, 93, 94, 94, 96, 97, 99, 99, 100, 102, 102, 103, 105, 106]);
   assert.equal(result.defender.stats.hp, 185);
   assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: { successes: 237, total: 256 } });
+});
+
+test("omite probabilidades de KO quando o cenário muda entre os turnos", () => {
+  const weather = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp"),
+    move: "Earthquake",
+    weather: "Sand",
+  });
+  const sturdy = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Garchomp", { ability: "Sturdy" }),
+    move: "Earthquake",
+  });
+  const defaultDisguise = calculateChampionsDamage({
+    attacker: side("Garchomp"),
+    defender: side("Mimikyu"),
+    move: "Shadow Claw",
+  });
+
+  assert.deepEqual(weather.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: null });
+  assert.ok(weather.koProbabilityNotes.some((note) => note.includes("campo")));
+  assert.deepEqual(sturdy.koProbabilities?.ohko, null);
+  assert.ok(sturdy.koProbabilities?.twoHit);
+  assert.ok(sturdy.koProbabilityNotes.some((note) => note.includes("Sturdy")));
+  assert.equal(defaultDisguise.defender.ability, "Disguise");
+  assert.equal(defaultDisguise.koProbabilities, null);
+  assert.ok(defaultDisguise.koProbabilityNotes.some((note) => note.includes("habilidade do alvo")));
+});
+
+test("omite 2HKO quando um golpe de contato ativa Wandering Spirit", () => {
+  const input = {
+    attacker: side("Azumarill", {
+      nature: "Adamant",
+      ability: "Huge Power",
+      statPoints: { atk: 14 },
+    }),
+    defender: side("Runerigus", { statPoints: { hp: 2 } }),
+    move: "Play Rough",
+    gameType: "Singles",
+  };
+  const contact = calculateChampionsDamage(input);
+  const nonContact = calculateChampionsDamage({ ...input, move: "Earthquake" });
+
+  assert.equal(contact.defender.ability, "Wandering Spirit");
+  assert.deepEqual([contact.min, contact.max], [58, 69]);
+  assert.equal(contact.koProbabilities?.ohko?.total, 16);
+  assert.equal(contact.koProbabilities?.twoHit, null);
+  assert.ok(contact.koProbabilityNotes.some((note) => note.includes("Wandering Spirit")));
+  assert.equal(nonContact.koProbabilities?.twoHit?.total, 256);
+});
+
+test("mantém OHKO e omite 2HKO quando Sand Spit muda o clima", () => {
+  const result = calculateChampionsDamage({
+    attacker: side("Garchomp-Mega", { ability: "Sand Force" }),
+    defender: side("Sandaconda", { statPoints: { hp: 4 } }),
+    move: "Earthquake",
+    gameType: "Singles",
+  });
+
+  assert.equal(result.defender.ability, "Sand Spit");
+  assert.deepEqual([result.min, result.max], [75, 88]);
+  assert.deepEqual(result.koProbabilities, { ohko: { successes: 0, total: 16 }, twoHit: null });
+  assert.ok(result.koProbabilityNotes.some((note) => note.includes("Sand Spit") && note.includes("campo")));
+});
+
+test("omite 2HKO quando Seed Sower muda o terreno após Wood Hammer", () => {
+  const input = {
+    attacker: side("Rillaboom", { nature: "Adamant", statPoints: { atk: 32 } }),
+    defender: side("Arboliva"),
+    move: "Wood Hammer",
+    gameType: "Singles",
+  };
+  const first = calculateChampionsDamage(input);
+  const second = calculateChampionsDamage({ ...input, terrain: "Grassy" });
+  const pairsAfterTerrainChange = first.rolls.reduce((total, firstRoll) => (
+    total + second.rolls.filter((secondRoll) => firstRoll + secondRoll >= first.defender.stats.hp).length
+  ), 0);
+
+  assert.equal(first.defender.ability, "Seed Sower");
+  assert.deepEqual([first.min, first.max], [60, 71]);
+  assert.deepEqual([second.min, second.max], [78, 92]);
+  assert.equal(pairsAfterTerrainChange, 83);
+  assert.equal(first.koProbabilities?.twoHit, null);
+  assert.ok(first.koProbabilityNotes.some((note) => note.includes("Seed Sower") && note.includes("campo")));
+});
+
+test("omite 2HKO quando o golpe reduz o atributo ofensivo do próximo uso", () => {
+  const attacker = side("Garchomp");
+  const defender = side("Glaceon");
+  const first = calculateChampionsDamage({ attacker, defender, move: "Draco Meteor", gameType: "Singles" });
+  const reducedAttacker = side("Garchomp");
+  reducedAttacker.boosts.spa = -2;
+  const second = calculateChampionsDamage({ attacker: reducedAttacker, defender, move: "Draco Meteor", gameType: "Singles" });
+  const pairsAfterDrop = first.rolls.reduce((total, firstRoll) => (
+    total + second.rolls.filter((secondRoll) => firstRoll + secondRoll >= first.defender.stats.hp).length
+  ), 0);
+
+  assert.deepEqual([first.min, first.max], [64, 76]);
+  assert.deepEqual([second.min, second.max], [33, 39]);
+  assert.equal(pairsAfterDrop, 0);
+  assert.equal(first.koProbabilities?.twoHit, null);
+  assert.ok(first.koProbabilityNotes.some((note) => note.includes("Draco Meteor") && note.includes("atributo ofensivo")));
 });
 
 test("valida espécie e Stat Points antes de calcular", () => {
@@ -347,6 +477,26 @@ test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
     defenderSpd: "16",
     move: "Earthquake",
   });
+});
+
+test("copiar um cenário deixa os dois sets e condições independentes", () => {
+  const original = {
+    attacker: side("Garchomp", { statPoints: { atk: 32 } }),
+    defender: side("Gardevoir-Mega", { item: "Gardevoirite" }),
+    attackerSide: { isHelpingHand: true },
+    defenderSide: { isReflect: true },
+    move: "Earthquake",
+    weather: "",
+  };
+  const comparison = cloneDamageScenario(original);
+  comparison.attacker.statPoints.atk = 0;
+  comparison.defender.species = "Garchomp";
+  comparison.attackerSide.isHelpingHand = false;
+
+  assert.equal(original.attacker.statPoints.atk, 32);
+  assert.equal(original.defender.species, "Gardevoir-Mega");
+  assert.equal(original.attackerSide.isHelpingHand, true);
+  assert.equal(original.defenderSide.isReflect, true);
 });
 
 test("golpes sem dano direto não são apresentados como uma faixa de dano", () => {

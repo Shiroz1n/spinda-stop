@@ -47,9 +47,29 @@ export function buildDamageCalculatorSearch(attacker, defender, move = "") {
   return params.toString();
 }
 
+export function cloneDamageScenario(scenario) {
+  return {
+    ...scenario,
+    attacker: { ...scenario.attacker, statPoints: { ...scenario.attacker.statPoints }, boosts: { ...scenario.attacker.boosts } },
+    defender: { ...scenario.defender, statPoints: { ...scenario.defender.statPoints }, boosts: { ...scenario.defender.boosts } },
+    attackerSide: { ...scenario.attackerSide },
+    defenderSide: { ...scenario.defenderSide },
+  };
+}
+
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
 const boostKeys = ["atk", "def", "spa", "spd", "spe"];
 const spreadTargets = new Set(["allAdjacent", "allAdjacentFoes"]);
+const firstHitChangingAbilities = new Set([
+  "disguise", "iceface", "multiscale", "shadowshield",
+]);
+const repeatedDamageChangingAbilities = new Set([
+  "angershell", "colorchange", "emergencyexit", "sandspit", "seedsower", "stamina", "weakarmor", "wimpout",
+]);
+const contactReactiveAbilities = new Set([
+  "cursedbody", "effectspore", "flamebody", "gooey", "ironbarbs", "mummy", "perishbody",
+  "pickpocket", "poisonpoint", "roughskin", "static", "tanglinghair", "wanderingspirit",
+]);
 const modifierLabels = {
   isAuroraVeil: "Aurora Veil",
   isBattery: "Battery",
@@ -97,6 +117,47 @@ function normalizeStatPoints(values = {}) {
     }
     return [stat, value];
   }));
+}
+
+function getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender) {
+  const defenderAbility = toID(defender.ability || input.defender?.ability || "");
+  const defenderItem = toID(defender.item || input.defender?.item || "");
+  const attackerItem = toID(attacker.item || input.attacker?.item || "");
+  const defenderStatus = defender.status || input.defender?.status || "";
+  const attackerStatus = attacker.status || input.attacker?.status || "";
+  const hasFieldCondition = Object.values(input.attackerSide || {}).some(Boolean)
+    || Object.values(input.defenderSide || {}).some(Boolean);
+  const changesFirstHit = firstHitChangingAbilities.has(defenderAbility);
+  const changesAfterHit = repeatedDamageChangingAbilities.has(defenderAbility);
+  const contactAbilityChangesNextHit = Boolean(moveData.flags?.contact)
+    && contactReactiveAbilities.has(defenderAbility);
+  const offensiveStat = moveData.overrideOffensiveStat
+    || (moveData.category === "Physical" ? "atk" : "spa");
+  const moveLowersOffense = Number(moveData.self?.boosts?.[offensiveStat] || 0) < 0;
+  const hasDefenderItem = Boolean(defenderItem);
+  const simpleSingleHit = hits === 1 && !hasParentalBondFollowUp && moveData.category !== "Status";
+  const notes = [];
+  if (!simpleSingleHit) notes.push("Estimativas de KO só são mostradas para golpes de dano com um acerto, sem o golpe adicional de Parental Bond.");
+  if (defenderAbility === "sturdy") notes.push("OHKO omitido: Sturdy pode deixar o alvo com 1 HP.");
+  if (defenderItem === "focussash") notes.push("OHKO omitido: Focus Sash pode deixar o alvo com 1 HP.");
+  if (changesFirstHit) notes.push("Estimativas de KO omitidas: a habilidade do alvo altera ou impede o dano do primeiro golpe.");
+  if (changesAfterHit) notes.push(`2HKO omitido: ${defender.ability} pode mudar o dano ou o campo após o primeiro golpe.`);
+  if (contactAbilityChangesNextHit) {
+    notes.push(`2HKO omitido: ${defender.ability} pode afetar o atacante ou o próximo golpe após um contato.`);
+  }
+  if (moveLowersOffense) {
+    notes.push(`2HKO omitido: ${moveData.name} reduz o atributo ofensivo do atacante após o uso.`);
+  }
+  if (hasDefenderItem) notes.push("Estimativas de KO omitidas quando o alvo tem item, pois recuperação, berries e efeitos de sobrevivência alteram a sequência.");
+  if (attackerStatus || defenderStatus || input.weather || input.terrain || hasFieldCondition || attackerItem) {
+    notes.push("2HKO omitido: itens, status ou condições de campo podem mudar entre turnos ou alterar o HP antes do segundo golpe.");
+  }
+  return {
+    ohko: simpleSingleHit && defenderAbility !== "sturdy" && defenderItem !== "focussash" && !changesFirstHit && !hasDefenderItem,
+    twoHit: simpleSingleHit && !changesFirstHit && !changesAfterHit && !contactAbilityChangesNextHit && !moveLowersOffense && !hasDefenderItem && !attackerItem
+      && !attackerStatus && !defenderStatus && !input.weather && !input.terrain && !hasFieldCondition,
+    notes,
+  };
 }
 
 function normalizeBoosts(values = {}) {
@@ -157,7 +218,7 @@ function getActiveModifiers(rawDesc, { gameType, moveData, isSpread, typeEffecti
   }
   if (rawDesc.isFriendGuard) modifiers.push({ label: "Friend Guard", factor: "0,75× no dano final" });
   if (rawDesc.isBurned) modifiers.push({ label: "Queimadura", factor: "0,5× no dano físico final" });
-  if (typeEffectiveness !== null && typeEffectiveness !== 1) {
+  if (typeEffectiveness !== null) {
     modifiers.push({ label: "Efetividade base de tipo", factor: `${typeEffectiveness}×` });
   }
   if (rawDesc.stabFactor) modifiers.push({ label: "STAB", factor: rawDesc.stabFactor });
@@ -255,16 +316,19 @@ export function calculateChampionsDamage(input) {
   if (hasStab) {
     const stabFactor = attacker.hasAbility("Adaptability") ? "2×" : "1,5×";
     result.rawDesc.stabFactor = stabFactor;
+  } else if (!result.rawDesc.stabFactor) {
+    result.rawDesc.stabFactor = "1× (sem STAB)";
   }
   const hasRollDistribution = moveData.category !== "Status" && rollGroups.length === 1 && Array.isArray(rollGroups[0]) && rollGroups[0].length === 16;
   const rolls = hasRollDistribution ? rollGroups[0] : null;
-  const koProbabilities = hasRollDistribution && max > 0 ? (() => {
+  const koEligibility = getKnockoutProbabilityEligibility(input, moveData, hits, hasParentalBondFollowUp, attacker, defender);
+  const koProbabilities = hasRollDistribution && max > 0 && (koEligibility.ohko || koEligibility.twoHit) ? (() => {
     const hp = defender.stats.hp;
     const ohkoRolls = rolls.filter((roll) => roll >= hp).length;
     const twoHitPairs = rolls.reduce((total, first) => total + rolls.filter((second) => first + second >= hp).length, 0);
     return {
-      ohko: { successes: ohkoRolls, total: 16 },
-      twoHit: { successes: twoHitPairs, total: 256 },
+      ohko: koEligibility.ohko ? { successes: ohkoRolls, total: 16 } : null,
+      twoHit: koEligibility.twoHit ? { successes: twoHitPairs, total: 256 } : null,
     };
   })() : null;
 
@@ -277,11 +341,14 @@ export function calculateChampionsDamage(input) {
     hits,
     hasParentalBondFollowUp,
     isSpread,
+    koProbabilityNotes: hasRollDistribution ? koEligibility.notes : [],
     koProbabilities,
     maxPercent: defender.stats.hp ? (max / defender.stats.hp) * 100 : 0,
     min,
     minPercent: defender.stats.hp ? (min / defender.stats.hp) * 100 : 0,
     move: moveData,
+    effectiveMoveType,
+    typeEffectiveness,
     rollGroups: rollGroups.map((group) => Array.isArray(group) ? group : [group]),
     rollGroupLabels,
     rolls,

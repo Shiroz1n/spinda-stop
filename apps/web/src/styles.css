@@ -667,6 +667,7 @@ p { max-width: 72ch; }
 .damage-comparison-controls { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); }
 .damage-comparison-controls > p { margin: 2px 0 12px; color: var(--muted); font-size: 0.83rem; line-height: 1.45; }
 .damage-comparison-fields { display: grid; grid-template-columns: minmax(210px, 1.4fr) repeat(2, minmax(130px, 0.8fr)); align-items: end; gap: 10px 12px; padding-bottom: 5px; }
+.damage-comparison-team { margin-top: 12px; }
 .damage-comparison-note { margin: 18px 0 0; padding: 10px 13px; border: 1px solid #8b6c2a; background: #f5e9bd; color: #44350f; font-size: 0.86rem; line-height: 1.45; }
 .damage-comparison-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; }
 .damage-comparison-results .damage-result { min-width: 0; }
