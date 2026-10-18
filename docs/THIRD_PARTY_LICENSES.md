@@ -1,5 +1,9 @@
 # Licenças de dependências
 
+## Identidade visual do Spinda Stop
+
+`apps/web/public/spinda-stop-mascot.svg`, favicons e ícones PNG são desenhos originais em pixel art criados para este repositório. Não incorporam sprites oficiais nem dependem de imagens remotas. O nome Pokémon aparece apenas para identificar o tema do app; marcas e personagens continuam pertencendo a seus titulares.
+
 ## `@smogon/calc` 0.12.0
 
 O motor de cálculo está disponível sob a licença MIT. A origem é [smogon/damage-calc](https://github.com/smogon/damage-calc); o arquivo de licença oficial está em [LICENSE](https://github.com/smogon/damage-calc/blob/master/LICENSE). O pacote publica a licença como MIT nos metadados do npm.

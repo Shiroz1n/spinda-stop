@@ -2,6 +2,8 @@
 
 Uma oficina independente para explorar Pokémon, montar times e, mais adiante, organizar torneios comunitários de Pokémon Champions. Doubles é o primeiro formato. O projeto não tem vínculo com The Pokémon Company, Nintendo, Creatures ou GAME FREAK.
 
+A interface usa uma paleta quente, bordas quadradas e detalhes pixel art próprios, com referências gerais a RPGs portáteis da era GBA. O mascote e os ícones são desenhos originais do projeto; nenhum sprite oficial é redistribuído.
+
 ## O que já funciona
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
