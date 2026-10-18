@@ -7,7 +7,9 @@ import moveData from "@spinda-stop/data/moves";
 import natureData from "@spinda-stop/data/natures";
 import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
+import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { buildDamageCalculatorSearch } from "../data/damageCalculator.js";
+import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
 const STAT_FIELDS = [
@@ -207,6 +209,21 @@ export function BuilderPage() {
     updateMember({ moves });
   }
 
+  async function saveTeamToAccount(visibility) {
+    await communityRequest("/teams", { method: "POST", body: { visibility, data: team } });
+  }
+
+  function loadAccountTeam(savedTeam) {
+    const result = parseTeam(JSON.stringify(savedTeam), dexData.pokemon);
+    if (!result.ok) {
+      setMessage(`Não foi possível carregar a equipe: ${result.error}`);
+      return;
+    }
+    commitTeam(result.value);
+    setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
+    setMessage("Equipe da conta carregada para este rascunho local.");
+  }
+
   const filledSlots = team.members.filter(Boolean).length;
   const pointTotal = selectedMember
     ? Object.values(selectedMember.statPoints).reduce((sum, value) => sum + value, 0)
@@ -242,6 +259,8 @@ export function BuilderPage() {
           <span className="save-status"><span className="status-dot" />{saveStatus}</span>
         </div>
       </div>
+
+      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
 
       <section className="builder-workspace">
         <div className="slot-column">

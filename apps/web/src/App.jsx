@@ -8,6 +8,9 @@ const DexDetailPage = lazy(() => import("./pages/DexDetailPage.jsx").then((modul
 const DexPage = lazy(() => import("./pages/DexPage.jsx").then((module) => ({ default: module.DexPage })));
 const HomePage = lazy(() => import("./pages/HomePage.jsx").then((module) => ({ default: module.HomePage })));
 const UsagePage = lazy(() => import("./pages/UsagePage.jsx").then((module) => ({ default: module.UsagePage })));
+const RoomsPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomsPage })));
+const RoomJoinPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomJoinPage })));
+const RoomDetailPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) => ({ default: module.RoomDetailPage })));
 
 function NotFoundPage() {
   return (
@@ -30,6 +33,9 @@ export default function App() {
           <Route path="/usage" element={<UsagePage />} />
           <Route path="/builder" element={<BuilderPage />} />
           <Route path="/calculator" element={<DamageCalculatorPage />} />
+          <Route path="/rooms" element={<RoomsPage />} />
+          <Route path="/rooms/join" element={<RoomJoinPage />} />
+          <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

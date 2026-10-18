@@ -7,6 +7,7 @@ const navigation = [
   { to: "/usage", label: "Usage" },
   { to: "/builder", label: "Construtor" },
   { to: "/calculator", label: "Dano" },
+  { to: "/rooms", label: "Salas" },
 ];
 
 export function AppShell({ children }) {

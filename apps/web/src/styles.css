@@ -894,3 +894,81 @@ select,
   .button:hover:not(:disabled),
   .button:active:not(:disabled) { transform: none; }
 }
+
+.community-page { max-width: 1120px; }
+.community-heading { align-items: center; }
+.community-account-actions { display: flex; align-items: center; gap: 12px; }
+.community-account-chip, .community-create-card .section-heading > span, .community-room-panel .section-heading > span { padding: 5px 8px; border: 1px solid var(--line); background: var(--surface-alt); font-size: 0.74rem; font-weight: 800; }
+.community-auth-card { max-width: 680px; padding: clamp(20px, 4vw, 38px); }
+.community-card-label { display: inline-block; margin-bottom: 12px; color: var(--fire-ink); font-size: 0.75rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.06em; }
+.community-auth-card h2 { margin-bottom: 12px; font-size: clamp(1.35rem, 3vw, 1.8rem); }
+.community-auth-card > p { margin-bottom: 18px; color: var(--muted); }
+.community-auth-card .text-button { display: block; margin-top: 14px; }
+.community-config-note, .community-muted, .community-empty, .community-privacy-note, .community-dispute-note { color: var(--muted); font-size: 0.88rem; }
+.community-config-note { padding: 12px; border-left: 4px solid var(--gold); background: #f7edce; }
+.community-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.community-create-card, .community-rooms-card, .community-room-panel { min-width: 0; padding: 18px; border: 2px solid var(--ink); background: var(--surface); box-shadow: var(--pixel-edge); }
+.community-dashboard .community-create-card, .community-dashboard .community-rooms-card { align-self: start; }
+.community-create-card .section-heading, .community-rooms-card .section-heading, .community-room-panel .section-heading, .team-account-panel .section-heading { align-items: center; margin-bottom: 12px; }
+.community-create-card .community-muted { margin-bottom: 14px; }
+.community-create-form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
+.community-field { min-width: 0; display: grid; gap: 5px; font-size: 0.79rem; font-weight: 800; }
+.community-create-form .community-field { flex: 1 1 230px; }
+.community-room-list, .participant-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.community-room-list > li, .participant-list > li { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px; border: 1px solid var(--line); background: var(--surface-alt); }
+.community-room-list > li > div, .participant-list > li > div { min-width: 0; display: grid; gap: 2px; }
+.community-room-list strong, .participant-list strong { overflow-wrap: anywhere; }
+.community-room-list span, .participant-list span { color: var(--muted); font-size: 0.76rem; overflow-wrap: anywhere; }
+.community-empty { margin: 4px 0; }
+.community-privacy-note { margin: 20px 0 0; padding: 11px 13px; border-left: 4px solid var(--green); background: #e9efdc; }
+.community-error, .community-inline-error { color: #7b211d; border-left: 4px solid var(--coral-dark); padding: 9px 12px; background: #f8e2d7; font-size: 0.88rem; }
+.community-success { padding: 8px 11px; border: 1px solid var(--green); background: #e5efdb; color: #214a32; font-weight: 700; }
+.community-loading { padding: 16px; border: 1px dashed var(--line); background: var(--surface); }
+.community-room-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.community-room-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 16px; align-items: start; }
+.community-room-panel { display: grid; align-content: start; gap: 12px; }
+.community-room-panel .section-heading { align-items: flex-start; }
+.community-room-panel .section-heading > span { max-width: 210px; text-align: center; }
+.invite-copy-row, .team-account-actions { display: flex; align-items: flex-end; gap: 8px; }
+.invite-copy-row .text-input { flex: 1; min-width: 0; font-size: 0.78rem; }
+.friend-code-form, .community-match-form, .moderator-resolution { display: grid; gap: 9px; padding-top: 12px; border-top: 1px solid var(--line); }
+.friend-code-form small { color: var(--muted); font-size: 0.74rem; }
+.friend-code-value { color: var(--ink) !important; font-weight: 750; }
+.community-room-panel > .button { justify-self: start; }
+.community-cancel { justify-self: start; color: var(--fire-ink); }
+.match-card { display: grid; gap: 12px; }
+.match-card > p { margin-bottom: 0; }
+.match-card > strong { width: fit-content; padding: 5px 8px; border: 1px solid var(--gold); background: #f8edc8; }
+.community-match-actions { display: grid; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.community-match-actions form { display: grid; gap: 8px; }
+.community-match-actions textarea, .moderator-resolution textarea { resize: vertical; min-height: 72px; }
+.moderator-resolution { margin-top: 12px; }
+.moderator-resolution > strong { color: var(--fire-ink); }
+.community-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.community-room-panel .button-small, .community-room-list .button-small { min-height: 36px; }
+.team-account-panel { display: grid; gap: 10px; margin-bottom: 18px; padding: 16px; border: 2px solid var(--ink); background: var(--surface-alt); box-shadow: var(--pixel-edge); }
+.team-account-panel .community-muted { margin: 0; }
+.team-account-actions { flex-wrap: wrap; }
+.team-account-actions .community-field { min-width: min(100%, 230px); flex: 1 1 230px; }
+.account-team-list { display: grid; gap: 6px; }
+.account-team-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); background: var(--surface); }
+.account-team-row > div { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.account-team-row strong { overflow-wrap: anywhere; }
+.account-team-row span { color: var(--muted); font-size: 0.75rem; }
+.account-team-row .text-button { font-size: 0.78rem; }
+
+@media (max-width: 760px) {
+  .community-dashboard, .community-room-grid { grid-template-columns: 1fr; }
+  .community-heading, .community-room-heading { align-items: flex-start; flex-direction: column; }
+  .community-create-card, .community-rooms-card, .community-room-panel { padding: 14px; }
+}
+
+@media (max-width: 520px) {
+  .community-room-list > li, .participant-list > li { align-items: flex-start; }
+  .invite-copy-row, .community-create-form, .team-account-actions { align-items: stretch; flex-direction: column; }
+  .invite-copy-row .button, .community-create-form .button, .team-account-actions .button { width: 100%; }
+  .community-room-panel .section-heading { flex-direction: column; }
+  .community-room-panel .section-heading > span { max-width: 100%; }
+  .account-team-row { align-items: flex-start; flex-wrap: wrap; }
+  .account-team-row > div { flex-basis: 100%; }
+}

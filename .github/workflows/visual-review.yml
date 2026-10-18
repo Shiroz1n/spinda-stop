@@ -10,6 +10,24 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: spinda
+          POSTGRES_PASSWORD: stop
+          POSTGRES_DB: spinda_visual
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U spinda -d spinda_visual"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://spinda:stop@localhost:5432/spinda_visual
+      APP_ORIGIN: http://127.0.0.1:4173
+      FRIEND_CODE_ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -18,6 +36,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: npm run api:migrate
       - run: npm run visual:review
       - uses: actions/upload-artifact@v5
         if: always()
