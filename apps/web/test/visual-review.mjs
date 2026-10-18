@@ -407,7 +407,7 @@ async function runViewport(viewportName, viewport) {
         await safeCapture(page, viewportName, "builder-account-team", { audit: true });
         await page.locator(".account-team-visibility").first().selectOption("public");
         await page.getByRole("button", { name: "Atualizar" }).last().click();
-        await page.getByText("Pública", { exact: true }).waitFor({ state: "visible", timeoutMs: 10_000 });
+        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeoutMs: 10_000 });
         await safeCapture(page, viewportName, "builder-account-public", { audit: true });
       }
     }

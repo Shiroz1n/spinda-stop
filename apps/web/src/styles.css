@@ -952,11 +952,12 @@ select,
 .team-account-actions { flex-wrap: wrap; }
 .team-account-actions .community-field { min-width: min(100%, 230px); flex: 1 1 230px; }
 .account-team-list { display: grid; gap: 6px; }
-.account-team-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); background: var(--surface); }
-.account-team-row > div { min-width: 0; flex: 1; display: grid; gap: 2px; }
+.account-team-row { display: grid; grid-template-columns: minmax(120px, 1fr) auto minmax(180px, 1.3fr) auto auto; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); background: var(--surface); }
+.account-team-row > div { min-width: 0; display: grid; gap: 2px; }
 .account-team-row strong { overflow-wrap: anywhere; }
 .account-team-row span { color: var(--muted); font-size: 0.75rem; }
 .account-team-row .text-button { font-size: 0.78rem; }
+.account-team-row .account-team-visibility { min-width: 0; width: 100%; }
 
 @media (max-width: 760px) {
   .community-dashboard, .community-room-grid { grid-template-columns: 1fr; }
@@ -970,6 +971,8 @@ select,
   .invite-copy-row .button, .community-create-form .button, .team-account-actions .button { width: 100%; }
   .community-room-panel .section-heading { flex-direction: column; }
   .community-room-panel .section-heading > span { max-width: 100%; }
-  .account-team-row { align-items: flex-start; flex-wrap: wrap; }
-  .account-team-row > div { flex-basis: 100%; }
+  .account-team-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .account-team-row > div, .account-team-row .account-team-visibility { grid-column: 1 / -1; }
+  .account-team-row > button:nth-of-type(1), .account-team-row > button:nth-of-type(2) { grid-column: 1; justify-self: start; }
+  .account-team-row > button:nth-of-type(3) { grid-column: 2; justify-self: end; }
 }
