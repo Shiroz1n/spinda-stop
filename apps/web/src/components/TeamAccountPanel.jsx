@@ -90,14 +90,20 @@ export function TeamAccountPanel({ onLoad, onSave }) {
             <button className="button button-primary button-small" type="button" disabled={busy} onClick={saveCopy}>Salvar cópia na conta</button>
           </div>
           {state.actionError ? <p className="community-inline-error" role="alert">{state.actionError}</p> : null}
-          <div className="account-team-list" aria-label="Equipes salvas na conta">
+          <div className="account-team-list" role="list" aria-label="Equipes salvas na conta">
             {state.teams.length ? state.teams.map((saved) => (
-              <div className="account-team-row" key={saved.id}>
+              <div className="account-team-row" role="listitem" key={saved.id}>
                 <div className="account-team-summary"><strong>{saved.name}</strong><span>{saved.visibility === "public" ? "Pública" : "Privada"}</span></div>
-                <div className="account-team-sprites" aria-label={`Integrantes de ${saved.name}`}>
+                <div className="account-team-sprites" role="list" aria-label={`Integrantes de ${saved.name}`}>
                   {(saved.data?.members || []).slice(0, 6).map((member, index) => {
                     const pokemon = dexData.pokemon.find((entry) => entry.slug === member?.pokemonId);
-                    return pokemon ? <PokemonSprite key={`${saved.id}-${index}`} pokemon={pokemon} name={pokemon.name} size={44} decorative /> : <span className="account-team-empty" key={`${saved.id}-${index}`} aria-hidden="true" />;
+                    return (
+                      <span className="account-team-member" role="listitem" key={`${saved.id}-${index}`}>
+                        {pokemon
+                          ? <PokemonSprite pokemon={pokemon} name={pokemon.name} size={44} />
+                          : <span className="account-team-empty" role="img" aria-label={`Posição ${index + 1} vazia`} />}
+                      </span>
+                    );
                   })}
                 </div>
                 <button className="button button-outline button-small" type="button" disabled={busy} onClick={() => onLoad(saved.data)}>Carregar</button>
@@ -108,8 +114,9 @@ export function TeamAccountPanel({ onLoad, onSave }) {
                 <button className="button button-outline button-small" type="button" disabled={busy || (savedVisibility[saved.id] || saved.visibility) === saved.visibility} onClick={() => updateVisibility(saved)}>Atualizar</button>
                 <button className="text-button" type="button" disabled={busy} onClick={() => removeSaved(saved.id)}>Excluir</button>
               </div>
-            )) : <p className="community-muted">Nenhuma cópia na conta ainda.</p>}
+            )) : null}
           </div>
+          {!state.teams.length ? <p className="community-muted">Nenhuma cópia na conta ainda.</p> : null}
           <p className="form-hint">Sets públicos são visíveis a qualquer pessoa. A equipe não é validada como legal ou permitida no jogo.</p>
         </>
       ) : null}

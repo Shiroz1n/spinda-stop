@@ -86,6 +86,37 @@ async function capture(page, viewport, name, { audit = false } = {}) {
   if (overflow > 1) failures.push(`${viewport}/${name} tem ${overflow}px de overflow horizontal.`);
 
   if (audit) {
+    const contrast = await page.evaluate(() => {
+      const luminance = (value) => {
+        const [red, green, blue] = value.match(/[\d.]+/g).slice(0, 3).map(Number).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const ratio = (foreground, background) => {
+        const values = [luminance(foreground), luminance(background)].sort((left, right) => right - left);
+        return Number(((values[0] + 0.05) / (values[1] + 0.05)).toFixed(2));
+      };
+      const checks = [
+        ["navegação desktop", ".site-header .primary-nav .nav-link:not(.is-active)", ".site-header"],
+        ["navegação mobile", ".mobile-primary-nav .mobile-nav-link:not(.is-active)", ".mobile-primary-nav"],
+        ["atribuição no rodapé", ".site-footer a", ".site-footer"],
+      ];
+      return checks.flatMap(([label, textSelector, backgroundSelector]) => {
+        const text = document.querySelector(textSelector);
+        const background = document.querySelector(backgroundSelector);
+        if (!text || !background) return [];
+        const foregroundColor = getComputedStyle(text).color;
+        const backgroundColor = getComputedStyle(background).backgroundColor;
+        return [{ label, ratio: ratio(foregroundColor, backgroundColor), foregroundColor, backgroundColor }];
+      });
+    });
+    observations.push({ viewport, name, contrast });
+    for (const check of contrast) {
+      if (check.ratio < 4.5) failures.push(`${viewport}/${name}: contraste ${check.ratio}:1 em ${check.label}.`);
+    }
+
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -528,11 +559,12 @@ async function runViewport(viewportName, viewport) {
         await safeCapture(page, viewportName, "builder-account-save-error", { audit: true });
       }
       if (await page.locator(".account-team-row").count()) {
-        await page.locator(".account-team-row").first().waitFor({ state: "visible", timeout: 10_000 });
+        const accountTeamRow = page.locator(".account-team-row").first();
+        await accountTeamRow.waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-team", { audit: true });
-        await page.locator(".account-team-visibility").first().selectOption("public");
-        await page.getByRole("button", { name: "Atualizar" }).last().click();
-        await page.locator(".account-team-row > div > span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeout: 10_000 });
+        await accountTeamRow.locator(".account-team-visibility").selectOption("public");
+        await accountTeamRow.getByRole("button", { name: "Atualizar" }).click();
+        await accountTeamRow.locator(".account-team-summary span").filter({ hasText: "Pública" }).waitFor({ state: "visible", timeout: 10_000 });
         await safeCapture(page, viewportName, "builder-account-public", { audit: true });
       }
     }
