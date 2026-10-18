@@ -26,5 +26,7 @@ Tentativas no ambiente:
 - `apt-get update` falhou ao iniciar o usuário isolado `_apt` (`setgroups: Operation not permitted`); não há navegador local instalado.
 - O Chrome remoto funciona, mas expõe viewport fixo de 1363 × 936 e não aceita os atalhos de DevTools enviados pela automação.
 - A criação de uma prévia mais recente pelo conector Vercel foi rejeitada na validação do campo `gitSource`, antes de iniciar um deploy.
+- Uma segunda consulta ao conector Vercel para obter uma prévia da branch retornou `403 Forbidden`; o comando `vercel` não está instalado. Nenhum deploy foi iniciado.
+- A prévia local do Vite iniciou em `localhost:5173`, mas o Chrome remoto não alcança o loopback do ambiente (`ERR_CONNECTION_REFUSED`).
 
-Para conferência local, clone o repositório, execute `npm ci`, depois `npm run dev` e abra o endereço que o Vite imprimir. O teste mobile deve cobrir pelo menos 390 px e 320 px, além de desktop, antes de remover esta pendência.
+Para conferir a branch localmente, use `git clone https://github.com/Shiroz1n/spinda-stop.git`, entre na pasta, execute `git fetch origin feat/calculator-validated-scenarios`, `git switch --track origin/feat/calculator-validated-scenarios`, `npm ci` e `npm run dev`; abra o endereço impresso pelo Vite. No DevTools do navegador, escolha 390 px e 320 px para validar o mobile. A inspeção permanece parcial até que esses fluxos e a comparação sejam vistos em uma viewport estreita.
