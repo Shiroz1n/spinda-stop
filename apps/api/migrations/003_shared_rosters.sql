@@ -34,7 +34,7 @@ $$;
 
 CREATE TRIGGER tournaments_clear_shared_rosters_after_end
   AFTER UPDATE OF status ON tournaments
-  FOR EACH ROW EXECUTE FUNCTION clear_tournament_rosters_after_end();
+  FOR EACH ROW EXECUTE FUNCTION clear_tournament_rosters_after_event_end();
 
 CREATE FUNCTION clear_room_roster_after_member_exit() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
