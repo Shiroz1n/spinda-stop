@@ -2,9 +2,15 @@
 
 ## Identidade visual do Spinda Stop
 
-`apps/web/public/spinda-stop-mascot.svg` é um desenho pixel art original feito para o Spinda Stop, com a silhueta e as manchas assimétricas do Spinda como referência visual. O sprite público consultado no Pokémon Database não tem licença clara de redistribuição concedida pelo titular; nenhum arquivo daquele site foi baixado ou incluído no repositório.
+O cabeçalho mostra o sprite de Spinda `327.png` da coleção Black/White em [PokeAPI/sprites](https://github.com/PokeAPI/sprites/blob/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png). A mesma revisão fornece os sprites de espécie, formas, tipos e itens. O navegador solicita esses arquivos ao host PokeAPI; não servimos uma cópia dos sprites a partir do Spinda Stop.
 
-`favicon.svg`, `favicon-16.svg`, `favicon.ico`, `favicon-16.png`, `favicon-32.png`, `spinda-stop-icon-192.png`, `spinda-stop-icon-512.png` e `apple-touch-icon.png` são artes locais originais ou versões renderizadas do SVG. As imagens não fazem requisições a Pokémon Database. Nomes e personagens da franquia continuam pertencendo a seus titulares; consulte a licença do projeto para o código e a arte original.
+O arquivo [`LICENCE.txt`](https://github.com/PokeAPI/sprites/blob/7a7d66b1620e646f69afd48dc1273da9033ede9c/LICENCE.txt) declara CC0 para o repositório e, ao mesmo tempo, diz que todo o conteúdo de imagens é copyright de The Pokémon Company. Essa declaração do repositório não concede por si só direitos sobre as imagens Pokémon nem afeta marcas. Por isso os sprites são solicitados diretamente ao host PokeAPI; o Spinda Stop não mantém uma cópia local desses arquivos. O mascote visível no cabeçalho é o `327.png` da coleção Black/White no commit fixado acima — não o arquivo indicado pelo link do Pokémon Database.
+
+Os favicons SVG de `favicon.svg` e `favicon-16.svg` são desenhos vetoriais locais inspirados na assimetria do rosto de Spinda. O ícone PNG de 32 px, o ícone de 512 px e o Apple touch icon de 180 px usam uma ilustração pixel art original criada para o Spinda Stop com ImageGen em 18 de outubro de 2026 e convertida com escala nearest-neighbor, sem suavização. Ela foi inspirada no sprite de referência, não é uma cópia dos pixels oficiais. Não há manifesto instalável porque o app ainda não implementa instalação como PWA.
+
+Tipos e itens seguem as mesmas URLs fixadas de PokeAPI/sprites. Se a imagem não carregar ou não existir para a forma específica, a interface mostra o nome e o fallback em vez de trocar silenciosamente pela imagem da forma base. O componente e a lista de IDs usados ficam em `apps/web/src/data/pokemonSprites.js`.
+
+Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares; atribuição ao repositório que hospeda os arquivos não transfere direitos. O MIT deste projeto cobre somente o código original.
 
 ## `@smogon/calc` 0.12.0
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPokedex, parseCsv, POKEAPI_COMMIT } from "../scripts/sync-pokedex.mjs";
+import { buildPokedex, parseCsv, POKEAPI_COMMIT, toDexIndex } from "../scripts/sync-pokedex.mjs";
 
 test("parses quoted commas, escaped quotes, and line breaks", () => {
   const rows = parseCsv('id,name,description\r\n1,"Mr. Mime","line one,\nline ""two"""\r\n');
@@ -33,7 +33,15 @@ test("builds separate species and form identifiers from source CSVs", () => {
   const alolanRaichu = result.pokemon.find((entry) => entry.slug === "raichu-alola");
   assert.equal(alolanRaichu.speciesId, 26);
   assert.equal(alolanRaichu.formId, "alola");
+  assert.equal(alolanRaichu.pokemonId, 10081);
   assert.equal(alolanRaichu.name, "Raichu Alola");
   assert.deepEqual(alolanRaichu.types, ["electric", "psychic"]);
   assert.equal(result.moves[0].name, "Thunderbolt");
+
+  const index = toDexIndex(result.pokemon);
+  assert.deepEqual(index.map((entry) => [entry.slug, entry.spriteId, entry.formId]), [
+    ["pikachu", 25, "default"],
+    ["raichu-alola", 10081, "alola"],
+  ]);
+  assert.equal(index[1].isDefault, false);
 });

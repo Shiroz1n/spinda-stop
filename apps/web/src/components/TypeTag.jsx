@@ -1,3 +1,5 @@
+import { typeIconUrl } from "../data/pokemonSprites.js";
+
 const TYPE_LABELS = {
   normal: "Normal",
   fire: "Fogo",
@@ -23,9 +25,18 @@ const TYPE_LABELS = {
 };
 
 export function typeLabel(type) {
-  return TYPE_LABELS[type] ?? type;
+  const key = typeof type === "string" ? type.toLowerCase() : type;
+  return TYPE_LABELS[key] ?? type;
 }
 
 export function TypeTag({ type }) {
-  return <span className={`type-tag type-${type}`}>{typeLabel(type)}</span>;
+  const key = typeof type === "string" ? type.toLowerCase() : "unknown";
+  const icon = typeIconUrl(key);
+  return (
+    <span className={`type-tag type-${key}`}>
+      {icon ? <img src={icon} alt="" aria-hidden="true" width="18" height="18" loading="lazy" decoding="async" /> : null}
+      <span>{typeLabel(type)}</span>
+    </span>
+  );
 }
+

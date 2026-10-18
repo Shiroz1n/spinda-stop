@@ -2,37 +2,52 @@
 
 ## Ideia
 
-O app é uma bancada de preparação para batalhas: a informação precisa ser rápida de comparar e fácil de editar. A direção usa cores quentes, molduras em degraus, seleção verde, ações em vermelho e bordas duras de RPGs portáteis da era GBA. A linguagem é do Spinda Stop: não reproduz menus, sprites ou telas de Pokémon FireRed nem do Silph Scope.
+O Spinda Stop é uma bancada de preparação com ritmo de RPG portátil. A moldura e a paleta lembram jogos GBA; a hierarquia, os controles e a navegação são de uma aplicação atual. Sprites e filtros ajudam a escolher. A cor nunca é a única forma de identificar tipo, seleção ou estado.
 
-O modo é **Operate**: quem usa está procurando uma espécie ou ajustando um time. A tela prioriza controles conhecidos, densidade útil e estados claros. A captura Silph Scope serve para entender tipos de filtros e volume de informação, não para copiar aparência. O mascote é um desenho pixel art original feito para o projeto; nenhum sprite oficial foi incluído.
+O campo principal usa azul-petróleo, menta e verde. Coral marca ações importantes; amarelo aparece em seleção e aviso. Cartões claros servem para leitura, com seções alternadas em azul ou verde para quebrar a página bege do visual anterior. Bordas em degraus aparecem na marca, nos painéis principais e no foco, sem sombra grande em todos os elementos.
 
-## Tokens iniciais
+Dados, formulários e textos usam uma sans legível. Press Start 2P fica restrita ao nome da marca e a títulos muito curtos. As áreas de toque têm pelo menos 44 px, o foco é visível e a navegação mobile tem uma barra própria.
 
-| Token | Valor | Uso |
+## Regras de composição
+
+- Mostrar o Pokémon antes do detalhe secundário. Listas usam sprite, nome, número e tipo; não escondem a espécie em cartões de texto.
+- A ficha começa com forma, sprite e tipos; stats e dados competitivos vêm em seguida, cada um com sua fonte.
+- O builder mostra os seis integrantes com imagens persistentes. Em mobile, a pessoa escolhe um slot e edita esse set; as seis posições não viram uma coluna de seis formulários.
+- Usage começa com resultados sem filtro. A lista e a ficha ficam lado a lado no desktop; em telas estreitas, a busca, a lista e a ficha viram etapas de navegação com uma seleção clara.
+- A calculadora deixa atacante e alvo visíveis junto ao resultado. Comparar cenários mantém os dois independentes.
+- Salas e torneios priorizam participantes, equipe compartilhada e próxima ação. Equipe só aparece quando a pessoa escolheu compartilhá-la.
+- Estados de carregamento, erro, vazio e indisponibilidade têm linguagem curta e ação próxima. Dados ausentes não recebem barras ou valores inventados.
+
+## Identidade, sprites e formas
+
+O cabeçalho usa o sprite estático do Spinda da coleção Black/White no repositório PokeAPI/sprites, fixado na revisão `7a7d66b1620e646f69afd48dc1273da9033ede9c`. A imagem é carregada diretamente do host PokeAPI; o repositório do Spinda Stop não inclui uma cópia. Os favicons SVG são desenhos vetoriais locais inspirados no rosto assimétrico de Spinda. Os PNGs de 32 e 512 px e o Apple touch icon usam a ilustração pixel art original criada com ImageGen para este projeto, reduzida com nearest-neighbor para manter bordas duras. As origens estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
+
+`PokemonSprite` usa um único mapeamento: ID da PokéAPI para forma base e ID próprio do Pokémon/forma para formas alternativas. Formas Mega, regionais e especiais não herdam a imagem base se a imagem correta não estiver disponível. O fallback mostra uma inicial identificável e informa que o sprite está indisponível. Listas usam carregamento sob demanda e mantêm espaço reservado.
+
+Tipos usam o símbolo de Pokémon Champions hospedado em PokeAPI/sprites, com o nome sempre visível. Itens usam o slug da PokéAPI quando há sprite; nomes continuam disponíveis sem a imagem. A origem e os limites de uso estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
+
+## Paleta
+
+| Token | Valor | Papel |
 |---|---|---|
-| `paper` | `#F3E7C4` | Fundo geral. |
-| `surface` | `#FFF8E9` | Área de trabalho. |
-| `ink` | `#20283A` | Texto e bordas principais. |
-| `blue` | `#2D67A4` | Links e navegação. |
-| `coral` | `#C44033` | Ações principais e estados de atenção. |
-| `green` | `#2C704A` | Seleção e confirmação, com contraste AA no fundo principal. |
-| `gold` | `#785300` | Aviso e dado provisório. |
+| `--paper` | `#dcebe3` | Fundo da página |
+| `--surface` | `#fffef7` | Superfície de leitura |
+| `--surface-alt` | `#edf5ec` | Painéis secundários |
+| `--ink` | `#173745` | Texto principal |
+| `--muted` | `#49636b` | Texto de apoio |
+| `--blue-dark` | `#164c61` | Navegação e links |
+| `--blue` | `#2c7894` | Controles informativos |
+| `--coral` | `#c94f40` | Ação principal |
+| `--coral-dark` | `#a93e33` | Hover de ação |
+| `--green` | `#287453` | Seleção e confirmação |
+| `--gold` | `#72520b` | Avisos |
+| `--focus` | `#a5352b` | Contorno de teclado |
 
-Tipo também aparece por nome. Press Start 2P é usada só na marca; corpo e formulários usam sans do sistema. Números de catálogo usam largura tabular. Molduras quadradas, sombras curtas e áreas de cor se repetem na navegação, cartões, filtros, campos, seleções e resultados. Cabeçalho, botões, abas de Usage, fichas e calculadora usam a mesma paleta.
+## Skills aplicadas
 
-## Mascote e ícones
+- `frontend-design`: a identidade usa uma direção única (arena portátil), tokens compartilhados, tipografia separada por função e composição assimétrica na home e no Usage.
+- `React`: estado permanece junto ao fluxo que o usa; sprites e tipos são componentes específicos do produto; não há memoização sem necessidade medida.
+- `performance-optimizer`: imagens têm dimensão reservada e `loading="lazy"` nas listas; a revisão mede bundle e requisições, sem incluir uma coleção inteira de artes.
+- Rotom Labs: foram consultados `docs/SKILL_ROUTER.md`, `docs/PATTERNS_ANTIPATTERNS.md` e `docs/ROADMAP.md`. As regras aplicadas incluem separar IDs de espécie e forma, não usar sprite base para forma sem imagem exata, conservar a proveniência de cada fonte e tratar estados vazios sem dados de exemplo. `PLANO_MESTRE.md` não está presente neste checkout.
 
-O desenho pixel art em `spinda-stop-mascot.svg` é original para o Spinda Stop. A imagem do Spinda no Pokémon Database foi referência visual; nenhum arquivo do site foi copiado, redistribuído ou carregado de lá. A cabeça clara, as orelhas assimétricas e as manchas desencontradas preservam a ideia de um Spinda sem usar o sprite oficial.
-
-O favicon 16×16 usa uma grade simplificada própria em `favicon-16.svg`; sem antialias, ela conserva olhos, manchas e contorno em poucos pixels. O favicon 32×32, `favicon.ico`, ícones 192×192 e 512×512 e Apple touch icon são servidos localmente a partir do desenho maior. Não há manifesto PWA porque o app ainda não oferece instalação offline.
-
-## Telas de referência
-
-| Tela | Desktop | Mobile |
-|---|---|---|
-| Dex | Filtros ao lado da lista; detalhe em página própria. | Filtros recolhíveis e lista em uma coluna. |
-| Builder | Slots à esquerda, set em foco e resumo do time ao lado. | Seis slots em abas; um set por vez. |
-| Calc | Dois sets lado a lado e distribuição de rolls abaixo. | Alternar atacante/defensor; resumo do resultado fixo. |
-| Lobby | Rodada, participantes e ações do organizador. | Estado da partida primeiro; detalhes abaixo. |
-
-Calc e Lobby são direções documentadas para fases futuras, sem telas fictícias nas etapas em que ainda não existem. Movimento só confirma seleção ou gravação; `prefers-reduced-motion` remove deslocamentos decorativos.
+O catálogo desta sessão não disponibilizou uma skill ou executável chamado Impeccable. Não declaro sua execução. A captura anterior foi usada como anti-referência, e a composição foi refeita para priorizar Pokémon e ações, com inspeção visual em vez de aprovação por lint ou axe. A skill externa de responsividade citada em `docs/SKILL_ROUTER.md` também não estava disponível no leitor; os requisitos de 320 px, toque de 44 px, zoom e teclado foram aplicados como critérios do projeto.

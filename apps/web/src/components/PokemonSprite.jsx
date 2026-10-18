@@ -1,0 +1,52 @@
+import { useState } from "react";
+import { itemSpriteUrl, resolvePokemonSpriteUrl } from "../data/pokemonSprites.js";
+
+export function PokemonSprite({ pokemon, name, size = 72, priority = false, decorative = false, className = "" }) {
+  const label = name || pokemon?.name || pokemon?.speciesName || "Pokémon";
+  const src = resolvePokemonSpriteUrl(pokemon);
+  const [failedSrc, setFailedSrc] = useState("");
+  const failed = !src || failedSrc === src;
+
+  return (
+    <span
+      className={`pokemon-art${failed ? " is-fallback" : ""}${className ? ` ${className}` : ""}`}
+      style={{ "--sprite-size": `${size}px` }}
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : (failed ? `${label}, sprite indisponível` : label)}
+      aria-hidden={decorative || undefined}
+    >
+      {!failed ? (
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          width={size}
+          height={size}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          onError={() => setFailedSrc(src)}
+        />
+      ) : <span className="pokemon-art-fallback" aria-hidden="true">{label.slice(0, 2).toLocaleUpperCase("pt-BR")}</span>}
+    </span>
+  );
+}
+
+export function ItemSprite({ name, size = 24, className = "" }) {
+  const src = itemSpriteUrl(name);
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <img
+      className={`item-sprite${className ? ` ${className}` : ""}`}
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
