@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { calculateChampionsDamage, damageCalculatorCatalog, getDamageMove, getHitOptions } from "../data/damageCalculator.js";
+import { calculateChampionsDamage, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../data/damageCalculator.js";
 
 const statFields = [
   ["hp", "HP"], ["atk", "Atk"], ["def", "Def"],
@@ -39,14 +39,23 @@ function initialForm(search) {
   };
 }
 
-function DataLists() {
+function DataLists({ form }) {
+  const renderSideOptions = (sideName) => {
+    const side = form[sideName];
+    return (
+      <>
+        <datalist id={`damage-${sideName}-species-options`}>{getDamageCatalogOptions("species", side.species).map((name) => <option value={name} key={name} />)}</datalist>
+        <datalist id={`damage-${sideName}-item-options`}>{getDamageCatalogOptions("items", side.item).map((name) => <option value={name} key={name} />)}</datalist>
+        <datalist id={`damage-${sideName}-ability-options`}>{getDamageCatalogOptions("abilities", side.ability).map((name) => <option value={name} key={name} />)}</datalist>
+        <datalist id={`damage-${sideName}-nature-options`}>{getDamageCatalogOptions("natures", side.nature).map((name) => <option value={name} key={name} />)}</datalist>
+      </>
+    );
+  };
   return (
     <div className="damage-datalists">
-      <datalist id="damage-species-options">{damageCalculatorCatalog.species.map((name) => <option value={name} key={name} />)}</datalist>
-      <datalist id="damage-move-options">{damageCalculatorCatalog.moves.map((name) => <option value={name} key={name} />)}</datalist>
-      <datalist id="damage-item-options">{damageCalculatorCatalog.items.map((name) => <option value={name} key={name} />)}</datalist>
-      <datalist id="damage-ability-options">{damageCalculatorCatalog.abilities.map((name) => <option value={name} key={name} />)}</datalist>
-      <datalist id="damage-nature-options">{damageCalculatorCatalog.natures.map((name) => <option value={name} key={name} />)}</datalist>
+      {renderSideOptions("attacker")}
+      {renderSideOptions("defender")}
+      <datalist id="damage-move-options">{getDamageCatalogOptions("moves", form.move).map((name) => <option value={name} key={name} />)}</datalist>
     </div>
   );
 }
@@ -72,10 +81,10 @@ function SideEditor({ title, side, onChange, sideName }) {
         <h2 id={`${sideName}-heading`}>{title}</h2>
       </div>
       <div className="damage-side-fields">
-        <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list="damage-species-options" placeholder="Buscar no catálogo" />
-        <CatalogInput label="Nature" value={side.nature} onChange={(value) => update("nature", value)} list="damage-nature-options" placeholder="Serious" />
-        <CatalogInput label="Habilidade" value={side.ability} onChange={(value) => update("ability", value)} list="damage-ability-options" placeholder="Padrão da espécie" />
-        <CatalogInput label="Item" value={side.item} onChange={(value) => update("item", value)} list="damage-item-options" placeholder="Sem item" />
+        <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list={`damage-${sideName}-species-options`} placeholder="Buscar no catálogo" />
+        <CatalogInput label="Nature" value={side.nature} onChange={(value) => update("nature", value)} list={`damage-${sideName}-nature-options`} placeholder="Serious" />
+        <CatalogInput label="Habilidade" value={side.ability} onChange={(value) => update("ability", value)} list={`damage-${sideName}-ability-options`} placeholder="Padrão da espécie" />
+        <CatalogInput label="Item" value={side.item} onChange={(value) => update("item", value)} list={`damage-${sideName}-item-options`} placeholder="Sem item" />
         <label className="damage-field">
           <span>Status</span>
           <select className="text-input" value={side.status} onChange={(event) => update("status", event.target.value)}>
@@ -252,7 +261,7 @@ export function DamageCalculatorPage() {
           <p className="damage-engine-note">Motor: <a href="https://github.com/smogon/damage-calc" target="_blank" rel="noreferrer">@smogon/calc 0.12.0</a>, licença MIT. Fórmulas e dados seguem o motor; a tela não valida legalidade, precisão, chance de acerto ou probabilidade de crítico.</p>
         </section>
       )}
-      <DataLists />
+      <DataLists form={form} />
     </div>
   );
 }

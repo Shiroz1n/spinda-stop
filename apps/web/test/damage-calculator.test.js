@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateChampionsDamage, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
+import { calculateChampionsDamage, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -74,6 +74,12 @@ test("valida espécie e Stat Points antes de calcular", () => {
     defender: side("Garchomp"),
     move: "Earthquake",
   }), /Stat Points/);
+});
+
+test("sugestões do catálogo são filtradas e limitadas para não renderizar a lista toda", () => {
+  assert.deepEqual(getDamageCatalogOptions("species", "garchomp"), ["Garchomp", "Garchomp-Mega", "Garchomp-Mega-Z"]);
+  assert.deepEqual(getDamageCatalogOptions("species", ""), []);
+  assert.equal(getDamageCatalogOptions("moves", "a").length, 50);
 });
 
 test("golpes sem dano direto não são apresentados como uma faixa de dano", () => {

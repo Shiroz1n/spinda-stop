@@ -12,6 +12,15 @@ export const damageCalculatorCatalog = {
   terrain: ["Electric", "Grassy", "Misty", "Psychic"],
 };
 
+export function getDamageCatalogOptions(catalogName, query) {
+  const catalog = damageCalculatorCatalog[catalogName];
+  const normalizedQuery = String(query || "").trim().toLocaleLowerCase();
+  if (!catalog || !normalizedQuery) return [];
+  return catalog
+    .filter((entry) => entry.toLocaleLowerCase().includes(normalizedQuery))
+    .slice(0, 50);
+}
+
 const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
 const boostKeys = ["atk", "def", "spa", "spd", "spe"];
 const spreadTargets = new Set(["allAdjacent", "allAdjacentFoes"]);
