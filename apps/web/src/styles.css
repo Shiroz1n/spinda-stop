@@ -480,6 +480,32 @@ p { max-width: 72ch; }
 .metaroll-ladder-capture > div > span { color: var(--muted); font-size: 0.7rem; font-weight: 800; }
 .metaroll-ladder-capture > div > strong, .metaroll-ladder-capture > div > a { overflow-wrap: anywhere; }
 .metaroll-ladder-capture > p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
+.metaroll-rating-history { display: grid; gap: 10px; margin: 0 0 16px; padding: clamp(13px, 2vw, 18px); border: 1px solid var(--line); background: var(--surface-alt); }
+.metaroll-rating-history-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.metaroll-rating-history-heading h3 { margin: 0 0 4px; font-size: 1rem; }
+.metaroll-rating-history-heading p:not(.page-label) { margin: 0; color: var(--muted); font-size: 0.76rem; }
+.metaroll-rating-history-heading .usage-filter-field { min-width: min(220px, 100%); }
+.metaroll-rating-history-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; padding: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 0.76rem; }
+.metaroll-rating-history-meta > div { min-width: 0; display: grid; align-content: start; gap: 3px; }
+.metaroll-rating-history-meta span { color: var(--muted); font-size: 0.67rem; font-weight: 800; }
+.metaroll-rating-history-meta strong, .metaroll-rating-history-meta a { overflow-wrap: anywhere; }
+.metaroll-rating-chart { display: block; width: 100%; height: auto; overflow: visible; color: var(--ink); }
+.metaroll-rating-chart line { stroke: var(--line); stroke-width: 1.5; }
+.metaroll-rating-chart .metaroll-rating-gridline { stroke-dasharray: 3 5; stroke-width: 1; }
+.metaroll-rating-chart polyline { fill: none; stroke: var(--coral-dark); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.metaroll-rating-chart circle { fill: var(--coral-dark); stroke: var(--surface); stroke-width: 2; }
+.metaroll-rating-chart-dates { display: flex; justify-content: space-between; gap: 12px; margin-top: -11px; color: var(--muted); font-size: 0.72rem; }
+.metaroll-rating-history-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.metaroll-rating-history-values > div { display: grid; gap: 3px; padding: 9px 10px; border: 1px solid var(--line); background: var(--surface); }
+.metaroll-rating-history-values span { color: var(--muted); font-size: 0.7rem; }
+.metaroll-rating-history-values strong { font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.metaroll-rating-history .metaroll-card-note { margin: 0; }
+.metaroll-rating-history-details summary { width: fit-content; cursor: pointer; font-size: 0.76rem; font-weight: 700; }
+.metaroll-rating-table-wrap { max-height: 280px; margin-top: 8px; overflow: auto; border: 1px solid var(--line); background: var(--surface); }
+.metaroll-rating-table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.73rem; }
+.metaroll-rating-table-wrap caption { padding: 8px; text-align: left; }
+.metaroll-rating-table-wrap th, .metaroll-rating-table-wrap td { padding: 6px 8px; border-top: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.metaroll-rating-table-wrap th { position: sticky; top: 0; background: var(--surface-alt); }
 .metaroll-ladder-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .metaroll-ladder-filters > .usage-search-field { grid-column: span 2; }
 .metaroll-ladder-results-heading { display: flex; justify-content: space-between; gap: 12px; margin: 16px 0 7px; color: var(--muted); font-size: 0.78rem; }
@@ -553,6 +579,9 @@ p { max-width: 72ch; }
   .metaroll-capture-note { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-heading { align-items: stretch; flex-direction: column; gap: 11px; }
   .metaroll-ladder-heading .usage-filter-field { width: 100%; }
+  .metaroll-rating-history-heading { align-items: stretch; flex-direction: column; gap: 10px; }
+  .metaroll-rating-history-heading .usage-filter-field { width: 100%; }
+  .metaroll-rating-history-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-capture { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-matchups-grid { grid-template-columns: 1fr; }
@@ -607,6 +636,7 @@ p { max-width: 72ch; }
   .metaroll-rank-summary { grid-template-columns: 1fr; }
   .metaroll-rank-history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metaroll-ladder-capture, .metaroll-ladder-filters { grid-template-columns: 1fr; }
+  .metaroll-rating-history-meta, .metaroll-rating-history-values { grid-template-columns: 1fr; }
   .metaroll-ladder-filters > .usage-search-field { grid-column: 1; }
   .metaroll-view-switch { display: grid; grid-template-columns: 1fr 1fr; }
   .metaroll-view-switch button { padding-inline: 7px; font-size: 0.78rem; }

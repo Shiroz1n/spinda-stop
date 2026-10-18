@@ -199,6 +199,22 @@ function normalizeLadderPerson(entry) {
   };
 }
 
+function normalizeRatingHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((point) => point && typeof point.at === "string" && !Number.isNaN(Date.parse(point.at)))
+    .map((point) => ({
+      at: point.at,
+      average: Number.isFinite(point.avg) ? point.avg : null,
+      count: Number.isSafeInteger(point.n) && point.n >= 0 ? point.n : null,
+      ratingsByRank: point.ranks && typeof point.ranks === "object" && !Array.isArray(point.ranks)
+        ? Object.fromEntries(Object.entries(point.ranks)
+          .filter(([rank]) => /^\d+$/.test(rank))
+          .map(([rank, rating]) => [rank, Number.isFinite(rating) ? rating : null]))
+        : {},
+    }))
+    .sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
+}
+
 export function normalizeMetaRollLadderResponse(payload) {
   if (!payload || !Array.isArray(payload.entries)) {
     throw new Error("A resposta MetaRoll não contém a ladder de jogadores.");
@@ -214,6 +230,7 @@ export function normalizeMetaRollLadderResponse(payload) {
     capturedAt: typeof payload.capturedAt === "string" ? payload.capturedAt : null,
     comparedTo: typeof payload.comparedTo === "string" ? payload.comparedTo : null,
     count: Number.isFinite(payload.count) ? payload.count : null,
+    ratingHistory: normalizeRatingHistory(payload.ratingHistory),
     entries: payload.entries.map(normalizeLadderPerson).filter((entry) => entry && entry.id),
   };
 }

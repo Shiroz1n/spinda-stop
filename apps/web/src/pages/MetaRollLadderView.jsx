@@ -28,6 +28,118 @@ function formatPreviousRank(person) {
   return person.previousRank === null ? "fora da captura anterior" : "#" + person.previousRank;
 }
 
+function formatHistoryDate(value) {
+  if (!value || Number.isNaN(Date.parse(value))) return "data não informada";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(value)) + " UTC";
+}
+
+function RatingHistoryPanel({ history, season }) {
+  const rankOptions = Array.from(new Set(history.flatMap((point) => Object.keys(point.ratingsByRank))))
+    .filter((rank) => /^\d+$/.test(rank))
+    .sort((left, right) => Number(left) - Number(right));
+  const [selectedMetric, setSelectedMetric] = useState("average");
+  const activeMetric = selectedMetric === "average" || rankOptions.includes(selectedMetric) ? selectedMetric : "average";
+  const metricValue = (point) => activeMetric === "average"
+    ? point.average
+    : point.ratingsByRank[activeMetric] ?? null;
+  const metricLabel = activeMetric === "average"
+    ? "Média publicada"
+    : `Posição #${activeMetric}`;
+  const points = history.map((point) => ({
+    at: point.at,
+    time: Date.parse(point.at),
+    value: metricValue(point),
+    count: point.count,
+  })).filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value));
+  const firstPoint = points[0];
+  const lastPoint = points.at(-1);
+  const counts = Array.from(new Set(points.map((point) => point.count).filter(Number.isFinite)))
+    .sort((left, right) => left - right);
+  const chart = points.length > 1 ? (() => {
+    const width = 760;
+    const height = 190;
+    const left = 46;
+    const right = 738;
+    const top = 16;
+    const bottom = 148;
+    const values = points.map((point) => point.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const padding = Math.max((max - min) * 0.12, 1);
+    const minAxis = min - padding;
+    const maxAxis = max + padding;
+    const firstTime = points[0].time;
+    const lastTime = points.at(-1).time;
+    const xScale = (time, index) => lastTime === firstTime
+      ? left + ((right - left) * index) / (points.length - 1)
+      : left + ((time - firstTime) / (lastTime - firstTime)) * (right - left);
+    const yScale = (value) => bottom - ((value - minAxis) / (maxAxis - minAxis)) * (bottom - top);
+    const coordinates = points.map((point, index) => `${xScale(point.time, index).toFixed(2)},${yScale(point.value).toFixed(2)}`);
+    return { width, height, left, right, top, bottom, minAxis, maxAxis, coordinates, first: points[0], last: points.at(-1), yScale };
+  })() : null;
+  const tableLabel = activeMetric === "average" ? "Média publicada" : `Rating na posição #${activeMetric}`;
+
+  return (
+    <section className="metaroll-rating-history" aria-labelledby="metaroll-rating-history-heading">
+      <div className="metaroll-rating-history-heading">
+        <div>
+          <p className="page-label">Tendência de Doubles · MetaRoll</p>
+          <h3 id="metaroll-rating-history-heading">Histórico de rating da ladder</h3>
+          <p>Valores lidos de <code>ratingHistory</code> na resposta de <code>ladder.json</code>.</p>
+        </div>
+        <label className="usage-filter-field">
+          <span>Série</span>
+          <select value={activeMetric} onChange={(event) => setSelectedMetric(event.target.value)}>
+            <option value="average">Média publicada</option>
+            {rankOptions.map((rank) => <option key={rank} value={rank}>Posição #{rank}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="metaroll-rating-history-meta">
+        <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
+        <div><span>Temporada da resposta</span><strong>{season || "não informada pela resposta"}</strong></div>
+        <div><span>Período deste histórico</span><strong>{firstPoint && lastPoint ? `${formatCapture(firstPoint.at)} — ${formatCapture(lastPoint.at)}` : "não informado"}</strong></div>
+        <div><span>Pontos</span><strong>{points.length}</strong></div>
+        <div><span><code>n</code> informado</span><strong>{counts.length === 0 ? "não informado" : counts.length === 1 ? counts[0] : `${counts[0]}–${counts.at(-1)}`}</strong></div>
+      </div>
+      {points.length > 1 ? (
+        <>
+          <svg className="metaroll-rating-chart" viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-labelledby="metaroll-rating-chart-title" aria-describedby="metaroll-rating-history-note">
+            <title id="metaroll-rating-chart-title">{metricLabel} no histórico MetaRoll de Doubles</title>
+            <line x1={chart.left} x2={chart.right} y1={chart.bottom} y2={chart.bottom} />
+            <line x1={chart.left} x2={chart.left} y1={chart.top} y2={chart.bottom} />
+            <line className="metaroll-rating-gridline" x1={chart.left} x2={chart.right} y1={chart.yScale((chart.minAxis + chart.maxAxis) / 2)} y2={chart.yScale((chart.minAxis + chart.maxAxis) / 2)} />
+            <polyline points={chart.coordinates.join(" ")} />
+            <circle cx={chart.left} cy={chart.yScale(chart.first.value)} r="4" />
+            <circle cx={chart.right} cy={chart.yScale(chart.last.value)} r="4" />
+          </svg>
+          <div className="metaroll-rating-chart-dates" aria-hidden="true"><span>{formatHistoryDate(firstPoint.at)}</span><span>{formatHistoryDate(lastPoint.at)}</span></div>
+          <div className="metaroll-rating-history-values">
+            <div><span>Primeiro ponto · {formatCapture(firstPoint.at)}</span><strong>{formatRating(firstPoint.value)}</strong></div>
+            <div><span>Último ponto · {formatCapture(lastPoint.at)}</span><strong>{formatRating(lastPoint.value)}</strong></div>
+          </div>
+          <p className="metaroll-card-note" id="metaroll-rating-history-note"><code>n</code> é o valor informado pela fonte para cada ponto; não é contagem de partidas do metagame. A documentação não descreve formalmente o histórico. Na captura atual, <code>avg</code> coincide com a média dos ratings listados e <code>ranks</code> com os ratings das posições correspondentes; isso não reconstrói pontos antigos.</p>
+          <details className="metaroll-rating-history-details">
+            <summary>Ver pontos publicados</summary>
+            <div className="metaroll-rating-table-wrap">
+              <table>
+                <caption>Valores da série selecionada: {tableLabel}</caption>
+                <thead><tr><th scope="col">Captura (UTC)</th><th scope="col">{tableLabel}</th><th scope="col"><code>n</code></th></tr></thead>
+                <tbody>{points.map((point) => <tr key={point.at}><td><time dateTime={point.at}>{formatCapture(point.at)}</time></td><td>{formatRating(point.value)}</td><td>{point.count ?? "não informado"}</td></tr>)}</tbody>
+              </table>
+            </div>
+          </details>
+        </>
+      ) : (
+        <p className="metaroll-empty">A fonte não publicou pontos suficientes de histórico de rating para esta captura.</p>
+      )}
+    </section>
+  );
+}
+
 export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSeasonChange }) {
   const [ladderState, setLadderState] = useState({ key: "", status: "idle" });
   const [ladderRetry, setLadderRetry] = useState(0);
@@ -126,6 +238,9 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
             <div><span>Entradas listadas</span><strong>{currentLadderState.data.count ?? "não informadas"}</strong></div>
             <p>O arquivo documentado contém até 1.000 jogadores. `rating` já vem dividido pela fonte; taxa de vitória é `wins / battles`. Isto não é o ladder completo nem uma amostra de partidas do metagame.</p>
           </div>
+          {currentLadderState.data.ratingHistory.length > 0 ? (
+            <RatingHistoryPanel key={season || "current"} history={currentLadderState.data.ratingHistory} season={currentLadderState.data.season} />
+          ) : <p className="metaroll-empty">A fonte não publicou histórico de rating nesta captura.</p>}
           <div className="metaroll-ladder-filters">
             <label className="usage-search-field"><span>Buscar jogador ou ID</span><input type="search" value={ladderQuery} onChange={(event) => { setLadderQuery(event.target.value); setLadderPage(1); }} placeholder="Nome ou ID publicado" autoComplete="off" /></label>
             <label className="usage-filter-field"><span>País</span><select value={countryFilter} onChange={(event) => { setCountryFilter(event.target.value); setLadderPage(1); }}><option value="all">Todos</option>{ladderCountries.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>

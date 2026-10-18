@@ -27,7 +27,7 @@ O guia também documenta `dailyBattleDataCsvs` no registro de Pokémon; a captur
 | Resposta consultada | Campos vistos |
 |---|---|
 | `/api/v1/index.json` | `version`, `game`, `source`, `format`, `season`, `capturedAt`, `comparedTo`, `count`, `endpoints`, `pastSeasons`, `attribution` (`required`, `name`, `url`, `text`, `terms`) |
-| `/api/v1/all.json` | Mesmo cabeçalho de captura, mais `entries[]`; captura real: `format: doubles`, `season: M-7`, `capturedAt: 2026-10-18T07:46:12Z`, `count: 262`, `attribution.required: true` |
+| `/api/v1/all.json` | Mesmo cabeçalho de captura, mais `entries[]`; captura real: `format: doubles`, `season: M-7`, `capturedAt: 2026-10-18T09:46:20Z`, `comparedTo: 2026-10-17T09:46:15Z`, `count: 262`, `attribution.required: true` |
 | `all.json.entries[]` | `abilities`, `confidence`, `id`, `items`, `matchups`, `moves`, `name`, `natures`, `previousRank`, `rank`, `spreads`, `teammates`; não havia `rankHistory` nem `usageHistory` no registro observado |
 | `/api/v1/ranking.json` | `attribution`, `capturedAt`, `comparedTo`, `count`, `entries`, `format`, `game`, `pastSeasons`, `season`, `source`, `version`, `weekOf`; `entries[]`: `forme`, `id`, `name`, `nat`, `previousRank`, `rank`, `spe`, `weekRank` |
 | `/api/v1/pokemon/tauros-paldea-aqua.json` | Cabeçalho de captura e `entry`; `entry`: `abilities`, `confidence`, `id`, `items`, `matchups`, `moves`, `name`, `natures`, `previousRank`, `rank`, `rankHistory`, `spreads`, `teammates`, `usageHistory` |
@@ -39,10 +39,10 @@ O guia também documenta `dailyBattleDataCsvs` no registro de Pokémon; a captur
 | `/api/v1/ladder.json` | `version`, `game`, `source`, `format`, `ranks`, `season`, `capturedAt`, `comparedTo`, `count`, `ratingHistory`, `entries` |
 | `ladder.entries[]` | `avatar`, `battles`, `country`, `draws`, `id`, `language`, `losses`, `name`, `rank`, `rating`, `winRate`, `wins`; `country` e `language`: `code`, `flag`, `iso`, `name` |
 | `ladder.ratingHistory[]` | `at`, `avg`, `n`, `ranks`; as chaves de `ranks` vistas foram `1`, `100`, `300`, `500`, `1000` |
-| `/api/v1/megas.json` | Resposta observada: cabeçalho de captura e 81 `entries[]` com `forme`, `id`, `name`, `percent`, `rank`, `stone`; `capturedAt: 2026-10-18T05:46:15Z` |
-| `/api/v1/ladder-cutoffs.json` | Resposta observada: `ranks: trainers`, `count: 1000`, captura em `2026-10-18T05:46:15Z` e `cutoffs` nas posições 10, 100, 300, 500 e 1000 |
+| `/api/v1/megas.json` | Resposta observada: cabeçalho de captura e 81 `entries[]` com `forme`, `id`, `name`, `percent`, `rank`, `stone`; `capturedAt: 2026-10-18T09:46:20Z` |
+| `/api/v1/ladder-cutoffs.json` | Resposta observada: `ranks: trainers`, `count: 1000`, captura em `2026-10-18T09:46:20Z` e `cutoffs` nas posições 10, 100, 300, 500 e 1000 |
 
-O adaptador e a tela usam o `all.json` observado para lista, ranking de espécies, filtros, distribuições e matchups. A captura foi lida diretamente, sem gravar uma cópia no repositório. O guia diz que o arquivo não inclui históricos diários individuais; por isso a tela busca a ficha por espécie ao abrir o histórico. Os campos `ratingHistory`, `megas` e `ladder-cutoffs` apareceram em respostas reais, mas continuam fora da interface até a fonte definir seus significados.
+O adaptador e a tela usam o `all.json` observado para lista, ranking de espécies, filtros, distribuições e matchups. A captura foi lida diretamente, sem gravar uma cópia no repositório. O guia diz que o arquivo não inclui históricos diários individuais; por isso a tela busca a ficha por espécie ao abrir o histórico. `ratingHistory` agora é apresentado em uma seção da ladder; `megas` fica para um PR próprio. `ladder-cutoffs` continua sem UI separada porque repete os ratings das mesmas posições e seu nome não prova um mínimo de elegibilidade.
 
 ## Pokémon Champions Battle Data
 
@@ -149,7 +149,14 @@ Docs: [Champions Usage API](https://metaroll.app/api/v1/docs) · base `https://m
 | `wins`, `losses`, `draws`, `battles`, `winRate` | Registro e taxa de vitórias | Sim | A documentação define `battles` e `winRate` como derivados; `winRate = wins / battles` |
 | `country`, `language` | Objetos com `code`, `name`, `flag` e, quando disponível, `iso` | Sim, filtros por país e idioma e nomes/flags | `country.code` não é ISO de país; agrupamento e filtro usam nome, nunca o código interno |
 | `avatar` | Índice de avatar do jogo | Sim, exibido como número | A API não fornece a imagem desse avatar |
-| `ratingHistory` | 102 pontos observados entre 14 e 18/10/2026; cada objeto traz `at`, `avg`, `n` e `ranks`; `n` foi 1000 e `ranks` tinha chaves 1, 100, 300, 500 e 1000 | Não | Campo não descrito no guia; `avg` e os valores de `ranks` não têm definição publicada; não exibir até a fonte esclarecer |
+| `ratingHistory[]: at, avg, n, ranks` | 104 leituras do ladder M-7 entre 14 e 18/10/2026; `n: 1000`; `ranks` tem posições 1, 100, 300, 500 e 1000 | Sim, em histórico próprio da ladder, com seletor de série e tabela de pontos | Não é amostra de partidas do metagame. No ponto atual, `avg` coincide com a média dos 1.000 ratings listados e `ranks` com a classificação. Fórmulas históricas não são publicadas e não são reconstruídas |
+
+### Endpoints anunciados pelo índice, fora da tabela do guia
+
+| Rota/campo | Resposta real observada | No Spinda Stop | Decisão e lacuna |
+|---|---|---|---|
+| `megas.json.entries[]: rank, id, name, forme, stone, percent` | 81 linhas no M-7, em 18/10/2026 09:46:20 UTC | Ainda não | `rank` coincide com a posição do Pokémon e `percent` com o uso do mesmo item em `all.json` em 81/81 casos. Próximo PR mostra forma e pedra associada, identificadas como uso do item e com captura própria |
+| `ladder-cutoffs.json.cutoffs` | Ratings das posições 10, 100, 300, 500 e 1000; `count: 1000` | Não há cartão separado | Os valores coincidem com os ratings nas posições correspondentes e com `ratingHistory.ranks` na captura atual. O nome “cutoff” não prova um rating mínimo futuro; a interface não o apresenta como requisito |
 
 ### Campos anunciados mas ainda sem semântica suficiente
 
