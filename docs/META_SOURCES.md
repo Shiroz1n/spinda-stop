@@ -2,6 +2,8 @@
 
 Revisão feita em 18/10/2026. O piloto de Usage usa Pokémon Champions Battle Data em Doubles; MetaRoll continua como alternativa separada. Percentuais ficam ligados à sua fonte: não somar, tirar média nem tratar respostas diferentes como uma única amostra.
 
+Para o inventário campo a campo das respostas consultadas, o que já aparece no Spinda Stop e a sequência de PRs proposta, veja [Matriz de cobertura competitiva](COMPETITIVE_COVERAGE.md).
+
 ## Decisão
 
 O primeiro piloto usa Pokémon Champions Battle Data porque a API responde às rotas públicas de Doubles e suas regras permitem projetos comunitários com atribuição. A tela mostra a origem e o período devolvido pela API. Os dados passam pelo navegador e por um adaptador que pode ser substituído.

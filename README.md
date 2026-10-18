@@ -37,6 +37,7 @@ Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da P
 
 - [Fontes e atribuições](docs/DATA_SOURCES.md)
 - [Avaliação das APIs competitivas](docs/META_SOURCES.md)
+- [Matriz de cobertura competitiva, campos observados e próximos PRs](docs/COMPETITIVE_COVERAGE.md)
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)

@@ -1,12 +1,17 @@
 # Próximas etapas
 
-| Fase | Entrega | Condição para avançar |
-|---|---|---|
-| 0 — Fundação | Fontes, termos, arquitetura, design e critérios de validação. **Concluída.** | Fontes e limites documentados. |
-| 1 — Dex e construtor | Catálogo geral, busca e filtros; seis slots; rascunho local e import/export. **Pronta para revisão nesta branch.** | Cobertura do dataset conferida; legalidade claramente não verificada. |
-| 2 — Análise | Tipos, regras versionadas e mensagens que explicam cada alerta. | Fixtures e regulamento confirmado. |
-| 3 — Usage | Piloto de Doubles com Pokémon Champions Battle Data, busca, filtros, atribuição e período devolvido pela API. | Este PR mantém a fonte isolada. Denominador e vínculo entre temporada e regulamento seguem desconhecidos; MetaRoll permanece alternativa separada. Histórico e comparação entre fontes precisam de revisão própria. |
-| 4 — Matchups e calculadora | Dano comparável, 16 rolls, condições e matriz de conformidade. | Casos de referência conferidos e release fixado. |
-| 5 — Comunidade | Contas, salas, inscrição, check-in, pareamento e resultados. | Provedor de auth, hospedagem, privacidade e moderação definidos. |
+O trabalho está dividido por entregas revisáveis. Nenhum PR deve tratar temporadas como regulamentos oficiais nem misturar percentuais de fontes diferentes.
 
-Ladder, Players e Rentals só entram quando existir uma fonte documentada para cada dado. Singles fica separado de Doubles e não herda suas regras.
+| Etapa | Entrega | Condição |
+|---|---|---|
+| 0 — Fundação | Fontes, arquitetura, design, privacidade e validação | Concluída |
+| 1 — Dex e builder | Busca, fichas gerais e seis slots locais com import/export | PR #1; mantém disponibilidade e legalidade como desconhecidas |
+| 2 — Piloto de Usage | Doubles por espécie usando Battle Data, fonte/período visíveis | PR #2; sem amostra ou regulamento inventados |
+| 3 — Cobertura competitiva | Inventário dos campos, limitações e plano de integração | PR #3 |
+| 4 — Battle Data | Perfil por Pokémon, facetas sustentadas pelo índice e snapshots por temporada/data | PR #4; fonte única na tela, cache em memória por cinco minutos |
+| 5 — MetaRoll | Perfil, ranking de espécies, histórico, ladder e matchups | PR #5; adaptador e proveniência próprios |
+| 6 — Tendências no builder | Acesso contextual à ficha competitiva de cada integrante | PR #6; nunca escolhe um set automaticamente |
+| 7 — Calculadora | Regras e cálculo de dano validados por casos de referência | PR próprio |
+| 8 — Contas e salas | Identidade, inscrição, pareamento e resultados | PR próprio após decisões de hospedagem, privacidade e moderação |
+
+A matriz e a disponibilidade real dos campos ficam em [COMPETITIVE_COVERAGE.md](COMPETITIVE_COVERAGE.md). A calculadora não será derivada de percentuais de Usage. Contas, salas e pareamento não fazem parte da integração de dados competitivos.
