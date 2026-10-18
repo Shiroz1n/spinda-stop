@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   capture:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'fix/visual-review-captures' || github.event.pull_request.head.ref == 'feat/spinda-gba-identity'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
