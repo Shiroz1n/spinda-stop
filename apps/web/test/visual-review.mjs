@@ -88,7 +88,7 @@ async function capture(page, viewport, name, { audit = false } = {}) {
   if (audit) {
     const contrast = await page.evaluate(() => {
       const luminance = (value) => {
-        const [red, green, blue] = value.match(/[\d.]+/g).slice(0, 3).map(Number).map((channel) => {
+        const [red, green, blue] = value.match(/[\\d.]+/g).slice(0, 3).map(Number).map((channel) => {
           const normalized = channel / 255;
           return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
         });
@@ -98,17 +98,29 @@ async function capture(page, viewport, name, { audit = false } = {}) {
         const values = [luminance(foreground), luminance(background)].sort((left, right) => right - left);
         return Number(((values[0] + 0.05) / (values[1] + 0.05)).toFixed(2));
       };
+      const visible = (element) => {
+        const style = getComputedStyle(element);
+        return element.getClientRects().length > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      };
+      const opaqueBackground = (element) => {
+        for (let current = element; current; current = current.parentElement) {
+          const color = getComputedStyle(current).backgroundColor;
+          const channels = color.match(/[\\d.]+/g) || [];
+          const alpha = channels.length > 3 ? Number(channels[3]) : 1;
+          if (alpha >= 0.99) return color;
+        }
+        return getComputedStyle(document.documentElement).backgroundColor;
+      };
       const checks = [
-        ["navegação desktop", ".site-header .primary-nav .nav-link:not(.is-active)", ".site-header"],
-        ["navegação mobile", ".mobile-primary-nav .mobile-nav-link:not(.is-active)", ".mobile-primary-nav"],
-        ["atribuição no rodapé", ".site-footer a", ".site-footer"],
+        ["navegação desktop", ".site-header .primary-nav .nav-link:not(.is-active)"],
+        ["navegação mobile", ".mobile-primary-nav .mobile-nav-link:not(.is-active)"],
+        ["atribuição no rodapé", ".site-footer a"],
       ];
-      return checks.flatMap(([label, textSelector, backgroundSelector]) => {
-        const text = document.querySelector(textSelector);
-        const background = document.querySelector(backgroundSelector);
-        if (!text || !background) return [];
+      return checks.flatMap(([label, textSelector]) => {
+        const text = [...document.querySelectorAll(textSelector)].find(visible);
+        if (!text) return [];
         const foregroundColor = getComputedStyle(text).color;
-        const backgroundColor = getComputedStyle(background).backgroundColor;
+        const backgroundColor = opaqueBackground(text);
         return [{ label, ratio: ratio(foregroundColor, backgroundColor), foregroundColor, backgroundColor }];
       });
     });
