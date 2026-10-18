@@ -235,6 +235,31 @@ export function normalizeMetaRollLadderResponse(payload) {
   };
 }
 
+export function normalizeMetaRollMegasResponse(payload) {
+  if (!payload || !Array.isArray(payload.entries)) {
+    throw new Error("A resposta MetaRoll não contém a lista de formas Mega.");
+  }
+  if (payload.format !== "doubles") {
+    throw new Error("A fonte não retornou formas Mega do ladder Doubles.");
+  }
+
+  return {
+    format: payload.format,
+    season: typeof payload.season === "string" ? payload.season : null,
+    capturedAt: typeof payload.capturedAt === "string" ? payload.capturedAt : null,
+    comparedTo: typeof payload.comparedTo === "string" ? payload.comparedTo : null,
+    entries: payload.entries.filter((entry) => entry && typeof entry === "object" && typeof entry.id === "string")
+      .map((entry) => ({
+        id: entry.id,
+        name: typeof entry.name === "string" ? entry.name : null,
+        formName: typeof entry.forme === "string" ? entry.forme : null,
+        stone: typeof entry.stone === "string" ? entry.stone : null,
+        rank: Number.isFinite(entry.rank) ? entry.rank : null,
+        percent: Number.isFinite(entry.percent) ? entry.percent : null,
+      })),
+  };
+}
+
 function asEntries(payload) {
   const entries = Array.isArray(payload?.entries)
     ? payload.entries
@@ -321,5 +346,10 @@ export const metaRollProvider = Object.freeze({
   async loadLadder({ season, force = false } = {}) {
     const path = apiPath(season, "ladder.json");
     return normalizeMetaRollLadderResponse(await requestJson(path, force));
+  },
+
+  async loadMegas({ season, force = false } = {}) {
+    const path = apiPath(season, "megas.json");
+    return normalizeMetaRollMegasResponse(await requestJson(path, force));
   },
 });

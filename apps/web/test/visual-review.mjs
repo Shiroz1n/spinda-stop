@@ -248,6 +248,17 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "usage-metaroll", { audit: true });
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
+    const metaRollSearch = page.locator(".metaroll-layout input[type=search]");
+    await metaRollSearch.fill("Garchomp");
+    await page.locator(".metaroll-layout .usage-species-button").filter({ hasText: "Garchomp" }).first().click();
+    await waitForEither(page, ".metaroll-mega-list, .metaroll-mega-card .usage-error, .metaroll-mega-card .metaroll-empty", 35_000);
+    if (await page.locator(".metaroll-mega-list").count()) {
+      const megaText = await page.locator(".metaroll-mega-list").innerText();
+      if (!megaText.includes("Garchomp-Mega")) failures.push(`${viewportName}: MetaRoll não mostrou a forma Mega publicada para Garchomp.`);
+    } else if (await page.locator(".metaroll-mega-card .usage-error").count()) {
+      failures.push(`${viewportName}: o endpoint de formas Mega falhou na conferência visual.`);
+    }
+    await safeCapture(page, viewportName, "usage-metaroll-megas", { audit: true });
     await safeCapture(page, viewportName, "usage-matchups-history");
     await page.getByRole("button", { name: "Ladder de jogadores" }).click();
     await waitForEither(page, ".metaroll-ladder-capture, .usage-error", 35_000);
@@ -268,6 +279,12 @@ async function runViewport(viewportName, viewport) {
   await errorPage.reload({ waitUntil: "domcontentloaded" });
   await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeoutMs: 10_000 });
   await safeCapture(errorPage, viewportName, "usage-metaroll-error");
+
+  const megaErrorPage = await context.newPage();
+  await megaErrorPage.route("https://metaroll.app/api/v1/megas.json", (route) => route.abort()).catch(() => {});
+  await megaErrorPage.goto(`${baseUrl}/usage?source=metaroll&pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
+  await waitForEither(megaErrorPage, ".metaroll-mega-card .usage-error, .metaroll-mega-list", 35_000);
+  await safeCapture(megaErrorPage, viewportName, "usage-metaroll-mega-error", { audit: true });
   await errorPage.close();
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });

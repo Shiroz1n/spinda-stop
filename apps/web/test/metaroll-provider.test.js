@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   normalizeMetaRollLadderResponse,
   normalizeMetaRollIndexResponse,
+  normalizeMetaRollMegasResponse,
   normalizeMetaRollPokemonResponse,
 } from "../src/data/usage/providers/metaroll.js";
 
@@ -223,4 +224,29 @@ test("preserves unknown MetaRoll rating history values instead of filling them",
     { at: "2026-10-18T00:00:00.000Z", average: null, count: null, ratingsByRank: { "1": null, "100": 2000 } },
   ]);
   assert.deepEqual(normalizeMetaRollLadderResponse({ format: "doubles", ranks: "trainers", entries: [] }).ratingHistory, []);
+});
+
+test("normalizes the announced MetaRoll mega-form endpoint without changing its percentage", () => {
+  const result = normalizeMetaRollMegasResponse({
+    format: "doubles",
+    season: "M-7",
+    capturedAt: "2026-10-18T09:46:20.000Z",
+    comparedTo: "2026-10-17T09:46:15.000Z",
+    entries: [
+      { rank: 1, id: "garchomp", name: "Garchomp", forme: "Garchomp-Mega-Z", stone: "Garchompite Z", percent: 38.4 },
+      { rank: 1, id: "garchomp", name: "Garchomp", forme: "Garchomp-Mega", stone: "Garchompite", percent: null },
+      { id: "charizard", forme: "Charizard-Mega-Y", stone: "Charizardite Y", percent: "94.6" },
+      null,
+    ],
+  });
+
+  assert.equal(result.season, "M-7");
+  assert.equal(result.capturedAt, "2026-10-18T09:46:20.000Z");
+  assert.deepEqual(result.entries, [
+    { id: "garchomp", name: "Garchomp", formName: "Garchomp-Mega-Z", stone: "Garchompite Z", rank: 1, percent: 38.4 },
+    { id: "garchomp", name: "Garchomp", formName: "Garchomp-Mega", stone: "Garchompite", rank: 1, percent: null },
+    { id: "charizard", name: null, formName: "Charizard-Mega-Y", stone: "Charizardite Y", rank: null, percent: null },
+  ]);
+  assert.throws(() => normalizeMetaRollMegasResponse({ format: "singles", entries: [] }), /Doubles/);
+  assert.throws(() => normalizeMetaRollMegasResponse({ format: "doubles" }), /lista de formas Mega/);
 });

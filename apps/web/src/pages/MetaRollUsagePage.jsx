@@ -107,6 +107,38 @@ function HistoryUsageCard({ record }) {
   );
 }
 
+function MegaFormsCard({ state, rows, onRetry }) {
+  return (
+    <section className="metaroll-card metaroll-mega-card" aria-labelledby="metaroll-mega-heading">
+      <div className="metaroll-card-heading"><h3 id="metaroll-mega-heading">Formas Mega e pedras associadas</h3><span>{rows.length}</span></div>
+      {state.status === "loading" ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando formas Mega…</p> : null}
+      {state.status === "error" ? (
+        <div className="usage-error" role="alert"><div><strong>Não foi possível consultar as formas Mega.</strong><p>{state.error}</p></div><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar de novo</button></div>
+      ) : null}
+      {state.status === "success" ? (
+        <>
+          <div className="metaroll-mega-provenance">
+            <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
+            <div><span>Temporada da resposta</span><strong>{state.data.season || "não informada"}</strong></div>
+            <div><span>Captura própria</span><strong>{formatCapture(state.data.capturedAt)}</strong></div>
+          </div>
+          {rows.length > 0 ? (
+            <ol className="metaroll-mega-list">
+              {rows.map((row) => (
+                <li key={`${row.formName}-${row.stone}`}>
+                  <div><strong>{row.formName || "Forma não informada"}</strong><span>{row.stone || "Pedra não informada"}</span></div>
+                  <b>{displayPercent(row.percent)}</b>
+                </li>
+              ))}
+            </ol>
+          ) : <p className="metaroll-empty">A fonte não listou forma Mega associada a este Pokémon nesta captura.</p>}
+          <p className="metaroll-card-note">O percentual é o uso publicado para a pedra associada à forma; não é chance de Mega Evolução nem percentual de partidas.</p>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 function MatchupSpeciesCard({ title, rows, outcomeLabel }) {
   return (
     <section className="metaroll-card">
@@ -163,9 +195,13 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   const [entryState, setEntryState] = useState({ key: "", status: "idle" });
   const [entryRetry, setEntryRetry] = useState(0);
   const entryForceKey = useRef("");
+  const [megaState, setMegaState] = useState({ key: "", status: "idle" });
+  const [megaRetry, setMegaRetry] = useState(0);
+  const megaForceKey = useRef("");
   const [selectedUsageDate, setSelectedUsageDate] = useState("");
   const [view, setView] = useState("species");
   const entryRequestKey = `${season || "current"}|${selectedId || ""}|${entryRetry}`;
+  const megaRequestKey = `${season || "current"}|${selectedId || ""}|${megaRetry}`;
   const currentEntryState = entryState.key === entryRequestKey
     ? entryState
     : { key: entryRequestKey, status: selectedId ? "loading" : "idle" };
@@ -173,6 +209,9 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   const entryCapture = currentEntryState.status === "success" ? currentEntryState.capture : null;
   const entryStatus = currentEntryState.status;
   const entryError = currentEntryState.error || "";
+  const currentMegaState = megaState.key === megaRequestKey
+    ? megaState
+    : { key: megaRequestKey, status: selectedId ? "loading" : "idle" };
 
   useEffect(() => {
     initialPokemonNameRef.current = initialPokemonName;
@@ -246,6 +285,25 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
     return () => { active = false; };
   }, [view, selectedId, season, entryRetry]);
 
+  useEffect(() => {
+    if (view !== "species" || !selectedId) return undefined;
+    let active = true;
+    const force = megaForceKey.current === megaRequestKey;
+    if (force) megaForceKey.current = "";
+
+    metaRollProvider.loadMegas({ season: season || undefined, force }).then((data) => {
+      if (active) setMegaState({ key: megaRequestKey, status: "success", data });
+    }).catch(() => {
+      if (active) setMegaState({
+        key: megaRequestKey,
+        status: "error",
+        error: "MetaRoll pode estar temporariamente indisponível para esta captura.",
+      });
+    });
+
+    return () => { active = false; };
+  }, [view, selectedId, season, megaRetry, megaRequestKey]);
+
   const entries = indexData?.entries || [];
   const facetOptions = Object.fromEntries(filters.map(([key]) => [
     key,
@@ -267,6 +325,9 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   });
   const selectedEntry = entries.find((item) => item.id === selectedId) || null;
   const selectedHistory = entry?.usageHistory.find((item) => item.date === selectedUsageDate) || null;
+  const selectedMegaRows = currentMegaState.status === "success"
+    ? currentMegaState.data.entries.filter((item) => item.id === selectedId)
+    : [];
 
   return (
     <section className="page-wrap usage-page metaroll-page">
@@ -462,6 +523,16 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                         />
                       ))}
                     </div>
+
+                    <MegaFormsCard
+                      state={currentMegaState}
+                      rows={selectedMegaRows}
+                      onRetry={() => {
+                        const nextRetry = megaRetry + 1;
+                        megaForceKey.current = `${season || "current"}|${selectedId}|${nextRetry}`;
+                        setMegaRetry(nextRetry);
+                      }}
+                    />
 
                     <section className="metaroll-matchups-section">
                       <div className="usage-category-heading"><div><p className="page-label">Relações publicadas</p><h3>Matchups</h3></div><span>MetaRoll</span></div>
