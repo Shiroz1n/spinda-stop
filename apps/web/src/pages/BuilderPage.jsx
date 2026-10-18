@@ -343,7 +343,7 @@ export function BuilderPage() {
                 {selectedMember.moves.map((move, index) => (
                   <label className="move-field" htmlFor={`move-${index}`} key={index}>
                     <span>{index + 1}</span>
-                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar ou digitar golpe" />
+                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
                   </label>
                 ))}
                 <p className="form-hint field-wide">A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p>

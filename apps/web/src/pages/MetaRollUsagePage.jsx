@@ -94,7 +94,13 @@ function DistributionCard({ title, rows, spread = false, note = "", pokemonRows 
                       <strong>{row.name || "Nome não informado"}</strong>
                     </span>
                   )}
-                  <b className="metaroll-row-percent">{displayPercent(row.percentageValue)}</b>
+                  <b
+                    className={hasBar ? "metaroll-row-percent" : "metaroll-row-percent is-missing"}
+                    aria-label={hasBar ? undefined : "Percentual não informado"}
+                    title={hasBar ? undefined : "Percentual não informado"}
+                  >
+                    {hasBar ? displayPercent(row.percentageValue) : "—"}
+                  </b>
                 </div>
                 <div className="usage-bar-track" aria-hidden="true">
                   {hasBar ? <span style={{ width: barWidth }} /> : null}
@@ -582,7 +588,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                     {activeProfileSection === "summary" ? (
                       <div className="metaroll-profile-grid metaroll-profile-summary">
                         {distributionSections.filter(([key]) => ["moves", "items", "abilities", "teammates"].includes(key)).map(([key, label]) => (
-                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 3)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Parceiros listados pela fonte." : "Principais linhas desta captura."} />
+                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 3)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Parceiros sem percentual informado." : "Principais linhas desta captura."} />
                         ))}
                       </div>
                     ) : null}

@@ -371,6 +371,20 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "usage-metaroll", { audit: true });
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
+    const teammateCard = page.locator(".metaroll-profile-summary .metaroll-card").filter({ hasText: "Parceiros" }).first();
+    const teammateRows = teammateCard.locator(".metaroll-list-row");
+    if (await teammateRows.count()) {
+      const missingPercentage = teammateRows.first().locator(".metaroll-row-percent.is-missing");
+      if (!await missingPercentage.count()) {
+        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
+      } else if (await missingPercentage.innerText() !== "—" || await missingPercentage.getAttribute("aria-label") !== "Percentual não informado") {
+        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
+      }
+      if (viewport.width <= 360) {
+        const identityWidth = await teammateRows.first().locator(".metaroll-row-identity").evaluate((element) => element.getBoundingClientRect().width);
+        if (identityWidth < 80) failures.push(`${viewportName}: o nome do parceiro perde espaço no cartão estreito do MetaRoll.`);
+      }
+    }
     const metaRollSearch = page.locator(".metaroll-layout input[type=search]");
     await metaRollSearch.fill("Garchomp");
     await page.locator(".metaroll-layout .usage-species-button").filter({ hasText: "Garchomp" }).first().click();
