@@ -288,7 +288,7 @@ export function BuilderPage() {
                   <p className="form-hint builder-usage-hint">A calculadora abre em nível 50 e pode levar os sets dos dois lados. O cálculo começa pelo primeiro golpe preenchido do atacante.</p>
                 </div>
                 <div className="set-heading-actions">
-                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de ${selectedPokemon.name} em Usage`}>
+                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>
                     Ver tendências de Usage
                   </Link>
                   <label className="builder-damage-opponent">

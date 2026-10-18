@@ -101,6 +101,7 @@ async function runViewport(viewportName, viewport) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+  await safeCapture(page, viewportName, "home", { audit: true });
   await page.keyboard.press("Tab");
   const firstFocus = await page.evaluate(() => ({
     className: document.activeElement?.className,
@@ -111,7 +112,26 @@ async function runViewport(viewportName, viewport) {
   if (!String(firstFocus.className).includes("skip-link") || firstFocus.outlineWidth === "0px") {
     failures.push(`${viewportName}: o primeiro foco de teclado não mostra o link de salto com contorno.`);
   }
-  await safeCapture(page, viewportName, "home", { audit: true });
+  await safeCapture(page, viewportName, "home-keyboard-focus");
+
+  let dexLinkFocus;
+  for (let tab = 0; tab < 12; tab += 1) {
+    await page.keyboard.press("Tab");
+    dexLinkFocus = await page.evaluate(() => ({
+      href: document.activeElement?.getAttribute("href"),
+      label: document.activeElement?.textContent?.trim(),
+      outlineWidth: getComputedStyle(document.activeElement).outlineWidth,
+      outlineStyle: getComputedStyle(document.activeElement).outlineStyle,
+    }));
+    if (dexLinkFocus.href === "/dex") break;
+  }
+  observations.push({ viewport: viewportName, name: "keyboard-dex-link-focus", ...dexLinkFocus });
+  if (dexLinkFocus?.href !== "/dex" || dexLinkFocus.outlineWidth === "0px" || dexLinkFocus.outlineStyle === "none") {
+    failures.push(`${viewportName}: não foi possível focar Pokédex com contorno visível pelo teclado.`);
+  } else {
+    await page.keyboard.press("Enter");
+    await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  }
 
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeoutMs: 10_000 });
