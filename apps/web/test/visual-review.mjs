@@ -178,7 +178,7 @@ async function runViewport(viewportName, viewport) {
   await search.fill("Garchomp");
   await page.locator(".pokemon-card").first().waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".pokemon-card-title").first().click();
-  await page.getByRole("heading", { name: /Garchomp/ }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true });
   await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
   await page.getByPlaceholder("Buscar por nome, forma ou número").fill("spindastop-no-match-457");
@@ -360,6 +360,17 @@ async function runViewport(viewportName, viewport) {
       failures.push(`${viewportName}: a sessão de teste para a sala não foi criada (${signIn.status()}).`);
     } else {
       const hostSession = await signIn.json();
+      const shareableTeam = { ...exportedTeam, name: "Time compartilhado" };
+      const savedTeamResponse = await context.request.post(`${baseUrl}/api/teams`, {
+        headers: { Origin: baseUrl },
+        data: { visibility: "private", data: shareableTeam },
+      });
+      let sharedTeamId = "";
+      if (!savedTeamResponse.ok()) {
+        failures.push(`${viewportName}: não foi possível preparar a equipe para testar o compartilhamento (${savedTeamResponse.status()}).`);
+      } else {
+        sharedTeamId = (await savedTeamResponse.json()).team.id;
+      }
       await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-empty", { audit: true });
@@ -367,6 +378,12 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("button", { name: "Criar sala privada" }).click();
       await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
+      if (sharedTeamId) {
+        await page.locator(".event-team-sharing-controls select").selectOption(sharedTeamId);
+        await page.getByRole("button", { name: "Compartilhar", exact: true }).click();
+        await page.getByRole("img", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await safeCapture(page, viewportName, "rooms-shared-roster-host", { audit: true });
+      }
       const inviteUrl = await page.locator('[aria-label="Link de convite"]').inputValue();
       await safeCapture(page, viewportName, "rooms-invite", { audit: true });
 
@@ -387,6 +404,10 @@ async function runViewport(viewportName, viewport) {
       const guest = guestSession.ok() ? await guestSession.json() : null;
       await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
       await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
+      if (sharedTeamId) {
+        await guestPage.getByRole("img", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await safeCapture(guestPage, viewportName, "rooms-shared-roster-guest", { audit: true });
+      }
       await guestPage.getByRole("button", { name: "Fazer check-in" }).click();
       await page.getByRole("button", { name: "Fazer check-in" }).click();
       await page.reload({ waitUntil: "networkidle" });
