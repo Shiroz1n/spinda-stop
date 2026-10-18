@@ -196,9 +196,49 @@ async function runViewport(viewportName, viewport) {
     await page.locator(".usage-no-results").waitFor({ state: "visible", timeoutMs: 10_000 });
     await safeCapture(page, viewportName, "usage-empty");
     await usageSearch.fill("Garchomp");
+    const sourceFilters = [
+      ['.usage-filters .usage-filter-field:has-text("Tipo") select', "Dragon"],
+      ['.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select', "Earthquake"],
+      ['.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select', "Garchompite Z"],
+      ['.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select', "Sand Veil"],
+    ];
+    for (const [selector, label] of sourceFilters) {
+      const filter = page.locator(selector);
+      const optionExists = await filter.evaluate((select, optionLabel) =>
+        Array.from(select.options).some((option) => option.label === optionLabel), label);
+      if (!optionExists) failures.push(`Usage não oferece a faceta real "${label}" neste índice.`);
+      else await filter.selectOption({ label });
+    }
+    const filteredSpecies = await page.locator(".usage-species-button").allTextContents();
+    if (!filteredSpecies.some((name) => name.includes("Garchomp"))) {
+      failures.push("As facetas combinadas não preservaram o Garchomp compatível com os dados publicados.");
+    }
+    await safeCapture(page, viewportName, "usage-filtered");
+    await page.getByRole("button", { name: "Limpar filtros" }).click();
+    await usageSearch.fill("Garchomp");
     await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
     await waitForEither(page, ".usage-snapshot-picker, .usage-no-snapshots, .usage-error", 35_000);
     await safeCapture(page, viewportName, "usage-history");
+  }
+
+  const metaRollButton = page.getByRole("button", { name: "MetaRoll", exact: true });
+  if (await metaRollButton.count()) {
+    await metaRollButton.press("Enter");
+    const activeSource = page.locator(".usage-source-switch button.is-active");
+    await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+    const keyboardSource = await metaRollButton.evaluate((button) => ({
+      pressed: button.getAttribute("aria-pressed"),
+      outlineWidth: getComputedStyle(button).outlineWidth,
+      outlineStyle: getComputedStyle(button).outlineStyle,
+    }));
+    observations.push({ viewport: viewportName, name: "keyboard-source-switch", ...keyboardSource });
+    if (keyboardSource.pressed !== "true" || keyboardSource.outlineWidth === "0px" || keyboardSource.outlineStyle === "none") {
+      failures.push(`${viewportName}: a troca de fonte por teclado não deixou estado e foco visíveis.`);
+    }
+    await page.getByRole("button", { name: "Battle Data", exact: true }).press("Enter");
+    await page.locator(".usage-source-switch button.is-active").filter({ hasText: "Battle Data" }).waitFor({ state: "visible", timeoutMs: 10_000 });
+  } else {
+    failures.push(`${viewportName}: o seletor de fonte não está disponível no Usage de Battle Data.`);
   }
 
   await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Tauros-Paldea-Aqua`, { waitUntil: "domcontentloaded" });
