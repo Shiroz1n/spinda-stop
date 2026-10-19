@@ -965,6 +965,8 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width <= 420 });
 
   await page.getByRole("button", { name: "1 vs 1" }).click();
+  const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
+  if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
   await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
   await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
   await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
