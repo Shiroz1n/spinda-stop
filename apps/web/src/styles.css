@@ -1349,7 +1349,7 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
   .speed-results-toolbar label { display: grid; }
   .speed-results-toolbar input { width: 100%; }
   .speed-target-banner { grid-template-columns: 58px minmax(0, 1fr) auto; gap: 5px; padding-inline: 5px; }
-  .speed-target-banner > .pokemon-art { width: 56px; height: 56px; }
+  .speed-target-banner > .pokemon-art { --sprite-size: 56px !important; width: 56px; height: 56px; min-width: 56px; }
   .speed-target-copy h2 { font-size: 0.95rem; }
   .speed-target-value strong { font-size: 1.25rem; }
   .builder-speed-heading { align-items: flex-start; padding-inline: 7px; }

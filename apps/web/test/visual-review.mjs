@@ -983,6 +983,15 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".speed-result-row").filter({ hasText: "Mega Garchomp Z" }).count() < 1) failures.push(`${viewportName}: Speed Tiers não manteve a forma Mega Garchomp Z na busca.`);
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
+  const speedTargetLayout = await page.locator(".speed-target-banner").evaluate((banner) => {
+    const artwork = banner.querySelector(".pokemon-art").getBoundingClientRect();
+    const name = banner.querySelector(".speed-target-copy h2").getBoundingClientRect();
+    return { artworkRight: artwork.right, nameLeft: name.left };
+  });
+  observations.push({ viewport: viewportName, name: "speed-target-banner-art-fit", ...speedTargetLayout });
+  if (viewport.width <= 360 && speedTargetLayout.artworkRight > speedTargetLayout.nameLeft + 1) {
+    failures.push(`${viewportName}: o sprite e o nome do alvo de Speed estão sobrepostos no banner.`);
+  }
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true, fullPage: false });
   await page.locator(".speed-result-row").first().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z-results", { fullPage: false });
