@@ -635,6 +635,13 @@ async function runViewport(viewportName, viewport) {
   }, null, { timeout: 15_000 });
   const megaZTargetImage = await page.locator(".builder-speed-target .pokemon-art img").evaluate((image) => ({ src: image.src, width: image.naturalWidth }));
   if (!megaZTargetImage.src.endsWith("10309.png") || megaZTargetImage.width !== 512) failures.push(`${viewportName}: Mega Garchomp Z não carregou o sprite HOME específico da forma.`);
+  const targetNameGeometry = await page.locator(".builder-speed-target").evaluate((container) => {
+    const artwork = container.querySelector(":scope > .pokemon-art").getBoundingClientRect();
+    const name = container.querySelector(".builder-speed-target-name strong").getBoundingClientRect();
+    return { artworkRight: Math.round(artwork.right), nameLeft: Math.round(name.left) };
+  });
+  observations.push({ viewport: viewportName, name: "builder-speed-target-artwork-clearance", ...targetNameGeometry });
+  if (viewport.width <= 420 && targetNameGeometry.artworkRight > targetNameGeometry.nameLeft) failures.push(`${viewportName}: speed target sprite overlaps its name.`);
   await page.getByLabel("SP do alvo").fill("32");
   const updatedTeamRows = await page.locator(".builder-speed-row").evaluateAll((rows) => rows.map((row) => ({ speed: row.dataset.speed, target: row.dataset.targetSpeed, relation: row.dataset.relation })));
   if (updatedTeamRows.length !== 6 || updatedTeamRows.some((row) => row.target !== "203" || !row.speed || !row.relation)) failures.push(`${viewportName}: alterar o SP do alvo não atualizou os seis resultados de Speed.`);
