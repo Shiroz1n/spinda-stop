@@ -49,6 +49,8 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
+- [Guia geral para evitar padrões visuais genéricos](docs/UI_HUMANIZER.md)
+- [Design system do Spinda Stop e referências](docs/SPINDA_STOP_DESIGN_SYSTEM.md)
 - [Speed Tiers e fórmulas](docs/SPEED_TIERS.md)
 - [Registro da revisão visual](docs/VISUAL_REVIEW.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
