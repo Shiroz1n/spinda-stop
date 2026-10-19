@@ -102,6 +102,48 @@ O roteiro registrou 533 observações e zero violações axe, mas marcou uma fal
 
 O status do #81 foi `needs-review`; a captura identificou melhorias reais e um falso negativo do roteiro, portanto não é aprovação automática. A captura seguinte também deve provar o carregamento das duas formas de Raichu em vez de apenas verificar o mapa de IDs.
 
+### Rechecagem focada nesta rodada — 19/10/2026
+
+Reaproveitei os fluxos já documentados acima e completei as rotas específicas solicitadas. As referências servem para estudar navegação e hierarquia. Nenhuma imagem, estatística, composição de time ou dado exclusivo dos concorrentes será incorporado.
+
+| URL | Ação feita | Resultado visível | Limite de uso |
+| --- | --- | --- | --- |
+| [Pikalytics Pokédex](https://www.pikalytics.com/pokedex) | Abri o catálogo e digitei `Rillaboom` no campo de busca | O cabeçalho confirmou a busca; a lista não apresentou um estado filtrado verificável nesta visita | Registro a ação, sem afirmar que a busca filtrou a lista |
+| [Ficha Rillaboom](https://www.pikalytics.com/pokedex/gen9championsvgc2026regmc/rillaboom) | Abri a ficha, cliquei em Sneasler #2 e troquei o formato para Reg M-A | A espécie mudou para Sneasler; a troca de formato voltou ao ranking M-A e atualizou a lista. A apresentação de título, formato e dados variou entre visitas | Não uso números nem rótulos divergentes |
+| [Calculadora Pikalytics](https://www.pikalytics.com/damage-calculator) | Abri o confronto predefinido e cliquei em Fake Out para Incineroar | O resumo do golpe e a faixa de dano foram recalculados, com rolls acessíveis abaixo; os formulários extensos ficam depois do resultado | Referência só de sequência e acessibilidade dos rolls |
+| [Champions Lab Team Builder](https://championslab.xyz/team-builder) | Carreguei o time de torneio LexiconVGC | Seis posições foram preenchidas; análise, cobertura e editor do integrante selecionado apareceram no mesmo fluxo | A ficha exibiu uma associação Mega/item inconsistente; não usei esse detalhe como dado |
+| [Rental Silph Scope](https://silph-scope.com/rentals/085MDPDKDD) | Abri o código pedido e esperei o carregamento da ficha | A lista manteve os filtros de Pokémon, tipo, golpe, habilidade, item e regulamento; o detalhe abriu seis sets e mostrou links para a fonte e PokéPaste | O time, a autoria e seus sets pertencem à referência e não foram reutilizados |
+
+O ZIP DataDex anexado traz 15 telas mobile. Usei as imagens para estudar varredura do catálogo, ficha e troca de forma, navegação por tarefa, filtros de golpes e relações de tipo. A direção do Spinda Stop mantém o GBA e os tokens próprios; não replica as cores, cards, ilustrações ou a estrutura do DataDex.
+
+### Diagnóstico visual antes da reformulação
+
+Revisei manualmente as capturas existentes de home, Dex, Usage, builder, calculadora, Speed, salas e torneios nas larguras 1440, 390 e 320 px (`visual-review-111`). A ficha foi consultada no estado de Garchomp em capturas anteriores (`visual-review-94/95`); a captura direta da ficha será acrescentada ao roteiro desta rodada para não depender da imagem antiga. As cinco questões mais concretas que guiam a edição são:
+
+| # | Problema observado nas capturas atuais | Evidência |
+| --- | --- | --- |
+| 1 | A home usa uma simulação grande de catálogo, com dois sprites de exemplo e dois blocos sem espécie, depois repete três cartões de passos; o bloco consome boa parte do primeiro viewport sem mostrar um estado real do time | `desktop-home.png` (1440) |
+| 2 | O catálogo mantém cartões altos com stats e chamada “Abrir ficha” repetidos; a 320 px só uma linha ocupa a largura e quase todo o primeiro viewport vira um único resultado | `desktop-pokedex-loaded-more.png`, `mobile-320-pokedex-loaded-more.png` |
+| 3 | A ficha dá a maior área ao sprite e ao título; a 320 px “Garchomp” quebra com um `p` isolado, e a navegação de formas e os dados só começam abaixo da dobra | `desktop-pokemon-sheet.png`, `mobile-pokemon-sheet.png`, `mobile-320-pokemon-sheet.png` de `visual-review-94/95` |
+| 4 | Em Usage, a barra de fonte, os horários de captura/consulta, a contagem e o botão de atualização precedem a espécie e a distribuição; a 320 px a ficha mal começa acima da navegação inferior e a trilha de categorias é cortada | `mobile-usage-battle-data.png`, `mobile-320-usage-battle-data.png` |
+| 5 | A hierarquia da tarefa se desfaz no primeiro viewport estreito: o set ativo do Builder começa abaixo das seis posições; a calculadora corta o texto do resultado percentual por trás da navegação fixa; salas e torneios mostram o painel de estado e a explicação antes de caberem as pessoas envolvidas | `mobile-320-builder-six-members-first-fold.png`, `mobile-320-calculator-comparison.png`, `mobile-320-room-state-flow.png`, `mobile-320-tournament-state-flow.png` |
+
+### Composição definida para cada tela
+
+| Tela | Composição a implementar |
+| --- | --- |
+| Home | Uma entrada curta com Spinda e ações reais para Dex, montar time e organizar partida; as três ações ficam próximas e não usam catálogo simulado nem métrica inventada. |
+| Pokédex | Campo de busca e filtros do catálogo inteiro no topo; exploração contínua com linhas compactas no celular e grade curta em desktop. Cada espécie/form mantém número, sprite próprio, nome, forma e tipos. |
+| Ficha | Sprite, número, espécie/forma e tipos como foco; seletor de formas e navegação por tarefa logo abaixo. Stats, golpes, evolução e relações de tipo ficam em seções legíveis. PokéAPI permanece identificada como dado geral, sem sugerir legalidade em Champions. |
+| Usage e ladder | Ranking/lista ativa junto da espécie selecionada e de sua distribuição. Fonte, formato e período aparecem uma vez; denominadores e limites ficam em “Sobre os dados”. Dados Battle Data e MetaRoll permanecem separados. |
+| Builder | Seis integrantes legíveis primeiro, com o set ativo acessível logo em seguida. Golpes, item, habilidade, Nature com ↑/↓ e efeito, e SP continuam editáveis; análise fica secundária sem perder função. |
+| Calculadora | Atacante, alvo e resultado A/B no início; resumo e controles frequentes ficam juntos, com os 16 rolls e modificadores ainda abríveis. Formulários longos ficam depois do resultado. |
+| Speed | Modelo, alvo e controles essenciais compactos; alvo calculado e comparação de tiers vêm imediatamente depois. Speed continua sendo ordem calculada, não ranking de uso; fórmula e limitações ficam em “Sobre os dados”. |
+| Salas | Estado e próxima ação juntos; confronto, participantes e Pokémon compartilhados formam o bloco principal. Convite, permissões e outros formulários seguem depois do contexto da partida. |
+| Torneios | Estado e próxima ação abrem a tela; participantes e chaveamento vêm antes dos controles do host. Convites e operações administrativas ficam após a leitura do andamento. |
+
+Essas composições variam por tarefa, usando os tokens existentes e menos molduras concorrentes. Não removem rótulos de tipo, estados, informações de fonte, recursos de domínio ou caminhos de teclado quando têm função.
+
 ## Limites e verificação
 
 - A execução local do Playwright não foi possível porque o executável Chromium apontado por `chromium.executablePath()` não existe e não havia Chrome/Chromium de sistema. A tentativa anterior de instalar pelo CDN recebeu HTML de 195 bytes no lugar do ZIP. As inspeções visuais do Spinda Stop usam as capturas do GitHub Actions, abertas manualmente; lint, axe e build não contam como aprovação visual.

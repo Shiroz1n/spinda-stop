@@ -17,6 +17,7 @@ const accessibilityIssues = [];
 const representativeCaptures = new Set([
   "home",
   "pokedex-loaded-more",
+  "pokemon-sheet",
   "usage-battle-data",
   "builder-six-members-first-fold",
   "builder-nature-before",
@@ -1325,6 +1326,7 @@ async function runViewport(viewportName, viewport) {
   if (viewport.width <= 360 && speedTargetLayout.artworkRight > speedTargetLayout.nameLeft + 1) {
     failures.push(`${viewportName}: o sprite e o nome do alvo de Speed estão sobrepostos no banner.`);
   }
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true, fullPage: false });
   await page.locator(".speed-result-row").first().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z-results", { audit: true, fullPage: false });
