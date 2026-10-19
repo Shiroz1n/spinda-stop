@@ -902,7 +902,7 @@ async function runViewport(viewportName, viewport) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
-  await page.getByLabel("Comparar com outro cenário").check();
+  await page.getByLabel("Comparar cenários").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".damage-editor-disclosure > summary").click();
   await page.getByLabel("Golpe B").fill("Dragon Claw");
@@ -929,14 +929,14 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
   const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
   if (compactDetailState.some(Boolean)) failures.push(`${viewportName}: os rolls e modificadores secundários devem começar recolhidos.`);
-  if (await page.locator(".damage-engine-note").count() !== 0 || await page.locator(".damage-engine-details").count() !== 1) failures.push(`${viewportName}: a nota do motor deve aparecer uma vez, em detalhes recolhidos.`);
+  if (await page.locator(".damage-engine-note").count() !== 0 || await page.locator(".damage-context-help").count() !== 1 || await page.locator(".damage-context-help").evaluate((details) => details.open)) failures.push(`${viewportName}: a ajuda do motor deve começar compacta e recolhida.`);
   await page.locator(".damage-result-more > summary").first().click();
   const visibleRollCount = await page.locator(".damage-result-more[open] .damage-rolls li").count();
   if (visibleRollCount !== 16) failures.push(`${viewportName}: a variação da calculadora não expôs exatamente os 16 rolls ao abrir detalhes.`);
   await page.locator(".damage-rolls").first().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "calculator-comparison-rolls", { audit: true, fullPage: false });
   if (!(await page.locator(".damage-editor-disclosure").evaluate((details) => details.open))) await page.locator(".damage-editor-disclosure > summary").click();
-  await page.getByRole("button", { name: "Vários alvos" }).click();
+  await page.getByRole("button", { name: "1 vs vários" }).click();
   await page.locator('input[list="damage-many-target-1"]').fill("Garchomp-Mega-Z");
   await page.locator(".damage-multi-row").nth(1).waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".damage-multi-row").count() !== 2) failures.push(`${viewportName}: um atacante não mostrou resultados independentes para dois alvos.`);
@@ -962,7 +962,7 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width <= 420 });
 
-  await page.getByRole("button", { name: "Um alvo" }).click();
+  await page.getByRole("button", { name: "1 vs 1" }).click();
   await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
   await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
   await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
@@ -983,6 +983,33 @@ async function runViewport(viewportName, viewport) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
   await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
+
+  const inverseMoveNames = ["Earthquake", "Energy Ball", "Grassy Glide", "Flare Blitz", "Heat Wave", "Hurricane"];
+  const inverseTeamState = await page.evaluate((moves) => {
+    const key = "spinda-stop.team.v1";
+    const team = JSON.parse(window.localStorage.getItem(key) || "null");
+    if (!team || !Array.isArray(team.members) || team.members.length !== 6 || team.members.some((member) => !member)) return null;
+    team.name = "Equipe de comparação";
+    team.members.forEach((member, index) => { member.moves = [moves[index], "", "", ""]; });
+    window.localStorage.setItem(key, JSON.stringify(team));
+    return team.members.map((member) => ({ pokemonId: member.pokemonId, move: member.moves[0], nature: member.nature, statPoints: member.statPoints }));
+  }, inverseMoveNames);
+  if (!inverseTeamState) failures.push(`${viewportName}: não foi possível preparar os seis sets locais para o modo inverso da calculadora.`);
+  await page.goto(`${baseUrl}/calculator?defender=Gardevoir-Mega`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Time vs 1" }).click();
+  await page.locator(".damage-team-member-grid").waitFor({ state: "visible", timeout: 10_000 });
+  const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({ status: [...row.classList].find((name) => name.startsWith("is-")), text: row.innerText })));
+  observations.push({ viewport: viewportName, name: "calculator-team-vs-one-rows", rows: inverseRows.map(({ status, text }) => ({ status, text: text.slice(0, 260) })) });
+  if (inverseRows.length !== 6 || inverseRows.some(({ status }) => status !== "is-ready")) failures.push(`${viewportName}: Time vs 1 não calculou os seis integrantes com os golpes do builder.`);
+  for (const move of inverseMoveNames) {
+    if (!inverseRows.some(({ text }) => text.includes(move))) failures.push(`${viewportName}: o golpe ${move} do builder não apareceu na comparação inversa.`);
+  }
+  await waitForSpritePaint(page, ".damage-team-member .pokemon-art img, .damage-team-results-heading .pokemon-art img");
+  await page.locator(".damage-team-move-details > summary").first().click();
+  const teamRollCount = await page.locator(".damage-team-member:first-child .damage-rolls li").count();
+  if (teamRollCount !== 16) failures.push(`${viewportName}: o primeiro golpe de Time vs 1 não preservou os 16 rolls.`);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: true });
 
   await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });

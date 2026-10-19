@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateDamageAgainstTargets, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -595,4 +595,70 @@ test("golpes sem dano direto não são apresentados como uma faixa de dano", () 
 
   assert.equal(result.move.category, "Status");
   assert.deepEqual([result.min, result.max], [0, 0]);
+});
+
+test("time contra um alvo calcula golpes do builder e preserva os 16 rolls", () => {
+  const team = [
+    { species: "Garchomp", nature: "Jolly", ability: "Rough Skin", item: "", statPoints: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ["Earthquake", "Shadow Claw", "", ""] },
+  ];
+  const rows = calculateDamageFromTeamAgainstTarget(team, side("Gardevoir-Mega"), {
+    gameType: "Doubles",
+    weather: "Rain",
+    attackerSide: { isHelpingHand: true },
+    defenderSide: { isReflect: true },
+  });
+
+  assert.equal(rows.length, 6);
+  assert.equal(rows[0].status, "ready");
+  assert.deepEqual(rows[0].moves.map(({ move }) => move), ["Earthquake", "Shadow Claw"]);
+  assert.equal(rows[0].moves[0].result.rolls.length, 16);
+  assert.equal(rows[0].moves[0].result.gameType, "Doubles");
+  assert.equal(rows[0].moves[0].result.targetsHit, 1);
+  assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Helping Hand"));
+  assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Reflect"));
+  assert.equal(rows[1].status, "empty");
+});
+
+test("compara os golpes preenchidos dos seis integrantes contra o mesmo alvo", () => {
+  const speciesAndMoves = [
+    ["Garchomp", "Earthquake"],
+    ["Lucario", "Aura Sphere"],
+    ["Gardevoir-Mega", "Moonblast"],
+    ["Charizard", "Heat Wave"],
+    ["Absol-Mega-Z", "Shadow Claw"],
+    ["Garchomp-Mega-Z", "Dragon Claw"],
+  ];
+  const members = speciesAndMoves.map(([species, move]) => ({
+    species,
+    nature: "Serious",
+    ability: "",
+    item: "",
+    statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: [move, "", "", ""],
+  }));
+  const rows = calculateDamageFromTeamAgainstTarget(members, side("Gardevoir-Mega"));
+
+  assert.deepEqual(rows.map(({ status }) => status), Array(6).fill("ready"));
+  assert.deepEqual(rows.map(({ moves }) => moves[0].result.move.name), speciesAndMoves.map(([, move]) => move));
+  assert.ok(rows.every(({ moves }) => moves[0].result && moves[0].result.max >= moves[0].result.min));
+  assert.ok(rows.slice(0, 5).every(({ moves }) => moves[0].result.rolls?.length === 16));
+});
+
+test("time contra um alvo explicita sets sem golpes e não presume uma distribuição legal", () => {
+  const blank = { species: "Garchomp", nature: "Serious", ability: "Rough Skin", item: "", statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, moves: ["", " ", "", ""] };
+  const overStatLimit = { ...blank, statPoints: { ...blank.statPoints, atk: 33 }, moves: ["Earthquake", "", "", ""] };
+  const overBudget = { ...blank, statPoints: { hp: 12, atk: 12, def: 12, spa: 12, spd: 10, spe: 9 }, moves: ["Earthquake", "", "", ""] };
+  const unknownMove = { ...blank, moves: ["Earthquake", "Move Not In Catalogue", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove], side("Garchomp"));
+
+  assert.equal(rows[0].status, "no-moves");
+  assert.match(rows[0].error, /Nenhum golpe/);
+  assert.equal(rows[1].status, "invalid");
+  assert.match(rows[1].error, /0 a 32 SP/);
+  assert.equal(rows[2].status, "invalid");
+  assert.match(rows[2].error, /66/);
+  assert.equal(rows[3].status, "ready");
+  assert.ok(rows[3].moves[0].result);
+  assert.equal(rows[3].moves[1].result, null);
+  assert.match(rows[3].moves[1].error, /fora do catálogo/);
 });

@@ -416,3 +416,72 @@ export function calculateDamageAgainstTargets(input, targetSpecies) {
       }
     });
 }
+
+const championsStatKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
+
+function validateTeamDamageMember(member) {
+  const statPoints = member?.statPoints;
+  if (!statPoints || typeof statPoints !== "object") return "Distribuição de Stat Points ausente.";
+
+  let total = 0;
+  for (const key of championsStatKeys) {
+    const value = statPoints[key];
+    if (!Number.isSafeInteger(value) || value < 0 || value > 32) {
+      return `${key.toUpperCase()} precisa ter de 0 a 32 SP.`;
+    }
+    total += value;
+  }
+  if (total > 66) return `O set usa ${total} SP; o limite deste modelo é 66.`;
+  if (!String(member?.species || "").trim()) return "Espécie ausente no rascunho salvo.";
+  if (!Array.isArray(member.moves)) return "Lista de golpes ausente neste set.";
+  return "";
+}
+
+// The inverse comparison consumes actual builder sets. Empty slots and partial
+// or invalid sets are represented explicitly; no default move or legal set is
+// inferred on behalf of the player.
+export function calculateDamageFromTeamAgainstTarget(teamMembers, defender, options = {}) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const member = Array.isArray(teamMembers) ? teamMembers[index] : null;
+    if (!member) return { slot: index + 1, status: "empty", moves: [], error: "Posição vazia." };
+
+    const memberError = validateTeamDamageMember(member);
+    if (memberError) return { slot: index + 1, status: "invalid", member, moves: [], error: memberError };
+
+    const selectedMoves = Array.isArray(member.moves)
+      ? member.moves.map((move) => String(move || "").trim()).filter(Boolean)
+      : [];
+    if (selectedMoves.length === 0) {
+      return { slot: index + 1, status: "no-moves", member, moves: [], error: "Nenhum golpe preenchido neste set." };
+    }
+
+    const moves = selectedMoves.map((move) => {
+      if (!getDamageMove(move)) return { move, result: null, error: "Golpe fora do catálogo de cálculo." };
+      try {
+        return {
+          move,
+          result: calculateChampionsDamage({
+            ...options,
+            attacker: {
+              species: member.species,
+              nature: member.nature || "Serious",
+              ability: member.ability || "",
+              item: member.item || "",
+              statPoints: member.statPoints,
+              boosts: member.boosts || {},
+              status: member.status || "",
+            },
+            defender,
+            gameType: options.gameType || "Doubles",
+            targetsHit: 1,
+            move,
+          }),
+          error: "",
+        };
+      } catch (error) {
+        return { move, result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este golpe." };
+      }
+    });
+    return { slot: index + 1, status: moves.some(({ result }) => result) ? "ready" : "invalid", member, moves, error: "" };
+  });
+}
