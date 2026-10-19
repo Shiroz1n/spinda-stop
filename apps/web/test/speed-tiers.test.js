@@ -7,6 +7,7 @@ import {
   calculateChampionsSpeed,
   calculateStandardSpeed,
   compareSpeed,
+  getChampionsSpeedRecommendation,
   maximumLegalSpeedPoints,
   minimumTrainingToOutspeed,
   savedNatureForSpeed,
@@ -92,6 +93,31 @@ test("prévia de Speed respeita 32 SP por atributo e o orçamento total de 66", 
   assert.equal(validateChampionsStatPoints(invalidAttribute).valid, false);
   assert.equal(maximumLegalSpeedPoints(invalidAttribute), 0);
   assert.equal(applySpeedPointsToStatSpread(invalidAttribute, 0).ok, false);
+});
+
+test("recomendação respeita os SP livres e separa o resultado de nature favorável", () => {
+  const neutralWithTwelve = getChampionsSpeedRecommendation({
+    baseSpeed: 100,
+    targetSpeed: 145,
+    nature: "neutral",
+    availableSpeedSp: 12,
+  });
+  assert.deepEqual(neutralWithTwelve, {
+    availableSpeedSp: 12,
+    requiredSp: 26,
+    canOutspeed: false,
+    favorableRequiredSp: 13,
+    favorableCanOutspeed: false,
+  });
+
+  const neutralWithThirteen = getChampionsSpeedRecommendation({
+    baseSpeed: 100,
+    targetSpeed: 145,
+    nature: "neutral",
+    availableSpeedSp: 13,
+  });
+  assert.equal(neutralWithThirteen.canOutspeed, false);
+  assert.equal(neutralWithThirteen.favorableCanOutspeed, true);
 });
 
 test("aplicar categoria de nature preserva a nature salva quando Speed já tem o mesmo efeito", () => {

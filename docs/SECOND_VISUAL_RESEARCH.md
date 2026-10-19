@@ -74,25 +74,13 @@ Usei a interface desktop do Work Browser e confirmei cada estado com uma captura
 | [Many vs Team](https://vgcmulticalc.com/many-vs-team/) | Ajustei HP de Charizard para 70%; comparei “Best Move” ligado e desligado com Rain mantida | Com “Best Move” ligado, Stone Edge de Machamp causou 308–364 e OHKO garantido; Rock Slide de Snorlax causou 144–172. Reabri os resultados com “Best Move” desligado para comparar a lista completa | Captura real exibida com “Best Move” desligado; estado desktop 1364×936 |
 | [Speed Calc](https://vgcmulticalc.com/speed-calc/) | Reduzi Speed SP de Charizard de 32 para 16; busquei Mega Garchomp Z no lado rival e ativei Icy Wind | Charizard ficou com 149 Speed e 24/66 SP restantes. O modificador do lado rival passou a −1 e a lista de Speed foi recalculada; “My Whole Team” permaneceu ativo | Captura real exibida depois da alteração do modificador; estado desktop 1364×936 |
 
-Tentei repetir os fluxos em mobile. O Work Browser desta sessão não expôs controle de viewport nem emulação de dispositivo; Ctrl+Shift+M e Ctrl+Shift+I não abriram essas opções, e as capturas continuaram em 1364×936. Portanto, os quatro fluxos da referência foram observados somente em desktop. A responsividade do Spinda Stop é verificada separadamente nos viewports 390, 320 e 720 CSS px pelo workflow do PR.
+Tentei repetir os fluxos em mobile. O Work Browser desta sessão não expôs controle de viewport nem emulação de dispositivo; Ctrl+Shift+M e Ctrl+Shift+I não abriram essas opções, e as capturas continuaram em 1364×936. Portanto, os quatro fluxos da referência foram observados somente em desktop. Os arquivos de imagem anexados ao pedido não estavam disponíveis nos caminhos locais desta sessão, então não os usei como captura substituta nem para afirmar uma interação mobile. A responsividade do Spinda Stop é verificada separadamente nos viewports 390, 320 e 720 CSS px pelo workflow do PR.
 
 ## Capturas do Spinda Stop e inspeção
 
-O script `apps/web/test/visual-review.mjs` grava um conjunto por viewport: `desktop` (1440), `mobile` (390), `mobile-320` (320) e `zoom200` (720 CSS px). Nomes focados desta rodada:
+O script `apps/web/test/visual-review.mjs` grava 11 estados representativos em cada viewport: `desktop` (1440), `mobile` (390), `mobile-320` (320) e `zoom200` (720 CSS px). O conjunto inclui home, Pokédex após lote carregado, Usage, seis posições do builder, comparação de Speed, comparação com orçamento/nature, calculadora um-contra-vários, Time vs 1, Speed Tiers e estados de salas/torneios. A captura `builder-speed-budget-nature` usa um rascunho local temporário e legal somente para verificar o limite restante; esses valores não são dados de Usage ou de telemetria.
 
-- `*-pokedex-loaded-more.png`, `*-pokedex-filtered.png`, `*-pokedex-restored.png`;
-- `*-usage-battle-data-moves.png` e `*-usage-metaroll-category.png`;
-- `*-builder-six-members-first-fold.png` e `*-builder-six-members.png`;
-- `*-builder-six-speed-vs-mega-garchomp-z.png` para os seis cálculos e o sprite da forma adversária;
-- `*-builder-six-speed-last-member.png` para conferir o restante da lista em telas estreitas;
-- `*-builder-empty-speed-target.png` para a ação de escolher alvo antes da comparação e `*-builder-speed-shortcut` no `inspection.json` para verificar a navegação pelo atalho;
-- `*-calculator-comparison.png`, `*-calculator-comparison-rolls.png`, `*-calculator-one-v-many.png` e `*-calculator-lucario-z-vs-absol-z.png`;
-- `*-calculator-team-vs-one.png` para os seis sets do builder contra um alvo, incluindo a linha expandida com rolls;
-- `*-speed-tiers-mega-garchomp-z.png` para busca e forma específica na tabela;
-- `*-room-state-flow.png` e `*-tournament-state-flow.png` para exercitar os estados de resposta;
-- `*-room-live-first-fold.png` e `*-tournament-live-first-fold.png` para mostrar as salas e o torneio criados no PostgreSQL efêmero, antes dos controles secundários.
-
-As capturas mobile das tarefas principais são de viewport, em pontos de rolagem selecionados; assim a navegação fixa aparece no lugar real e não fica colada no meio de uma imagem longa. As capturas desktop da Pokédex continuam em página completa. Para sala/torneio, `*-state-flow.png` usa fixtures com formato de resposta da API; as capturas `*-live-first-fold.png` usam salas e torneios criados no PostgreSQL efêmero, com participantes reais do teste, estado e próxima ação no topo antes dos formulários. A sequência completa de convite, check-in, partida, resultado, confirmação, chaveamento e final também usa PostgreSQL efêmero. O roteiro registra cada modo no `inspection.json`. Antes da captura longa da Pokédex, o roteiro percorre os lotes carregados para que os sprites com `loading="lazy"` tenham a chance de aparecer; o produto continua carregando a lista conforme o usuário rola.
+Capturas mobile usam o viewport real em pontos de rolagem selecionados, com a navegação fixa na borda inferior. Desktop usa página completa só quando ajuda a avaliar a composição. As capturas de estados de sala/torneio usam fixtures no formato da API; o workflow também executa as transições completas contra PostgreSQL efêmero no desktop. O `inspection.json` registra observações, overflow, axe e falhas do roteiro. Para a Pokédex, o teste percorre os lotes carregados antes da captura para que sprites visíveis com `loading="lazy"` terminem de aparecer; o produto continua carregando a lista conforme a rolagem do usuário.
 
 ### Revisão manual do artefato #80
 

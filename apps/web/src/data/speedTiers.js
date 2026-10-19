@@ -105,6 +105,23 @@ export function minimumTrainingToOutspeed({ model = "champions", baseSpeed, targ
   return null;
 }
 
+export function getChampionsSpeedRecommendation({ baseSpeed, targetSpeed, nature = "neutral", availableSpeedSp = CHAMPIONS_MAX_STAT_POINTS }) {
+  const available = Number.isInteger(availableSpeedSp)
+    ? Math.min(CHAMPIONS_MAX_STAT_POINTS, Math.max(0, availableSpeedSp))
+    : 0;
+  const requiredSp = minimumTrainingToOutspeed({ baseSpeed, targetSpeed, nature });
+  const favorableRequiredSp = normalizeNature(nature) === "favorable"
+    ? null
+    : minimumTrainingToOutspeed({ baseSpeed, targetSpeed, nature: "favorable" });
+  return {
+    availableSpeedSp: available,
+    requiredSp,
+    canOutspeed: requiredSp !== null && requiredSp <= available,
+    favorableRequiredSp,
+    favorableCanOutspeed: favorableRequiredSp !== null && favorableRequiredSp <= available,
+  };
+}
+
 export function speedNatureFromName(value) {
   return normalizeNature(value);
 }

@@ -10,7 +10,7 @@ import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { buildDamageCalculatorSearch, getDamageSpeciesName } from "../data/damageCalculator.js";
-import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, maximumLegalSpeedPoints, minimumTrainingToOutspeed, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
+import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
@@ -104,11 +104,15 @@ export function BuilderPage() {
       nature: speedNatureFromName(member.nature),
       natureTouched: false,
     };
-    const previewSpeedPoints = Math.min(CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0));
-    const speed = calculateChampionsSpeed(pokemon.stats.spe, previewSpeedPoints, preview.nature);
-    const relation = compareSpeed(speed, speedTargetValue);
-    const requiredSp = minimumTrainingToOutspeed({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature });
-    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, requiredSp };
+    const availableSpeedSp = maximumLegalSpeedPoints(member.statPoints);
+    const previewSpeedPoints = Math.min(availableSpeedSp, CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0));
+    const appliedPreview = applySpeedPointsToStatSpread(member.statPoints, previewSpeedPoints);
+    const speed = appliedPreview.ok ? calculateChampionsSpeed(pokemon.stats.spe, previewSpeedPoints, preview.nature) : null;
+    const relation = appliedPreview.ok ? compareSpeed(speed, speedTargetValue) : "unknown";
+    const recommendation = appliedPreview.ok
+      ? getChampionsSpeedRecommendation({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature, availableSpeedSp })
+      : null;
+    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, recommendation, availableSpeedSp };
   });
 
   function toDamageSide(member, pokemon) {
@@ -271,9 +275,14 @@ export function BuilderPage() {
       nature: speedNatureFromName(member.nature),
       natureTouched: false,
     };
+    const speedPoints = Math.min(
+      maximumLegalSpeedPoints(member.statPoints),
+      CHAMPIONS_MAX_STAT_POINTS,
+      Math.max(0, Number(preview.sp) || 0),
+    );
     const appliedSpread = applySpeedPointsToStatSpread(
       member.statPoints,
-      Math.min(CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0)),
+      speedPoints,
     );
     if (!appliedSpread.ok) {
       setMessage(`Prévia não aplicada. ${appliedSpread.error}`);
@@ -478,16 +487,34 @@ export function BuilderPage() {
           </>}
         </div>
         {speedTargetPokemon ? <div className="builder-speed-grid" aria-label="Comparação dos seis Pokémon do time">
-          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, requiredSp }) => {
+          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, recommendation, availableSpeedSp }) => {
             if (!member || !pokemon) return <div className="builder-speed-empty" key={index}><span>{String(index + 1).padStart(2, "0")}</span>Posição vazia</div>;
             const appliedSpread = applySpeedPointsToStatSpread(member.statPoints, preview.sp);
             const remainingSp = CHAMPIONS_MAX_TOTAL_POINTS - Object.entries(member.statPoints).reduce((sum, [key, value]) => sum + (key === "spe" ? preview.sp : value), 0);
-            const availableSpeedSp = maximumLegalSpeedPoints(member.statPoints);
+            const recommendationText = !appliedSpread.ok
+              ? "Set inválido · revise os SP"
+              : relation === "faster"
+                ? "Já ultrapassa"
+                : recommendation.requiredSp === null
+                  ? "Não passa com até 32 SP"
+                  : recommendation.canOutspeed
+                    ? `${relation === "tie" ? "Empata · " : ""}${recommendation.requiredSp} SP passa`
+                    : `Não passa · precisa ${recommendation.requiredSp} SP; ${availableSpeedSp} disponíveis`;
+            const favorableNatureText = !appliedSpread.ok || relation === "faster" || recommendation.canOutspeed || preview.nature === "favorable"
+              ? ""
+              : recommendation.favorableRequiredSp === null
+                ? "Nem natureza favorável + 32 SP ultrapassa"
+                : recommendation.favorableCanOutspeed
+                  ? `Nature favorável: ${recommendation.favorableRequiredSp} SP passa`
+                  : `Nature favorável: precisa ${recommendation.favorableRequiredSp} SP; ${availableSpeedSp} disponíveis`;
+            const remainingText = appliedSpread.ok
+              ? `${remainingSp} SP livres`
+              : "revise a distribuição";
             return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation}>
               <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}</small></div></div>
-              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max={CHAMPIONS_MAX_STAT_POINTS} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max={CHAMPIONS_MAX_STAT_POINTS} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div><small>{availableSpeedSp} SP disponíveis em Speed · máximo de 32 por atributo</small></label>
+              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div><small>{availableSpeedSp} SP disponíveis em Speed · máximo de 32 por atributo</small></label>
               <label className="builder-speed-nature"><span>Nature temporária</span><select className="text-input" value={preview.nature} onChange={(event) => updateSpeedPreview(index, "nature", event.target.value)}><option value="favorable">Favorável (+10%)</option><option value="neutral">Neutra</option><option value="unfavorable">Desfavorável (−10%)</option></select></label>
-              <div className="builder-speed-action"><span>{relation === "faster" ? "Já ultrapassa" : relation === "tie" ? (requiredSp === null ? "Empata · não passa com até 32 SP" : `Empata · ${requiredSp} SP passa`) : requiredSp === null ? "Não passa com até 32 SP" : `${requiredSp} SP passa`} · {remainingSp >= 0 ? `${remainingSp} SP livres` : `excede em ${Math.abs(remainingSp)} SP`}</span><button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
+              <div className="builder-speed-action"><span>{recommendationText} · {remainingText}</span>{favorableNatureText && <small className="builder-speed-favorable-note">{favorableNatureText}</small>}<button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
             </article>;
           })}
         </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>Esta prévia aceita até 32 SP em Speed e confere o orçamento de 66 SP do set antes de salvar. A referência é um formato comunitário e não confirma regras oficiais.</span></details></div>}

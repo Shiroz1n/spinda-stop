@@ -649,7 +649,8 @@ test("time contra um alvo explicita sets sem golpes e não presume uma distribui
   const overStatLimit = { ...blank, statPoints: { ...blank.statPoints, atk: 33 }, moves: ["Earthquake", "", "", ""] };
   const overBudget = { ...blank, statPoints: { hp: 12, atk: 12, def: 12, spa: 12, spd: 10, spe: 9 }, moves: ["Earthquake", "", "", ""] };
   const unknownMove = { ...blank, moves: ["Earthquake", "Move Not In Catalogue", "", ""] };
-  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove], side("Garchomp"));
+  const unsupportedItem = { ...blank, item: "Clear Amulet", moves: ["Earthquake", "", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove, unsupportedItem], side("Garchomp"));
 
   assert.equal(rows[0].status, "no-moves");
   assert.match(rows[0].error, /Nenhum golpe/);
@@ -661,4 +662,7 @@ test("time contra um alvo explicita sets sem golpes e não presume uma distribui
   assert.ok(rows[3].moves[0].result);
   assert.equal(rows[3].moves[1].result, null);
   assert.match(rows[3].moves[1].error, /fora do catálogo/);
+  assert.equal(rows[4].status, "invalid");
+  assert.equal(rows[4].moves[0].result, null);
+  assert.match(rows[4].moves[0].error, /item disponível no catálogo/);
 });

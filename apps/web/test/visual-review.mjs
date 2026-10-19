@@ -19,6 +19,8 @@ const representativeCaptures = new Set([
   "pokedex-loaded-more",
   "usage-battle-data",
   "builder-six-members-first-fold",
+  "builder-six-speed-vs-mega-garchomp-z",
+  "builder-speed-budget-nature",
   "calculator-one-v-many",
   "calculator-team-vs-one",
   "speed-tiers-mega-garchomp-z-results",
@@ -325,7 +327,7 @@ async function runViewport(viewportName, viewport) {
     observations.push({ viewport: viewportName, name: "spinda-favicon", href: declaredFavicon, ...faviconImage });
     assert.ok(faviconImage.complete && faviconImage.width > 0 && faviconImage.height > 0, `o navegador não conseguiu exibir o favicon remoto: ${faviconImage.error || "imagem vazia"}`);
   }
-  await safeCapture(page, viewportName, "home", { audit: true });
+  await safeCapture(page, viewportName, "home", { audit: true, fullPage: viewport.width > 720 });
 
   await page.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Salas privadas" }).waitFor({ state: "visible", timeout: 10_000 });
@@ -682,6 +684,56 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "builder-six-speed-vs-mega-garchomp-z", { audit: true, fullPage: false });
   await page.locator(".builder-speed-row").last().scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "builder-six-speed-last-member", { fullPage: false });
+  const validTeamSnapshot = await page.evaluate(() => window.localStorage.getItem("spinda-stop.team.v1"));
+  await page.evaluate(() => {
+    const key = "spinda-stop.team.v1";
+    const team = JSON.parse(window.localStorage.getItem(key));
+    team.members[0].nature = "Adamant";
+    team.members[0].statPoints = { hp: 9, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 };
+    window.localStorage.setItem(key, JSON.stringify(team));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Comparar Speed" }).click();
+  await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
+  await page.locator("#speed-target-search").fill("Mega Mewtwo Y");
+  await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
+  const budgetRow = page.locator(".builder-speed-row").first();
+  const budgetRecommendation = await budgetRow.locator(".builder-speed-action").innerText();
+  const favorableNatureAlternative = await budgetRow.locator(".builder-speed-favorable-note").innerText();
+  observations.push({ viewport: viewportName, name: "builder-speed-budget-nature", recommendation: budgetRecommendation, alternative: favorableNatureAlternative });
+  if (!budgetRecommendation.includes("25 SP livres") || !favorableNatureAlternative.includes("25 SP passa")) {
+    failures.push(`${viewportName}: a prévia deve respeitar 25 SP restantes e separar o resultado da nature favorável.`);
+  }
+  await safeCapture(page, viewportName, "builder-speed-budget-nature", { audit: true, fullPage: false });
+  await page.evaluate((snapshot) => window.localStorage.setItem("spinda-stop.team.v1", snapshot), validTeamSnapshot);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  if (viewportName === "desktop") {
+    const invalidTeamSnapshot = await page.evaluate(() => {
+      const key = "spinda-stop.team.v1";
+      const team = JSON.parse(window.localStorage.getItem(key));
+      team.members[0].statPoints = { hp: 32, atk: 32, def: 3, spa: 0, spd: 0, spe: 0 };
+      const serialized = JSON.stringify(team);
+      window.localStorage.setItem(key, serialized);
+      return serialized;
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.getByRole("link", { name: "Comparar Speed" }).click();
+    await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
+    await page.locator("#speed-target-search").fill("Garchomp-Mega-Z");
+    await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
+    const invalidApplyButton = page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" });
+    const disabledForInvalidSet = await invalidApplyButton.isDisabled();
+    await invalidApplyButton.dispatchEvent("click");
+    const savedAfterInvalidApply = await page.evaluate(() => window.localStorage.getItem("spinda-stop.team.v1"));
+    observations.push({ viewport: viewportName, name: "builder-speed-invalid-apply", disabled: disabledForInvalidSet, unchanged: savedAfterInvalidApply === invalidTeamSnapshot });
+    if (!disabledForInvalidSet || savedAfterInvalidApply !== invalidTeamSnapshot) {
+      failures.push(`${viewportName}: Aplicar ao set deve bloquear e preservar uma distribuição de SP inválida.`);
+    }
+    await page.evaluate((snapshot) => window.localStorage.setItem("spinda-stop.team.v1", snapshot), validTeamSnapshot);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  }
   await page.locator(".builder-secondary-actions > summary").click();
   await page.getByRole("link", { name: /como atacante/i }).click();
   await page.getByRole("heading", { name: /Cenário|Resultado/ }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
@@ -987,7 +1039,7 @@ async function runViewport(viewportName, viewport) {
   if (visibleMultiTargetResults.length !== 2 || visibleMultiTargetResults.some((row) => !row.hasSprite)) {
     failures.push(`${viewportName}: a comparação de vários alvos precisa capturar as duas linhas de resultado com sprites.`);
   }
-  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width <= 420 });
+  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width > 720 });
 
   await page.getByRole("button", { name: "1 vs 1" }).click();
   const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
@@ -1028,24 +1080,35 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/calculator?defender=Gardevoir-Mega`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Time vs 1" }).click();
   await page.locator(".damage-team-member-grid").waitFor({ state: "visible", timeout: 10_000 });
-  const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({ status: [...row.classList].find((name) => name.startsWith("is-")), text: row.innerText })));
+  const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({
+    status: [...row.classList].find((name) => name.startsWith("is-")),
+    text: row.innerText,
+    alerts: row.querySelectorAll('[role="alert"]').length,
+  })));
   observations.push({ viewport: viewportName, name: "calculator-team-vs-one-rows", rows: inverseRows.map(({ status, text }) => ({ status, text: text.slice(0, 260) })) });
-  if (inverseRows.length !== 6 || inverseRows.some(({ status }) => status !== "is-ready")) failures.push(`${viewportName}: Time vs 1 não calculou os seis integrantes com os golpes do builder.`);
+  const readyRows = inverseRows.filter(({ status }) => status === "is-ready");
+  const unavailableRows = inverseRows.filter(({ status }) => status !== "is-ready");
+  if (inverseRows.length !== 6 || readyRows.length === 0) failures.push(`${viewportName}: Time vs 1 não exibiu os seis integrantes do builder ou nenhum golpe calculável.`);
+  if (unavailableRows.some(({ alerts }) => alerts === 0)) failures.push(`${viewportName}: um set não calculável não explicou o erro junto ao Pokémon e ao golpe.`);
   for (const move of inverseMoveNames) {
     if (!inverseRows.some(({ text }) => text.includes(move))) failures.push(`${viewportName}: o golpe ${move} do builder não apareceu na comparação inversa.`);
   }
   await waitForSpritePaint(page, ".damage-team-member .pokemon-art img, .damage-team-results-heading .pokemon-art img");
-  await page.locator(".damage-team-move-details > summary").first().click();
-  const teamRollCount = await page.locator(".damage-team-member:first-child .damage-rolls li").count();
-  if (teamRollCount !== 16) failures.push(`${viewportName}: o primeiro golpe de Time vs 1 não preservou os 16 rolls.`);
+  const firstValidMember = page.locator(".damage-team-member.is-ready").first();
+  await firstValidMember.locator(".damage-team-move-details > summary").first().click();
+  const teamRollCount = await firstValidMember.locator(".damage-rolls li").count();
+  if (teamRollCount !== 16) failures.push(`${viewportName}: um golpe calculável de Time vs 1 não preservou os 16 rolls.`);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: true });
+  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: viewport.width > 720 });
 
   await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });
   await page.getByLabel("Buscar na lista").fill("Garchomp");
   await page.locator(".speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".speed-result-row").filter({ hasText: "Mega Garchomp Z" }).count() < 1) failures.push(`${viewportName}: Speed Tiers não manteve a forma Mega Garchomp Z na busca.`);
+  const speedThresholds = await page.locator(".speed-threshold").allTextContents();
+  if (speedThresholds.some((text) => /\b(?:3[3-9]|[4-9]\d)\s*SP\b/.test(text))) failures.push(`${viewportName}: Speed Tiers recomendou mais de 32 SP num único atributo.`);
+  if (!speedThresholds.some((text) => text.includes("Não passa com até 32 SP"))) failures.push(`${viewportName}: Speed Tiers não explicou quando o alvo é inalcançável dentro do limite de 32 SP.`);
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
   const speedTargetLayout = await page.locator(".speed-target-banner").evaluate((banner) => {
     const artwork = banner.querySelector(".pokemon-art").getBoundingClientRect();
