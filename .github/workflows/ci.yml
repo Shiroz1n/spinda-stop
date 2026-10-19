@@ -36,6 +36,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run data:sync
       - run: npm run api:migrate
       - run: npm run lint
       - run: npm test
