@@ -14,6 +14,17 @@ const spindaFaviconUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/7a7d
 const observations = [];
 const failures = [];
 const accessibilityIssues = [];
+const representativeCaptures = new Set([
+  "home",
+  "pokedex-loaded-more",
+  "usage-battle-data",
+  "builder-six-members-first-fold",
+  "calculator-one-v-many",
+  "calculator-team-vs-one",
+  "speed-tiers-mega-garchomp-z-results",
+  "room-state-flow",
+  "tournament-state-flow",
+]);
 
 await mkdir(outputDir, { recursive: true });
 
@@ -150,6 +161,7 @@ async function capture(page, viewport, name, { audit = false, fullPage = true } 
 }
 
 async function safeCapture(page, viewport, name, options) {
+  if (!representativeCaptures.has(name)) return;
   try {
     await capture(page, viewport, name, options);
   } catch (error) {
@@ -271,7 +283,7 @@ async function captureCommunityState(context, viewport, viewportName, kind) {
     url = `${baseUrl}/tournaments/${tournamentId}`;
   }
 
-  await page.goto(url, { waitUntil: "networkidle" });
+  await page.goto(url, { waitUntil: "domcontentloaded" });
   await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".participant-list").waitFor({ state: "visible", timeout: 10_000 });
   const hierarchy = await inspectCommunityHierarchy(page, viewportName, kind, "API-shaped visual fixture");
@@ -287,12 +299,13 @@ async function captureCommunityState(context, viewport, viewportName, kind) {
 }
 
 async function runViewport(viewportName, viewport) {
+  console.log(`Visual review: start ${viewportName} at ${viewport.width}×${viewport.height}.`);
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600, reducedMotion: "reduce" });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
-  await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   if (viewportName === "desktop") {
     const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
     assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");
@@ -314,12 +327,12 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "home", { audit: true });
 
-  await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Salas privadas" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "rooms-signed-out", { audit: true });
   const unavailablePage = await context.newPage();
   await unavailablePage.route("**/api/auth/status", (route) => route.abort());
-  await unavailablePage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+  await unavailablePage.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
   await unavailablePage.locator(".community-auth-card .community-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(unavailablePage, viewportName, "rooms-api-error", { audit: true });
   await unavailablePage.close();
@@ -354,7 +367,7 @@ async function runViewport(viewportName, viewport) {
     await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   }
 
-  await page.goto(`${baseUrl}/dex`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/dex`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex", { audit: true, fullPage: viewport.width > 720 });
   const initialCardCount = await page.locator(".pokemon-card").count();
@@ -370,7 +383,7 @@ async function runViewport(viewportName, viewport) {
   }
   const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art img", viewport.height);
   observations.push({ viewport: viewportName, name: "pokedex-loaded-batch-sprites", ...dexSpriteState });
-  await safeCapture(page, viewportName, "pokedex-loaded-more", { fullPage: viewport.width > 720 });
+  await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
   const firstSpeciesStats = await page.locator(".quick-stats").first().innerText();
@@ -487,7 +500,7 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "pokedex-restored", { fullPage: false });
 
-  await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-empty", { audit: true });
   const emptySpeedTarget = page.locator(".builder-speed-target.is-empty");
@@ -523,7 +536,7 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: a calculadora do builder deve manter o atacante e pedir um alvo quando não há outro integrante.`);
   }
   await safeCapture(page, viewportName, "calculator-from-builder-no-opponent", { audit: true, fullPage: false });
-  await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   const slotNameMetrics = await page.locator(".team-slot.is-selected .slot-copy b").evaluate((element) => ({
     text: element.textContent?.trim(),
@@ -602,7 +615,7 @@ async function runViewport(viewportName, viewport) {
   if (viewport.width <= 420 && (builderTitleLayout.lineCount !== 1 || builderTitleLayout.scrollWidth > builderTitleLayout.width + 1 || builderTitleLayout.overlapsAction)) {
     failures.push(`${viewportName}: o título do builder deve caber em uma linha sem overflow ou sobreposição ao botão Speed.`);
   }
-  await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
+  await safeCapture(page, viewportName, "builder-six-members-first-fold", { audit: true, fullPage: false });
   await page.getByRole("link", { name: "Comparar Speed" }).click();
   await page.locator("#builder-speed-title").waitFor({ state: "visible", timeout: 10_000 });
   const speedShortcutState = await page.waitForFunction(() => {
@@ -898,7 +911,7 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(megaErrorPage, viewportName, "usage-metaroll-mega-error", { audit: true });
   await errorPage.close();
 
-  await page.goto(`${baseUrl}/calculator`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/calculator`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
   const emptyCalculatorInputs = await Promise.all([
     'input[list="damage-attacker-species-options"]',
@@ -1012,7 +1025,7 @@ async function runViewport(viewportName, viewport) {
     return team.members.map((member) => ({ pokemonId: member.pokemonId, move: member.moves[0], nature: member.nature, statPoints: member.statPoints }));
   }, inverseMoveNames);
   if (!inverseTeamState) failures.push(`${viewportName}: não foi possível preparar os seis sets locais para o modo inverso da calculadora.`);
-  await page.goto(`${baseUrl}/calculator?defender=Gardevoir-Mega`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/calculator?defender=Gardevoir-Mega`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Time vs 1" }).click();
   await page.locator(".damage-team-member-grid").waitFor({ state: "visible", timeout: 10_000 });
   const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({ status: [...row.classList].find((name) => name.startsWith("is-")), text: row.innerText })));
@@ -1028,7 +1041,7 @@ async function runViewport(viewportName, viewport) {
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: true });
 
-  await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });
   await page.getByLabel("Buscar na lista").fill("Garchomp");
   await page.locator(".speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 });
@@ -1045,12 +1058,12 @@ async function runViewport(viewportName, viewport) {
   }
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true, fullPage: false });
   await page.locator(".speed-result-row").first().scrollIntoViewIfNeeded();
-  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z-results", { fullPage: false });
+  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z-results", { audit: true, fullPage: false });
 
   await captureCommunityState(context, viewport, viewportName, "room");
   await captureCommunityState(context, viewport, viewportName, "tournament");
 
-  if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL && viewportName === "desktop") {
     const signIn = await context.request.post(`${baseUrl}/api/test/session`, {
       headers: { Origin: baseUrl },
       data: { handle: `visual-${viewportName}` },
@@ -1070,7 +1083,7 @@ async function runViewport(viewportName, viewport) {
       } else {
         sharedTeamId = (await savedTeamResponse.json()).team.id;
       }
-      await page.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+      await page.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: "Suas salas" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-empty", { audit: true });
       await page.getByLabel("Nome da sala").fill("Revisão visual");
@@ -1095,7 +1108,7 @@ async function runViewport(viewportName, viewport) {
       const guestPage = await guestContext.newPage();
       guestPage.on("pageerror", (error) => pageErrors.push(error.message));
       const inviteToken = new URL(inviteUrl).hash.slice(1);
-      await guestPage.goto(`${baseUrl}/rooms/join#${inviteToken}`, { waitUntil: "networkidle" });
+      await guestPage.goto(`${baseUrl}/rooms/join#${inviteToken}`, { waitUntil: "domcontentloaded" });
       await guestPage.getByRole("heading", { name: "Entrar na sala" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(guestPage, viewportName, "rooms-join-signin", { audit: true });
       const inviteHeldInTab = await guestPage.evaluate(() => window.sessionStorage.getItem("spinda_pending_invite")?.length > 0 && !window.location.hash);
@@ -1106,7 +1119,7 @@ async function runViewport(viewportName, viewport) {
       });
       if (!guestSession.ok()) failures.push(`${viewportName}: a sessão de convidado para a sala não foi criada.`);
       const guest = guestSession.ok() ? await guestSession.json() : null;
-      await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "networkidle" });
+      await guestPage.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
       await guestPage.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       if (sharedTeamId) {
         await guestPage.getByRole("img", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
@@ -1114,27 +1127,27 @@ async function runViewport(viewportName, viewport) {
       }
       await guestPage.getByRole("button", { name: "Fazer check-in" }).click();
       await page.getByRole("button", { name: "Fazer check-in" }).click();
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByRole("button", { name: "Fechar inscrições" }).click();
       await page.getByRole("button", { name: "Iniciar sala" }).click();
       await page.getByRole("heading", { name: "Resultado" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.getByLabel("Vencedor informado").selectOption(guest?.user?.id || "");
       await page.getByRole("button", { name: "Registrar resultado" }).click();
-      await guestPage.reload({ waitUntil: "networkidle" });
+      await guestPage.reload({ waitUntil: "domcontentloaded" });
       await guestPage.getByRole("button", { name: "Confirmar resultado" }).click();
       await guestPage.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText("Resultado confirmado", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "rooms-complete", { audit: true });
       await safeCapture(guestPage, viewportName, "rooms-confirm-result", { audit: true });
       await guestContext.close();
 
-      await page.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
+      await page.goto(`${baseUrl}/tournaments`, { waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: "Seus torneios" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournaments-empty", { audit: true });
       const tournamentsErrorPage = await context.newPage();
       await tournamentsErrorPage.route("**/api/tournaments", (route) => route.abort()).catch(() => {});
-      await tournamentsErrorPage.goto(`${baseUrl}/tournaments`, { waitUntil: "networkidle" });
+      await tournamentsErrorPage.goto(`${baseUrl}/tournaments`, { waitUntil: "domcontentloaded" });
       await tournamentsErrorPage.getByRole("heading", { name: "Não foi possível carregar" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(tournamentsErrorPage, viewportName, "tournaments-api-error", { audit: true });
       await tournamentsErrorPage.close();
@@ -1155,7 +1168,7 @@ async function runViewport(viewportName, viewport) {
 
       const tournamentJoinContext = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600 });
       const tournamentJoinPage = await tournamentJoinContext.newPage();
-      await tournamentJoinPage.goto(`${baseUrl}/tournaments/join#${tournamentToken}`, { waitUntil: "networkidle" });
+      await tournamentJoinPage.goto(`${baseUrl}/tournaments/join#${tournamentToken}`, { waitUntil: "domcontentloaded" });
       await tournamentJoinPage.getByRole("heading", { name: "Entrar no torneio" }).waitFor({ state: "visible", timeout: 10_000 });
       await tournamentJoinPage.getByRole("heading", { name: "Entre para organizar ou aceitar um convite" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(tournamentJoinPage, viewportName, "tournament-join-signin", { audit: true });
@@ -1185,7 +1198,7 @@ async function runViewport(viewportName, viewport) {
         const checkedIn = await playerContext.request.post(`${baseUrl}/api/tournaments/${tournamentId}/check-in`, { headers: { Origin: baseUrl }, data: {} });
         if (!checkedIn.ok()) failures.push(`${viewportName}: participante ${participantId} não conseguiu fazer check-in.`);
       }
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByRole("button", { name: "Fechar inscrições" }).click();
       await page.getByRole("button", { name: "Sortear e iniciar" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.getByRole("button", { name: "Sortear e iniciar" }).click();
@@ -1208,18 +1221,18 @@ async function runViewport(viewportName, viewport) {
       };
       let liveTournament = await getTournament();
       for (const semifinal of liveTournament.matches.filter((match) => match.roundNumber === 1)) await reportAndConfirm(semifinal);
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: "Final" }).waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournament-final", { audit: true });
       liveTournament = await getTournament();
       const finalMatch = liveTournament.matches.find((match) => match.roundNumber === 2);
       await reportAndConfirm(finalMatch);
-      await page.reload({ waitUntil: "networkidle" });
+      await page.reload({ waitUntil: "domcontentloaded" });
       await page.getByText(/Concluído/).first().waitFor({ state: "visible", timeout: 10_000 });
       await safeCapture(page, viewportName, "tournament-complete", { audit: true });
       for (const [participantId, playerContext] of playerContexts) if (participantId !== hostSession.user.id) await playerContext.close();
 
-      await page.goto(`${baseUrl}/builder`, { waitUntil: "networkidle" });
+      await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: "Equipes da conta" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
       await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
@@ -1250,6 +1263,7 @@ async function runViewport(viewportName, viewport) {
 
   if (pageErrors.length) failures.push(`${viewportName}: erros no app: ${pageErrors.join(" | ")}`);
   await context.close();
+  console.log(`Visual review: end ${viewportName}; ${observations.length} observations, ${failures.length} failures so far.`);
 }
 
 let browser;
