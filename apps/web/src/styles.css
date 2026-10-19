@@ -1392,6 +1392,8 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 }
 
 @media (max-width: 420px) {
+  .builder-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; }
+  .builder-heading > div { min-width: 0; }
   .builder-page .builder-heading h1 { font-size: 0.96rem; line-height: 1.5; white-space: nowrap; }
   .builder-speed-jump { max-width: 110px; min-height: 36px; padding-inline: 5px; font-size: 0.6rem; line-height: 1.15; text-align: center; white-space: normal; }
 }
@@ -2650,6 +2652,8 @@ h2 { letter-spacing: 0; }
 .site-footer { border-top: 4px solid #a83630; background: #214766; box-shadow: inset 0 2px #507c83; color: #f9f4d9; }
 .site-footer a { color: #ffe183; }
 .mobile-primary-nav { border-top-color: #172f4a; background: #b63a33; box-shadow: 0 -3px 0 #e8c966; }
+.mobile-primary-nav .mobile-nav-link > span { color: #fff8e2; }
+.mobile-primary-nav .mobile-nav-link.is-active > span { color: #ffedab; }
 .mobile-nav-link.is-active { border-bottom-color: #ffdf74; color: #ffedab; }
 .mobile-more-menu { border-color: #1d344b; box-shadow: 3px 3px 0 #8f302c; }
 

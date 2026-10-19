@@ -593,11 +593,14 @@ async function runViewport(viewportName, viewport) {
   const builderTitleLayout = await page.locator(".builder-heading h1").evaluate((element) => {
     const range = document.createRange();
     range.selectNodeContents(element);
-    return { lineCount: range.getClientRects().length, width: element.clientWidth, scrollWidth: element.scrollWidth };
+    const title = element.getBoundingClientRect();
+    const action = element.closest(".builder-heading")?.querySelector(".builder-speed-jump")?.getBoundingClientRect();
+    const overlapsAction = Boolean(action && title.left < action.right && title.right > action.left && title.top < action.bottom && title.bottom > action.top);
+    return { lineCount: range.getClientRects().length, width: element.clientWidth, scrollWidth: element.scrollWidth, overlapsAction };
   });
   observations.push({ viewport: viewportName, name: "builder-title-compact-layout", ...builderTitleLayout });
-  if (viewport.width <= 420 && (builderTitleLayout.lineCount !== 1 || builderTitleLayout.scrollWidth > builderTitleLayout.width + 1)) {
-    failures.push(`${viewportName}: o título do builder deve caber em uma linha sem overflow horizontal.`);
+  if (viewport.width <= 420 && (builderTitleLayout.lineCount !== 1 || builderTitleLayout.scrollWidth > builderTitleLayout.width + 1 || builderTitleLayout.overlapsAction)) {
+    failures.push(`${viewportName}: o título do builder deve caber em uma linha sem overflow ou sobreposição ao botão Speed.`);
   }
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
   await page.getByRole("link", { name: "Comparar Speed" }).click();
@@ -976,6 +979,7 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("button", { name: "1 vs 1" }).click();
   const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
   if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
+  if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
   await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
   await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
   await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
