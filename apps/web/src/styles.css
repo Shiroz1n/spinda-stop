@@ -1392,13 +1392,13 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 }
 
 @media (max-width: 420px) {
-  .builder-heading h1 { font-size: 0.96rem; line-height: 1.5; white-space: nowrap; }
+  .builder-page .builder-heading h1 { font-size: 0.96rem; line-height: 1.5; white-space: nowrap; }
   .builder-speed-jump { max-width: 110px; min-height: 36px; padding-inline: 5px; font-size: 0.6rem; line-height: 1.15; text-align: center; white-space: normal; }
 }
 
 @media (max-width: 360px) {
   .builder-heading .page-label { font-size: 0.4rem; white-space: nowrap; }
-  .builder-heading h1 { font-size: 0.88rem; }
+  .builder-page .builder-heading h1 { font-size: 0.88rem; }
   .builder-speed-jump { width: 84px; max-width: 84px; padding-inline: 3px; font-size: 0.55rem; }
 }
 @media (prefers-reduced-motion: reduce) {
