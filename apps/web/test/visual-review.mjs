@@ -659,6 +659,20 @@ async function runViewport(viewportName, viewport) {
     await page.locator(".species-dialog .picker-result").first().click();
     await page.getByRole("heading", { name: species, exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   }
+  await waitForSpritePaint(page, ".team-slot .pokemon-art img");
+  const teamSpriteStates = await page.locator(".team-slot").evaluateAll((slots) => slots.map((slot) => {
+    const art = slot.querySelector(".pokemon-art");
+    const image = art?.querySelector("img");
+    return {
+      name: slot.querySelector(".slot-copy b")?.textContent?.trim() || "",
+      src: image?.getAttribute("src") || "",
+      loaded: Boolean(image?.complete && image.naturalWidth > 0 && !art.classList.contains("is-loading") && !art.classList.contains("is-fallback")),
+    };
+  }));
+  observations.push({ viewport: viewportName, name: "builder-six-member-sprite-load", sprites: teamSpriteStates });
+  if (teamSpriteStates.length !== 6 || teamSpriteStates.some((sprite) => !sprite.loaded)) {
+    failures.push(`${viewportName}: os seis sprites do builder devem estar carregados antes da captura.`);
+  }
   const slotNames = await page.locator(".team-slot .slot-copy b").allTextContents();
   observations.push({ viewport: viewportName, name: "builder-six-member-names", slotNames });
   if (slotNames.length !== 6 || slotNames.some((name) => name === "Vazio")) {
