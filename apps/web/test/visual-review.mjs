@@ -594,6 +594,25 @@ async function runViewport(viewportName, viewport) {
   await natureTrigger.focus();
   await natureTrigger.press("Enter");
   await page.locator("#member-nature-options").waitFor({ state: "visible" });
+  const natureMenuBounds = await page.locator("#member-nature-options").evaluate((menu) => {
+    const rect = menu.getBoundingClientRect();
+    const nav = document.querySelector(".mobile-primary-nav");
+    const navBounds = nav?.getBoundingClientRect();
+    const navVisible = navBounds && navBounds.height > 0 && getComputedStyle(nav).display !== "none";
+    return {
+      left: Math.round(rect.left),
+      right: Math.round(rect.right),
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      viewportWidth: window.innerWidth,
+      visibleBottom: navVisible ? Math.round(navBounds.top) : window.innerHeight,
+    };
+  });
+  observations.push({ viewport: viewportName, name: "builder-nature-menu-bounds", ...natureMenuBounds });
+  if (natureMenuBounds.left < -1 || natureMenuBounds.right > natureMenuBounds.viewportWidth + 1
+    || natureMenuBounds.top < -1 || natureMenuBounds.bottom > natureMenuBounds.visibleBottom + 1) {
+    failures.push(`${viewportName}: o menu de Nature do builder deve caber acima da navegação fixa.`);
+  }
   await safeCapture(page, viewportName, "builder-nature-picker-open", { fullPage: false });
   await page.keyboard.press("Tab");
   const firstNatureFocused = await page.evaluate(() => document.activeElement?.classList.contains("nature-picker-option"));
@@ -864,6 +883,16 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
+  if (viewport.width <= 760) {
+    const mobileUsageOrder = await page.evaluate(() => ({
+      selected: document.querySelector(".usage-results-column")?.getBoundingClientRect().top,
+      search: document.querySelector(".usage-browser-panel")?.getBoundingClientRect().top,
+    }));
+    observations.push({ viewport: viewportName, name: "usage-mobile-results-before-search", ...mobileUsageOrder });
+    if (mobileUsageOrder.selected === undefined || mobileUsageOrder.search === undefined || mobileUsageOrder.selected >= mobileUsageOrder.search) {
+      failures.push(`${viewportName}: Usage deve mostrar a ficha e o ranking selecionado antes da busca no mobile.`);
+    }
+  }
   if (await page.locator(".usage-index-note").count()) {
     const usageCategory = page.locator(".usage-category-tabs .usage-category-tab").filter({ hasText: "Golpes" }).first();
     await usageCategory.click();
@@ -1099,7 +1128,7 @@ async function runViewport(viewportName, viewport) {
     return { count: cards.length, ranges, visibleBottom, cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)) };
   });
   observations.push({ viewport: viewportName, name: "calculator-comparison-first-fold", ...comparisonFirstFold });
-  if (viewport.width <= 420 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
+  if (viewport.width <= 760 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
     failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
   }
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img");
@@ -1224,10 +1253,24 @@ async function runViewport(viewportName, viewport) {
   await speedTargetNatureMenu.waitFor({ state: "visible", timeout: 10_000 });
   const speedTargetNatureBounds = await speedTargetNatureMenu.evaluate((menu) => {
     const rect = menu.getBoundingClientRect();
-    return { left: Math.round(rect.left), right: Math.round(rect.right), viewport: window.innerWidth };
+    const nav = document.querySelector(".mobile-primary-nav");
+    const navBounds = nav?.getBoundingClientRect();
+    const navVisible = navBounds && navBounds.height > 0 && getComputedStyle(nav).display !== "none";
+    return {
+      left: Math.round(rect.left),
+      right: Math.round(rect.right),
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      viewport: window.innerWidth,
+      visibleBottom: navVisible ? Math.round(navBounds.top) : window.innerHeight,
+      position: getComputedStyle(menu).position,
+      inlineStyle: menu.style.cssText,
+    };
   });
   observations.push({ viewport: viewportName, name: "speed-tiers-target-nature-menu-bounds", ...speedTargetNatureBounds });
-  if (speedTargetNatureBounds.left < -1 || speedTargetNatureBounds.right > speedTargetNatureBounds.viewport + 1) {
+  if (speedTargetNatureBounds.left < -1 || speedTargetNatureBounds.right > speedTargetNatureBounds.viewport + 1
+    || speedTargetNatureBounds.top < -1 || speedTargetNatureBounds.bottom > speedTargetNatureBounds.visibleBottom + 1
+    || speedTargetNatureBounds.position !== "fixed") {
     failures.push(`${viewportName}: o menu de Nature do alvo em Speed Tiers deve caber na largura da tela.`);
   }
   await page.keyboard.press("Escape");

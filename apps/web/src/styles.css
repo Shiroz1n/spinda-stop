@@ -2260,6 +2260,7 @@ select,
   .usage-source-banner { grid-template-columns: auto minmax(0, 1fr) auto; }
   .usage-source-details[open] { grid-column: 1 / -1; }
   .usage-layout { grid-template-columns: minmax(0, 1fr); }
+  .usage-results-column { order: -1; }
   .usage-species-list { max-height: 228px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .usage-browser-panel { padding: 9px; }
   .usage-category-tabs { margin-top: 1px; }
@@ -3244,4 +3245,16 @@ h2 { letter-spacing: 0; }
   .damage-comparison-results .damage-percent { margin: 4px 0 0; font-size: 0.58rem; line-height: 1.2; }
   .damage-comparison-results .damage-result-more { margin-top: 4px; padding-top: 4px; }
   .damage-comparison-results .damage-result-more > summary { min-height: 30px; padding: 3px; font-size: 0.56rem; line-height: 1.15; }
+}
+
+@media (min-width: 601px) and (max-width: 760px) {
+  .damage-comparison-results { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .damage-comparison-results .damage-result-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .damage-comparison-results .damage-result-copy h2 { font-size: clamp(1rem, 2vw, 1.2rem); }
+  .damage-comparison-results .damage-result-range { flex: 0 0 auto; width: auto; min-width: 100px; }
 }

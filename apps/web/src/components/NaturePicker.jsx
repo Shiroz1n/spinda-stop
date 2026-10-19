@@ -10,53 +10,70 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
   const optionsId = `${id}-options`;
   const labelId = `${id}-label`;
   const valueId = `${id}-value`;
-  const keepPopupInViewport = className.includes("builder-target-nature") || className.includes("speed-nature-target");
+
+  function getPopupStyle(details = detailsRef.current) {
+    const bounds = details?.querySelector("summary")?.getBoundingClientRect();
+    if (!bounds || !details?.open) return null;
+
+    const gutter = 10;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const mobileNav = document.querySelector(".mobile-primary-nav");
+    const mobileNavBounds = mobileNav?.getBoundingClientRect();
+    const mobileNavVisible = mobileNavBounds && mobileNavBounds.height > 0
+      && window.getComputedStyle(mobileNav).display !== "none"
+      && mobileNavBounds.top < viewportHeight;
+    const safeBottom = mobileNavVisible ? Math.min(viewportHeight, mobileNavBounds.top) : viewportHeight;
+    const width = Math.max(1, Math.min(620, viewportWidth - gutter * 2));
+    const maxHeight = Math.max(80, Math.min(420, safeBottom - gutter * 2));
+    const belowSpace = Math.max(0, safeBottom - bounds.bottom - gutter - 5);
+    const aboveSpace = Math.max(0, bounds.top - gutter - 5);
+    const openBelow = belowSpace >= Math.min(240, maxHeight) || belowSpace >= aboveSpace;
+    const availableHeight = openBelow ? belowSpace : aboveSpace;
+    const height = Math.max(80, Math.min(maxHeight, availableHeight));
+    const left = Math.max(gutter, Math.min(bounds.left, viewportWidth - width - gutter));
+    const top = openBelow ? bounds.bottom + 5 : Math.max(gutter, bounds.top - height - 5);
+
+    return {
+      position: "fixed",
+      left: `${left}px`,
+      right: "auto",
+      top: `${top}px`,
+      bottom: "auto",
+      width: `${width}px`,
+      maxHeight: `${height}px`,
+      boxSizing: "border-box",
+    };
+  }
 
   function closePicker() {
     if (detailsRef.current) detailsRef.current.open = false;
     setOpen(false);
-    setPopupStyle(null);
+    applyPopupStyle(null);
     detailsRef.current?.querySelector("summary")?.focus();
+  }
+
+  function applyPopupStyle(style, details = detailsRef.current) {
+    const options = details?.querySelector(".nature-picker-options");
+    if (options) {
+      if (style) Object.assign(options.style, style);
+      else options.removeAttribute("style");
+    }
+    setPopupStyle(style);
   }
 
   function handleToggle(event) {
     const isOpen = event.currentTarget.open;
     setOpen(isOpen);
-    if (!isOpen || !keepPopupInViewport) setPopupStyle(null);
+    applyPopupStyle(isOpen ? getPopupStyle(event.currentTarget) : null, event.currentTarget);
   }
 
   useLayoutEffect(() => {
-    if (!open || !keepPopupInViewport) return undefined;
+    if (!open) return undefined;
 
     let frame = 0;
     const positionPopup = () => {
-      const details = detailsRef.current;
-      const bounds = details?.querySelector("summary")?.getBoundingClientRect();
-      if (!bounds || !details?.open) return;
-
-      const gutter = 10;
-      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const width = Math.max(1, Math.min(620, viewportWidth - gutter * 2));
-      const maxHeight = Math.max(80, Math.min(420, viewportHeight - gutter * 2));
-      const belowSpace = Math.max(0, viewportHeight - bounds.bottom - gutter - 5);
-      const aboveSpace = Math.max(0, bounds.top - gutter - 5);
-      const openBelow = belowSpace >= Math.min(240, maxHeight) || belowSpace >= aboveSpace;
-      const availableHeight = openBelow ? belowSpace : aboveSpace;
-      const height = Math.max(80, Math.min(maxHeight, availableHeight));
-      const left = Math.max(gutter, Math.min(bounds.left, viewportWidth - width - gutter));
-      const top = openBelow ? bounds.bottom + 5 : Math.max(gutter, bounds.top - height - 5);
-
-      setPopupStyle({
-        position: "fixed",
-        left: `${left}px`,
-        right: "auto",
-        top: `${top}px`,
-        bottom: "auto",
-        width: `${width}px`,
-        maxHeight: `${height}px`,
-        boxSizing: "border-box",
-      });
+      applyPopupStyle(getPopupStyle());
     };
     const schedulePosition = () => {
       window.cancelAnimationFrame(frame);
@@ -71,7 +88,7 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
       window.removeEventListener("resize", schedulePosition);
       window.removeEventListener("scroll", schedulePosition, true);
     };
-  }, [keepPopupInViewport, open]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -79,7 +96,7 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
       if (detailsRef.current && !detailsRef.current.contains(event.target)) {
         if (detailsRef.current) detailsRef.current.open = false;
         setOpen(false);
-        setPopupStyle(null);
+        applyPopupStyle(null);
       }
     }
     document.addEventListener("pointerdown", dismissOutside, true);
@@ -90,7 +107,7 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
     onChange(nature.name);
     if (detailsRef.current) detailsRef.current.open = false;
     setOpen(false);
-    setPopupStyle(null);
+    applyPopupStyle(null);
     window.requestAnimationFrame(() => detailsRef.current?.querySelector("summary")?.focus());
   }
 
