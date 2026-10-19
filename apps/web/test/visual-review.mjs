@@ -133,9 +133,11 @@ async function capture(page, viewport, name, { audit = false, fullPage = true } 
       const opaqueBackground = (element) => {
         for (let current = element; current; current = current.parentElement) {
           const image = getComputedStyle(current).backgroundImage;
-          const gradientColor = image.match(/#[0-9a-f]{6}/i)?.[0];
+          const gradientColor = image.match(/rgba?\([\d.,%\s]+\)/i)?.[0] || image.match(/#[0-9a-f]{6}/i)?.[0];
           if (gradientColor) {
-            const channels = [1, 3, 5].map((offset) => Number.parseInt(gradientColor.slice(offset, offset + 2), 16));
+            const channels = gradientColor.startsWith("#")
+              ? [1, 3, 5].map((offset) => Number.parseInt(gradientColor.slice(offset, offset + 2), 16))
+              : gradientColor.match(/[\d.]+/g).slice(0, 3).map(Number);
             return `rgb(${channels.join(", ")})`;
           }
           const color = getComputedStyle(current).backgroundColor;
@@ -1056,6 +1058,8 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
   const damageEditor = page.locator(".damage-editor-disclosure");
   if (!(await damageEditor.evaluate((details) => details.open))) await damageEditor.locator(":scope > summary").click();
+      const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
+      if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
   const attackerEditor = page.locator('.damage-side[aria-labelledby="attacker-heading"]');
   await attackerEditor.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("Habilidade criada pelo usuário");
