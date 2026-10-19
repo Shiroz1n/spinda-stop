@@ -924,6 +924,16 @@ async function runViewport(viewportName, viewport) {
   await page.locator('input[list="damage-many-target-1"]').fill("Garchomp-Mega-Z");
   await page.locator(".damage-multi-row").nth(1).waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".damage-multi-row").count() !== 2) failures.push(`${viewportName}: um atacante não mostrou resultados independentes para dois alvos.`);
+  await page.waitForFunction(() => {
+    const row = [...document.querySelectorAll(".damage-multi-row")].find((item) => item.textContent?.includes("Garchomp-Mega-Z"));
+    const image = row?.querySelector(".pokemon-art img");
+    return image?.src.endsWith("10309.png") && image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading");
+  }, null, { timeout: 15_000 }).catch(() => {});
+  const multiTargetMegaSprite = await page.locator(".damage-multi-row").filter({ hasText: "Garchomp-Mega-Z" }).locator(".pokemon-art img").evaluate((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") }));
+  observations.push({ viewport: viewportName, name: "calculator-multi-target-mega-garchomp-z-sprite", ...multiTargetMegaSprite });
+  if (!multiTargetMegaSprite.src.endsWith("10309.png") || multiTargetMegaSprite.width !== 512 || !multiTargetMegaSprite.loaded) {
+    failures.push(`${viewportName}: o segundo alvo da calculadora não exibiu o sprite próprio de Mega Garchomp Z antes da captura.`);
+  }
   await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: false });
 
   await page.getByRole("button", { name: "Um alvo" }).click();

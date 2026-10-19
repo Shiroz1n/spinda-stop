@@ -293,9 +293,9 @@ function MultiTargetResults({ calculations, attacker, move }) {
     <section className="damage-multi-results" aria-label={`${attacker} usa ${move} contra vários alvos`}>
       <div className="damage-multi-heading"><div><p className="page-label">Um atacante · {calculations.length} alvos</p><h2>{attacker} usa {move}</h2></div><span>Set defensivo compartilhado</span></div>
       <div className="damage-multi-grid">
-        {calculations.map(({ species, result, error }) => (
+        {calculations.map(({ species, result, error }, index) => (
           <article className={`damage-multi-row${error ? " has-error" : ""}`} key={species}>
-            <div className="damage-multi-identity"><PokemonSprite pokemon={findPokemonSprite(species)} name={species} size={54} decorative /><strong>{species}</strong></div>
+            <div className="damage-multi-identity"><PokemonSprite pokemon={findPokemonSprite(species)} name={species} size={54} priority={index < 2} decorative /><strong>{species}</strong></div>
             {result ? <>
               <strong className="damage-multi-range">{result.min}–{result.max}</strong>
               <span className="damage-multi-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} · {result.defender.stats.hp} HP</span>
