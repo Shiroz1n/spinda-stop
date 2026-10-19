@@ -3258,3 +3258,15 @@ h2 { letter-spacing: 0; }
   .damage-comparison-results .damage-result-copy h2 { font-size: clamp(1rem, 2vw, 1.2rem); }
   .damage-comparison-results .damage-result-range { flex: 0 0 auto; width: auto; min-width: 100px; }
 }
+
+/* Keep matchup identities readable when the quickbar compresses on small screens. */
+@media (max-width: 420px) {
+  .damage-quickbar-side strong {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}

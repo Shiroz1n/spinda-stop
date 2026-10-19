@@ -1136,6 +1136,27 @@ async function runViewport(viewportName, viewport) {
   if (viewport.width <= 760 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
     failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
   }
+  if (viewport.width <= 420) {
+    const matchupIdentity = await page.locator(".damage-quickbar-side strong").evaluateAll((elements) => elements.map((element) => {
+      const style = getComputedStyle(element);
+      return {
+        text: element.textContent?.trim() || "",
+        overflow: style.overflow,
+        textOverflow: style.textOverflow,
+        whiteSpace: style.whiteSpace,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+      };
+    }));
+    observations.push({ viewport: viewportName, name: "calculator-comparison-pokemon-names", labels: matchupIdentity });
+    if (matchupIdentity.length !== 2 || matchupIdentity.some((label) => !label.text || label.text.includes("…")
+      || label.overflow === "hidden" || label.textOverflow === "ellipsis" || label.whiteSpace === "nowrap"
+      || label.scrollWidth > label.clientWidth + 1 || label.scrollHeight > label.clientHeight + 1)) {
+      failures.push(`${viewportName}: os nomes do atacante e do alvo devem aparecer completos na barra A/B.`);
+    }
+  }
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img");
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
   const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
