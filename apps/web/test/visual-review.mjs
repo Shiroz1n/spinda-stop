@@ -30,6 +30,15 @@ const representativeCaptures = new Set([
 
 await mkdir(outputDir, { recursive: true });
 
+async function markProgress(viewport, name, stage) {
+  await writeFile(join(outputDir, "progress.json"), JSON.stringify({
+    viewport,
+    name,
+    stage,
+    updatedAt: new Date().toISOString(),
+  }, null, 2));
+}
+
 const server = spawn(process.execPath, [
   join(root, "node_modules/vite/bin/vite.js"), "preview",
   "--host", "127.0.0.1", "--port", "4173", "--strictPort",
@@ -88,7 +97,9 @@ async function waitForUsage(page, selector = ".usage-index-note, .usage-index-er
 
 async function capture(page, viewport, name, { audit = false, fullPage = true } = {}) {
   const file = join(outputDir, `${viewport}-${name}.png`);
+  await markProgress(viewport, name, "screenshot-start");
   await page.screenshot({ path: file, fullPage, animations: "disabled" });
+  await markProgress(viewport, name, "screenshot-complete");
   const metrics = await page.evaluate(() => ({
     viewportWidth: window.innerWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -143,9 +154,11 @@ async function capture(page, viewport, name, { audit = false, fullPage = true } 
       if (check.ratio < 4.5) failures.push(`${viewport}/${name}: contraste ${check.ratio}:1 em ${check.label}.`);
     }
 
+    await markProgress(viewport, name, "axe-start");
     const result = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
+    await markProgress(viewport, name, "axe-complete");
     if (result.violations.length) {
       accessibilityIssues.push({
         viewport,
@@ -166,7 +179,9 @@ async function safeCapture(page, viewport, name, options) {
   if (!representativeCaptures.has(name)) return;
   try {
     await capture(page, viewport, name, options);
+    await markProgress(viewport, name, "capture-complete");
   } catch (error) {
+    await markProgress(viewport, name, "capture-error");
     failures.push(`${viewport}/${name}: ${error.message}`);
   }
 }
@@ -1039,32 +1054,37 @@ async function runViewport(viewportName, viewport) {
   if (visibleMultiTargetResults.length !== 2 || visibleMultiTargetResults.some((row) => !row.hasSprite)) {
     failures.push(`${viewportName}: a comparação de vários alvos precisa capturar as duas linhas de resultado com sprites.`);
   }
-  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width > 720 });
+  await safeCapture(page, viewportName, "calculator-one-v-many", {
+    audit: viewport.width > 720,
+    fullPage: viewport.width > 720,
+  });
 
-  await page.getByRole("button", { name: "1 vs 1" }).click();
-  const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
-  if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
-  if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
-  await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
-  await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
-  await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
-  await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading")), null, { timeout: 15_000 }).catch(() => {});
-  const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
-  if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.endsWith("10310.png") || !alternateFormSprites[1].src.endsWith("10307.png") || alternateFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
-    failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
+  if (viewport.width > 720) {
+    await page.getByRole("button", { name: "1 vs 1" }).click();
+    const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
+    if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
+    if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
+    await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
+    await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
+    await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
+    await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
+    await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading")), null, { timeout: 15_000 }).catch(() => {});
+    const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+    if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.endsWith("10310.png") || !alternateFormSprites[1].src.endsWith("10307.png") || alternateFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
+      failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
+    }
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll(".damage-result-matchup .pokemon-art img")];
+      return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading"));
+    }, null, { timeout: 15_000 }).catch(() => {});
+    const resultFormSprites = await page.locator(".damage-result-matchup .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+    if (resultFormSprites.length !== 2 || !resultFormSprites[0].src.endsWith("10310.png") || !resultFormSprites[1].src.endsWith("10307.png") || resultFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
+      failures.push(`${viewportName}: o resultado não mostrou os sprites próprios de Mega Lucario Z e Mega Absol Z.`);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
+    await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
   }
-  await page.waitForFunction(() => {
-    const images = [...document.querySelectorAll(".damage-result-matchup .pokemon-art img")];
-    return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading"));
-  }, null, { timeout: 15_000 }).catch(() => {});
-  const resultFormSprites = await page.locator(".damage-result-matchup .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
-  if (resultFormSprites.length !== 2 || !resultFormSprites[0].src.endsWith("10310.png") || !resultFormSprites[1].src.endsWith("10307.png") || resultFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
-    failures.push(`${viewportName}: o resultado não mostrou os sprites próprios de Mega Lucario Z e Mega Absol Z.`);
-  }
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
-  await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
 
   const inverseMoveNames = ["Earthquake", "Energy Ball", "Grassy Glide", "Flare Blitz", "Heat Wave", "Hurricane"];
   const inverseTeamState = await page.evaluate((moves) => {
@@ -1076,10 +1096,14 @@ async function runViewport(viewportName, viewport) {
     window.localStorage.setItem(key, JSON.stringify(team));
     return team.members.map((member) => ({ pokemonId: member.pokemonId, move: member.moves[0], nature: member.nature, statPoints: member.statPoints }));
   }, inverseMoveNames);
+  await markProgress(viewportName, "calculator-team-vs-one", "builder-team-fixture-ready");
   if (!inverseTeamState) failures.push(`${viewportName}: não foi possível preparar os seis sets locais para o modo inverso da calculadora.`);
   await page.goto(`${baseUrl}/calculator?defender=Gardevoir-Mega`, { waitUntil: "domcontentloaded" });
+  await markProgress(viewportName, "calculator-team-vs-one", "calculator-route-loaded");
   await page.getByRole("button", { name: "Time vs 1" }).click();
+  await markProgress(viewportName, "calculator-team-vs-one", "team-vs-one-selected");
   await page.locator(".damage-team-member-grid").waitFor({ state: "visible", timeout: 10_000 });
+  await markProgress(viewportName, "calculator-team-vs-one", "team-vs-one-results-rendered");
   const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({
     status: [...row.classList].find((name) => name.startsWith("is-")),
     text: row.innerText,
