@@ -1214,6 +1214,7 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 .speed-relation-tie { color: #75540b; background: #f5e8b7; }
 .speed-relation-slower { color: #8c382f; background: #f4ded3; }
 .speed-threshold { color: var(--blue-dark); font-size: 0.78rem; font-weight: 800; }
+.speed-threshold small { display: block; margin-top: 3px; color: var(--muted); font-size: 0.68rem; font-weight: 650; }
 .speed-load-more { display: flex; margin: 14px auto 0; }
 .speed-end { max-width: none; margin: 0; padding: 14px; border-bottom: 2px solid var(--line); color: var(--muted); font-size: 0.78rem; text-align: center; }
 .speed-empty { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 16px 2px; border-block: 1px solid var(--line); }
@@ -1249,10 +1250,13 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 .builder-speed-sp { grid-column: 1 / -1; }
 .builder-speed-sp > div { display: grid; grid-template-columns: minmax(0, 1fr) 57px; align-items: center; gap: 6px; }
 .builder-speed-sp input[type="range"] { width: 100%; min-width: 0; accent-color: var(--green); }
+.builder-speed-sp > small { color: var(--muted); font-size: 0.61rem; font-weight: 650; }
 .builder-speed-sp .text-input, .builder-speed-nature .text-input { min-height: 34px; padding: 4px 6px; font-size: 0.75rem; }
 .builder-speed-action { display: grid; justify-items: end; gap: 4px; }
 .builder-speed-action > span { max-width: 136px; color: var(--blue-dark); font-size: 0.63rem; font-weight: 850; text-align: right; }
+.builder-speed-action > small { max-width: 180px; color: var(--fire-ink); font-size: 0.61rem; line-height: 1.25; text-align: right; }
 .builder-speed-action .button { min-height: 33px; padding: 4px 6px; font-size: 0.68rem; }
+.builder-speed-action .button:disabled { cursor: not-allowed; opacity: 0.55; }
 .builder-speed-empty { min-height: 66px; display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; }
 .builder-speed-empty span { color: var(--fire-ink); font-family: "Press Start 2P", ui-monospace, monospace; font-size: 0.58rem; }
 .builder-speed-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 8px 12px 0; color: var(--muted); font-size: 0.72rem; }

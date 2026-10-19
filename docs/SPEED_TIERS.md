@@ -4,12 +4,12 @@
 
 ## Modelos
 
-- **Champions · SP:** nível 50; `floor((Speed base + SP + 20) × nature)`, com multiplicador 1,1 / 1 / 0,9. O controle aceita de 0 a 999 SP para explorar a fórmula. Isso não afirma que essa faixa, um total ou uma distribuição sejam legais no jogo.
+- **Champions · SP:** nível 50; `floor((Speed base + SP + 20) × nature)`, com multiplicador 1,1 / 1 / 0,9. A comparação permite até 32 SP no atributo; o builder também confere o limite total de 66 SP antes de aplicar a prévia. Esses limites seguem o formato comunitário usado pelo projeto e não são uma confirmação oficial do jogo.
 - **Padrão · EV/IV:** fórmula padrão de stat no nível informado, com nível entre 1 e 100, IV entre 0 e 31 e EV entre 0 e 252. Este modelo geral não representa uma confirmação de regra do Pokémon Champions.
 
-Escolha um alvo e ajuste sua configuração. A tabela compara candidatos com a mesma natureza e o mesmo ajuste individual; empates são explícitos. “Para passar” mostra o menor SP ou EV que resulta em Speed **estritamente maior** que a do alvo, mantendo as demais entradas do candidato. Se não puder ultrapassá-lo dentro da faixa do modelo, a tela informa isso.
+Escolha um alvo e ajuste sua configuração. A tabela compara candidatos com a mesma natureza e o mesmo ajuste individual; empates são explícitos. “Para passar” mostra o menor SP ou EV que resulta em Speed **estritamente maior** que a do alvo, mantendo as demais entradas do candidato. No modo Champions, o cálculo nunca recomenda mais de 32 SP. Quando o candidato não passa com a natureza selecionada, a tela mostra à parte se uma natureza favorável mudaria o resultado.
 
-O builder compara os seis integrantes em paralelo. Ajustes da prévia são temporários. **Aplicar ao time** grava SP e, se a natureza foi alterada, seleciona uma natureza salva com o mesmo efeito em Speed. A nova natureza também pode afetar outros stats do set.
+O builder compara os seis integrantes em paralelo. Ajustes da prévia são temporários. **Aplicar ao set** grava SP e, se a natureza foi alterada, seleciona uma natureza salva com o mesmo efeito em Speed. A ação só fica disponível para uma distribuição de até 32 SP por atributo e 66 SP no total. A nova natureza também pode afetar outros stats do set.
 
 ## Limites
 

@@ -10,7 +10,7 @@ import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { buildDamageCalculatorSearch, getDamageSpeciesName } from "../data/damageCalculator.js";
-import { calculateChampionsSpeed, compareSpeed, minimumTrainingToOutspeed, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
+import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, maximumLegalSpeedPoints, minimumTrainingToOutspeed, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
@@ -104,10 +104,11 @@ export function BuilderPage() {
       nature: speedNatureFromName(member.nature),
       natureTouched: false,
     };
-    const speed = calculateChampionsSpeed(pokemon.stats.spe, preview.sp, preview.nature);
+    const previewSpeedPoints = Math.min(CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0));
+    const speed = calculateChampionsSpeed(pokemon.stats.spe, previewSpeedPoints, preview.nature);
     const relation = compareSpeed(speed, speedTargetValue);
     const requiredSp = minimumTrainingToOutspeed({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature });
-    return { member, pokemon, index, preview, speed, relation, requiredSp };
+    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, requiredSp };
   });
 
   function toDamageSide(member, pokemon) {
@@ -248,11 +249,14 @@ export function BuilderPage() {
         nature: speedNatureFromName(member.nature),
         natureTouched: false,
       };
+      const nextValue = key === "sp"
+        ? Math.min(maximumLegalSpeedPoints(member.statPoints), Math.max(0, Number(value) || 0))
+        : value;
       return {
         ...current,
         [index]: {
           ...preview,
-          [key]: value,
+          [key]: nextValue,
           ...(key === "nature" ? { natureTouched: true } : {}),
         },
       };
@@ -267,11 +271,19 @@ export function BuilderPage() {
       nature: speedNatureFromName(member.nature),
       natureTouched: false,
     };
+    const appliedSpread = applySpeedPointsToStatSpread(
+      member.statPoints,
+      Math.min(CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0)),
+    );
+    if (!appliedSpread.ok) {
+      setMessage(`Prévia não aplicada. ${appliedSpread.error}`);
+      return;
+    }
     const members = [...team.members];
     members[index] = {
       ...member,
       nature: preview.natureTouched ? savedNatureForSpeed(preview.nature, member.nature) : member.nature,
-      statPoints: { ...member.statPoints, spe: preview.sp },
+      statPoints: appliedSpread.statPoints,
     };
     commitTeam({ ...team, members });
     setMessage(`A prévia foi aplicada à posição ${index + 1}.`);
@@ -303,6 +315,15 @@ export function BuilderPage() {
   const pointTotal = selectedMember
     ? Object.values(selectedMember.statPoints).reduce((sum, value) => sum + value, 0)
     : 0;
+  const pointRemaining = CHAMPIONS_MAX_TOTAL_POINTS - pointTotal;
+
+  function maximumForStatPointField(statKey) {
+    if (!selectedMember) return 0;
+    const otherPoints = Object.entries(selectedMember.statPoints)
+      .filter(([key]) => key !== statKey)
+      .reduce((sum, [, value]) => sum + value, 0);
+    return Math.max(0, Math.min(CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS - otherPoints));
+  }
 
   return (
     <div className="page-wrap builder-page">
@@ -423,12 +444,12 @@ export function BuilderPage() {
 
                 <details className="points-section field-wide">
                   <summary>Conferir Stat Points <span>{pointTotal} distribuídos</span></summary>
-                  <p className="form-hint">Os valores ficam no arquivo da equipe. Os limites oficiais do jogo ainda não foram confirmados.</p>
+                  <p className="form-hint">Limite usado pelo formato comunitário: 32 SP por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} SP.`}</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>
                         <span>{label}</span>
-                        <input id={`stat-${key}`} className="text-input" type="number" min="0" max="999" value={selectedMember.statPoints[key]} onChange={(event) => updateMember({ statPoints: { ...selectedMember.statPoints, [key]: Math.min(999, Math.max(0, Number(event.target.value) || 0)) } })} />
+                        <input id={`stat-${key}`} className="text-input" type="number" min="0" max={maximumForStatPointField(key)} value={selectedMember.statPoints[key]} onChange={(event) => updateMember({ statPoints: { ...selectedMember.statPoints, [key]: Math.min(maximumForStatPointField(key), Math.max(0, Number(event.target.value) || 0)) } })} />
                       </label>
                     ))}
                   </div>
@@ -448,7 +469,7 @@ export function BuilderPage() {
           {speedTargetPokemon ? <>
             <PokemonSprite pokemon={speedTargetPokemon} name={speedTargetPokemon.name} size={52} decorative />
             <div className="builder-speed-target-name"><small>Adversário escolhido</small><strong>{speedTargetPokemon.name}</strong><span>{speedTargetValue} Speed · nível 50</span></div>
-            <label><span>SP do alvo</span><input className="text-input" type="number" min="0" max="999" value={speedTargetSp} onChange={(event) => setSpeedTargetSp(Math.min(999, Math.max(0, Number(event.target.value) || 0)))} /></label>
+            <label><span>SP do alvo</span><input className="text-input" type="number" min="0" max="32" value={speedTargetSp} onChange={(event) => setSpeedTargetSp(Math.min(32, Math.max(0, Number(event.target.value) || 0)))} /></label>
             <label><span>Nature do alvo</span><select className="text-input" value={speedTargetNature} onChange={(event) => setSpeedTargetNature(event.target.value)}><option value="favorable">Favorável à Speed</option><option value="neutral">Neutra para Speed</option><option value="unfavorable">Desfavorável à Speed</option></select></label>
             <button className="button button-quiet button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Trocar alvo</button>
           </> : <>
@@ -459,14 +480,17 @@ export function BuilderPage() {
         {speedTargetPokemon ? <div className="builder-speed-grid" aria-label="Comparação dos seis Pokémon do time">
           {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, requiredSp }) => {
             if (!member || !pokemon) return <div className="builder-speed-empty" key={index}><span>{String(index + 1).padStart(2, "0")}</span>Posição vazia</div>;
+            const appliedSpread = applySpeedPointsToStatSpread(member.statPoints, preview.sp);
+            const remainingSp = CHAMPIONS_MAX_TOTAL_POINTS - Object.entries(member.statPoints).reduce((sum, [key, value]) => sum + (key === "spe" ? preview.sp : value), 0);
+            const availableSpeedSp = maximumLegalSpeedPoints(member.statPoints);
             return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation}>
               <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}</small></div></div>
-              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max="999" value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max="999" value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Math.min(999, Math.max(0, Number(event.target.value) || 0)))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div></label>
+              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max={CHAMPIONS_MAX_STAT_POINTS} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max={CHAMPIONS_MAX_STAT_POINTS} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div><small>{availableSpeedSp} SP disponíveis em Speed · máximo de 32 por atributo</small></label>
               <label className="builder-speed-nature"><span>Nature temporária</span><select className="text-input" value={preview.nature} onChange={(event) => updateSpeedPreview(index, "nature", event.target.value)}><option value="favorable">Favorável (+10%)</option><option value="neutral">Neutra</option><option value="unfavorable">Desfavorável (−10%)</option></select></label>
-              <div className="builder-speed-action"><span>{relation === "faster" ? "Já ultrapassa" : relation === "tie" ? `Empata · ${requiredSp ?? "—"} SP passa` : requiredSp === null ? "Não alcança no modelo" : `${requiredSp} SP passa`}</span><button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)}>Aplicar ao set</button></div>
+              <div className="builder-speed-action"><span>{relation === "faster" ? "Já ultrapassa" : relation === "tie" ? (requiredSp === null ? "Empata · não passa com até 32 SP" : `Empata · ${requiredSp} SP passa`) : requiredSp === null ? "Não passa com até 32 SP" : `${requiredSp} SP passa`} · {remainingSp >= 0 ? `${remainingSp} SP livres` : `excede em ${Math.abs(remainingSp)} SP`}</span><button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
             </article>;
           })}
-        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>O cálculo aceita 0–999 SP como faixa de exploração; limites e legalidade oficiais não foram confirmados.</span></details></div>}
+        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>Esta prévia aceita até 32 SP em Speed e confere o orçamento de 66 SP do set antes de salvar. A referência é um formato comunitário e não confirma regras oficiais.</span></details></div>}
         {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva · Trick Room muda ordem de atuação, não Speed bruta. <details><summary>Sobre o modelo</summary><span>Fórmula Champions no nível 50 conforme o modelo do @smogon/calc. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Aplicar uma natureza nova também pode alterar outros stats do set.</span></details></div>}
       </section>
 

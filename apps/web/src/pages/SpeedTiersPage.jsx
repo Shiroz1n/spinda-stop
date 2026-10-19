@@ -46,7 +46,7 @@ function SpeedSettings({ label, model, values, onChange, target = false }) {
       {model === "champions" ? (
         <label className="speed-setting-field">
           <span>SP de Speed</span>
-          <input className="text-input" type="number" min="0" max="999" value={values.sp} onChange={(event) => onChange("sp", event.target.value === "" ? 0 : Math.min(999, Math.max(0, Number(event.target.value))))} />
+          <input className="text-input" type="number" min="0" max="32" step="1" value={values.sp} onChange={(event) => onChange("sp", event.target.value === "" ? 0 : Math.min(32, Math.max(0, Number(event.target.value))))} />
         </label>
       ) : (
         <>
@@ -91,7 +91,10 @@ export function SpeedTiersPage() {
         const required = !Number.isFinite(pokemonBaseSpeed) ? null : model === "champions"
           ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature })
           : minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature, level: candidate.level, iv: candidate.iv });
-        return { pokemon, value, relation, required };
+        const favorableRequired = required === null && candidate.nature !== "favorable" && Number.isFinite(pokemonBaseSpeed)
+          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: "favorable", level: candidate.level, iv: candidate.iv })
+          : null;
+        return { pokemon, value, relation, required, favorableRequired };
       })
       .sort((left, right) => {
         if (left.value === null && right.value !== null) return 1;
@@ -172,12 +175,16 @@ export function SpeedTiersPage() {
           <div className="speed-results-toolbar"><div><strong>{ranked.length.toLocaleString("pt-BR")}</strong> entradas no catálogo</div><label>Buscar na lista <input className="text-input" value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setVisibleCount(90); }} placeholder="Espécie ou forma" /></label></div>
           <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
           <div className="speed-results-list" aria-live="polite">
-            {visibleRows.map(({ pokemon, value, relation, required }) => (
+            {visibleRows.map(({ pokemon, value, relation, required, favorableRequired }) => (
               <article className={`speed-result-row is-${relation}`} key={pokemon.slug}>
                 <div className="speed-result-pokemon"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>#{pokemon.speciesId} · {pokemon.formId === "default" ? "forma base" : pokemon.formId}</small><span className="type-list">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</span></div></div>
                 <strong className="speed-result-number">{value ?? "—"}</strong>
                 <span className={`speed-relation speed-relation-${relation}`}>{relation === "faster" ? "Ultrapassa" : relation === "tie" ? "Empata" : relation === "slower" ? "Abaixo" : "Sem dado"}</span>
-                <span className="speed-threshold">{relation === "faster" ? "—" : required === null ? "Não alcança no modelo" : `${required} ${model === "champions" ? "SP" : "EV"}`}</span>
+                <span className="speed-threshold">
+                  <span>{relation === "faster" ? "—" : required === null ? (model === "champions" ? (candidate.nature === "favorable" ? "Não passa com natureza favorável e 32 SP" : "Não passa com até 32 SP") : "Não alcança no modelo") : `${required} ${model === "champions" ? "SP" : "EV"}`}</span>
+                  {required === null && favorableRequired !== null && <small>Nature favorável (simulação): {favorableRequired} {model === "champions" ? "SP" : "EV"}</small>}
+                  {required === null && candidate.nature !== "favorable" && favorableRequired === null && model === "champions" && <small>Nem natureza favorável + 32 SP ultrapassa</small>}
+                </span>
               </article>
             ))}
             {ranked.length === 0 && <p className="empty-state">Nenhuma espécie corresponde à busca.</p>}
@@ -185,7 +192,7 @@ export function SpeedTiersPage() {
           {visibleCount < ranked.length ? <button className="button button-outline speed-load-more" type="button" onClick={() => setVisibleCount((count) => Math.min(ranked.length, count + 90))}>Mostrar mais {Math.min(90, ranked.length - visibleCount)}</button> : <p className="speed-end">Fim da lista · {ranked.length.toLocaleString("pt-BR")} entradas</p>}
         </>
       )}
-      <details className="speed-about"><summary>Sobre os dados e a fórmula</summary><p>Speed calculada a partir dos stats base e do modelo escolhido. Empate significa o mesmo valor bruto; Trick Room não altera Speed, apenas a ordem de atuação. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Tier calculado não é ranking de uso.</p><p>Champions usa a fórmula no nível 50 exposta pelo modo Champions do <code>@smogon/calc</code>: <code>floor((base + SP + 20) × nature)</code>. O campo explora 0–999 SP; esse intervalo não confirma limites ou legalidade no jogo. O modelo geral usa base, IV, EV e nível como hipóteses de cálculo, não como validação de set. As formas vêm do catálogo da PokéAPI.</p></details>
+      <details className="speed-about"><summary>Sobre os dados e a fórmula</summary><p>Speed calculada a partir dos stats base e do modelo escolhido. Empate significa o mesmo valor bruto; Trick Room não altera Speed, apenas a ordem de atuação. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Tier calculado não é ranking de uso.</p><p>Champions usa a fórmula no nível 50 exposta pelo modo Champions do <code>@smogon/calc</code>: <code>floor((base + SP + 20) × nature)</code>, com até 32 SP no atributo. A comparação de tiers não tem os outros cinco atributos do set para calcular os 66 SP restantes; no builder esse orçamento é contado antes de aplicar a prévia. O modelo geral usa base, IV, EV e nível como hipóteses de cálculo, não como validação de set. As formas vêm do catálogo da PokéAPI.</p></details>
     </div>
   );
 }
