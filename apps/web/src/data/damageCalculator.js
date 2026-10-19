@@ -212,6 +212,17 @@ function makePokemon(input, label) {
   });
 }
 
+export function calculateChampionsStats(input) {
+  // Stat previews only depend on the species, Nature, and SP. Keep free-text
+  // battle fields out of this path so an unrecognized item or ability cannot
+  // hide otherwise valid stats in the editor.
+  return makePokemon({
+    species: input.species,
+    nature: input.nature,
+    statPoints: input.statPoints,
+  }, "stats do set").stats;
+}
+
 export function getHitOptions(move) {
   if (typeof move?.multihit === "number") return [move.multihit];
   if (Array.isArray(move?.multihit)) {

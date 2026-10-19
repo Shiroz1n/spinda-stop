@@ -19,6 +19,9 @@ const representativeCaptures = new Set([
   "pokedex-loaded-more",
   "usage-battle-data",
   "builder-six-members-first-fold",
+  "builder-nature-before",
+  "builder-nature-picker-open",
+  "builder-nature-after",
   "builder-six-speed-vs-mega-garchomp-z",
   "builder-speed-budget-nature",
   "calculator-one-v-many",
@@ -576,7 +579,22 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: o nome do Pokémon selecionado está cortado no slot do builder.`);
   }
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
-  await page.getByLabel("Nature", { exact: true }).fill("Adamant");
+  const natureStatsBefore = await page.locator(".builder-nature-stats").innerText();
+  await safeCapture(page, viewportName, "builder-nature-before", { fullPage: false });
+  const natureTrigger = page.locator("#member-nature");
+  await natureTrigger.focus();
+  await natureTrigger.press("Enter");
+  await page.locator("#member-nature-options").waitFor({ state: "visible" });
+  await safeCapture(page, viewportName, "builder-nature-picker-open", { fullPage: false });
+  await page.keyboard.press("Tab");
+  const firstNatureFocused = await page.evaluate(() => document.activeElement?.classList.contains("nature-picker-option"));
+  if (!firstNatureFocused) failures.push(`${viewportName}: Tab não moveu o foco do seletor de Nature para uma opção.`);
+  await page.locator("#member-nature-options").getByRole("button", { name: /Adamant Ataque/ }).click();
+  await page.locator("#member-nature").getByText("Adamant", { exact: true }).waitFor({ state: "visible" });
+  const natureStatsAfter = await page.locator(".builder-nature-stats").innerText();
+  if (natureStatsBefore === natureStatsAfter) failures.push(`${viewportName}: trocar para Adamant não atualizou os stats mostrados no builder.`);
+  await safeCapture(page, viewportName, "builder-nature-after", { fullPage: false });
+  await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await page.locator("#move-0").fill("Earthquake");
   await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
@@ -690,6 +708,21 @@ async function runViewport(viewportName, viewport) {
   }, null, { timeout: 15_000 });
   const megaZTargetImage = await page.locator(".builder-speed-target .pokemon-art img").evaluate((image) => ({ src: image.src, width: image.naturalWidth }));
   if (!megaZTargetImage.src.endsWith("10309.png") || megaZTargetImage.width !== 512) failures.push(`${viewportName}: Mega Garchomp Z não carregou o sprite HOME específico da forma.`);
+  const targetNatureWidth = await page.locator(".builder-target-nature").evaluate((element) => Math.round(element.getBoundingClientRect().width));
+  observations.push({ viewport: viewportName, name: "builder-speed-target-nature-width", width: targetNatureWidth });
+  if (viewport.width <= 420 && targetNatureWidth < 160) failures.push(`${viewportName}: o seletor da Nature do alvo ficou estreito demais no mobile.`);
+  await page.locator("#builder-target-nature").press("Enter");
+  const targetNatureMenu = page.locator("#builder-target-nature-options");
+  await targetNatureMenu.waitFor({ state: "visible", timeout: 10_000 });
+  const targetNatureMenuBounds = await targetNatureMenu.evaluate((menu) => {
+    const rect = menu.getBoundingClientRect();
+    return { left: Math.round(rect.left), right: Math.round(rect.right), viewport: window.innerWidth };
+  });
+  observations.push({ viewport: viewportName, name: "builder-speed-target-nature-menu-bounds", ...targetNatureMenuBounds });
+  if (targetNatureMenuBounds.left < -1 || targetNatureMenuBounds.right > targetNatureMenuBounds.viewport + 1) {
+    failures.push(`${viewportName}: o menu de Nature do alvo de Speed deve caber na largura da tela.`);
+  }
+  await page.keyboard.press("Escape");
   const targetNameGeometry = await page.locator(".builder-speed-target").evaluate((container) => {
     const artwork = container.querySelector(":scope > .pokemon-art").getBoundingClientRect();
     const name = container.querySelector(".builder-speed-target-name strong").getBoundingClientRect();
@@ -703,6 +736,15 @@ async function runViewport(viewportName, viewport) {
   const speedGridColumns = await page.locator(".builder-speed-grid").evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length);
   observations.push({ viewport: viewportName, name: "builder-speed-grid-columns", count: speedGridColumns });
   if (viewport.width <= 420 && speedGridColumns !== 1) failures.push(`${viewportName}: os controles de Speed devem ter largura de toque legível em telas mobile.`);
+  await page.locator(".builder-speed-row").first().locator('input[type="number"]').fill("1");
+  await page.locator(".team-slot").first().click();
+  const mainNatureTrigger = page.locator("#member-nature");
+  await mainNatureTrigger.click();
+  await page.locator("#member-nature-options").getByRole("button", { name: /Jolly Velocidade/ }).click();
+  await page.getByRole("link", { name: "Comparar Speed" }).click();
+  const speedAfterSavedNatureChange = await page.locator(".builder-speed-row").first().getAttribute("data-speed");
+  observations.push({ viewport: viewportName, name: "builder-speed-uses-current-saved-nature", speed: speedAfterSavedNatureChange });
+  if (speedAfterSavedNatureChange !== "135") failures.push(`${viewportName}: a prévia de SP temporária não acompanhou a Nature Jolly salva no set.`);
   await page.locator(".builder-speed-row").first().locator('input[type="number"]').fill("17");
   await page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" }).click();
   await page.locator(".team-slot").first().click();
@@ -1005,6 +1047,13 @@ async function runViewport(viewportName, viewport) {
   await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
   await page.locator('input[list="damage-move-options"]').fill("Earthquake");
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
+  const attackerEditor = page.locator('.damage-side[aria-labelledby="attacker-heading"]');
+  await attackerEditor.getByLabel("Item", { exact: true }).fill("Clear Amulet");
+  await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("Habilidade criada pelo usuário");
+  const attackerStatsVisible = await attackerEditor.locator(".damage-calculated-stats").isVisible();
+  if (!attackerStatsVisible) failures.push(`${viewportName}: stats válidos do atacante sumiram ao preencher item/habilidade desconhecidos.`);
+  await attackerEditor.getByLabel("Item", { exact: true }).fill("");
+  await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("");
   await page.evaluate(() => window.scrollTo(0, 0));
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
@@ -1150,6 +1199,18 @@ async function runViewport(viewportName, viewport) {
   const speedThresholds = await page.locator(".speed-threshold").allTextContents();
   if (speedThresholds.some((text) => /\b(?:3[3-9]|[4-9]\d)\s*SP\b/.test(text))) failures.push(`${viewportName}: Speed Tiers recomendou mais de 32 SP num único atributo.`);
   if (!speedThresholds.some((text) => text.includes("Não passa com até 32 SP"))) failures.push(`${viewportName}: Speed Tiers não explicou quando o alvo é inalcançável dentro do limite de 32 SP.`);
+  await page.locator("#speed-target-nature").press("Enter");
+  const speedTargetNatureMenu = page.locator("#speed-target-nature-options");
+  await speedTargetNatureMenu.waitFor({ state: "visible", timeout: 10_000 });
+  const speedTargetNatureBounds = await speedTargetNatureMenu.evaluate((menu) => {
+    const rect = menu.getBoundingClientRect();
+    return { left: Math.round(rect.left), right: Math.round(rect.right), viewport: window.innerWidth };
+  });
+  observations.push({ viewport: viewportName, name: "speed-tiers-target-nature-menu-bounds", ...speedTargetNatureBounds });
+  if (speedTargetNatureBounds.left < -1 || speedTargetNatureBounds.right > speedTargetNatureBounds.viewport + 1) {
+    failures.push(`${viewportName}: o menu de Nature do alvo em Speed Tiers deve caber na largura da tela.`);
+  }
+  await page.keyboard.press("Escape");
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
   const speedTargetLayout = await page.locator(".speed-target-banner").evaluate((banner) => {
     const artwork = banner.querySelector(".pokemon-art").getBoundingClientRect();

@@ -7,10 +7,12 @@ import {
   calculateChampionsSpeed,
   calculateStandardSpeed,
   compareSpeed,
+  compareSpeedOrder,
   getChampionsSpeedRecommendation,
   maximumLegalSpeedPoints,
   minimumTrainingToOutspeed,
   savedNatureForSpeed,
+  resolveSpeedPreviewNature,
   validateChampionsStatPoints,
 } from "../src/data/speedTiers.js";
 
@@ -70,6 +72,24 @@ test("ultrapassar exige Speed estritamente maior e nunca recomenda mais de 32 SP
   assert.equal(minimumTrainingToOutspeed({ baseSpeed: 100, targetSpeed: 160, nature: "neutral" }), null);
   assert.equal(minimumTrainingToOutspeed({ baseSpeed: 100, targetSpeed: 160, nature: "favorable" }), 27);
   assert.equal(minimumTrainingToOutspeed({ baseSpeed: 100, targetSpeed: 160, nature: "unfavorable" }), null);
+});
+
+test("Natures nomeadas calculam Speed com sinais diferentes, e Trick Room só inverte a ordem", () => {
+  assert.equal(calculateChampionsSpeed(102, 32, "Timid"), 169);
+  assert.equal(calculateChampionsSpeed(102, 32, "Serious"), 154);
+  assert.equal(calculateChampionsSpeed(102, 32, "Brave"), 138);
+  assert.equal(calculateChampionsSpeed(102, 32, "Adamant"), 154);
+  assert.equal(compareSpeedOrder(140, 139), "first");
+  assert.equal(compareSpeedOrder(140, 139, true), "second");
+  assert.equal(compareSpeedOrder(138, 139, true), "first");
+  assert.equal(compareSpeedOrder(139, 139, true), "tie");
+});
+
+test("prévia segue a Nature do set até que uma Nature temporária seja escolhida", () => {
+  assert.equal(resolveSpeedPreviewNature("Timid", { nature: "Serious", natureTouched: false }), "Timid");
+  assert.equal(resolveSpeedPreviewNature("Adamant", { nature: "Brave", natureTouched: false }), "Adamant");
+  assert.equal(resolveSpeedPreviewNature("Adamant", { nature: "Brave", natureTouched: true }), "Brave");
+  assert.equal(resolveSpeedPreviewNature("Adamant", { nature: "not-a-nature", natureTouched: true }), "Adamant");
 });
 
 test("prévia de Speed respeita 32 SP por atributo e o orçamento total de 66", () => {

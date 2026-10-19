@@ -4,23 +4,15 @@ const NATURE_FACTOR = Object.freeze({
   unfavorable: 0.9,
 });
 
-const SPEED_UP_NATURES = new Set(["timid", "jolly", "hasty", "naive"]);
-const SPEED_DOWN_NATURES = new Set(["brave", "relaxed", "quiet", "sassy"]);
+import { getNature, getNatureMultiplier, getNatureSpeedClass } from "./natures.js";
 
 export const CHAMPIONS_MAX_STAT_POINTS = 32;
 export const CHAMPIONS_MAX_TOTAL_POINTS = 66;
 const CHAMPIONS_STAT_KEYS = Object.freeze(["hp", "atk", "def", "spa", "spd", "spe"]);
 
-function toNatureId(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
-}
-
 function normalizeNature(value) {
   if (Object.hasOwn(NATURE_FACTOR, value)) return value;
-  const nature = toNatureId(value);
-  if (SPEED_UP_NATURES.has(nature)) return "favorable";
-  if (SPEED_DOWN_NATURES.has(nature)) return "unfavorable";
-  return "neutral";
+  return getNatureSpeedClass(value);
 }
 
 function readInteger(value, label, min, max) {
@@ -32,7 +24,9 @@ function readInteger(value, label, min, max) {
 }
 
 function natureFactor(value) {
-  return NATURE_FACTOR[normalizeNature(value)];
+  return Object.hasOwn(NATURE_FACTOR, value)
+    ? NATURE_FACTOR[value]
+    : getNatureMultiplier(value, "spe");
 }
 
 export function calculateChampionsSpeed(baseSpeed, statPoints = 0, nature = "neutral") {
@@ -55,6 +49,13 @@ export function compareSpeed(value, target) {
   if (value > target) return "faster";
   if (value < target) return "slower";
   return "tie";
+}
+
+export function compareSpeedOrder(value, target, trickRoom = false) {
+  const relation = compareSpeed(value, target);
+  if (relation === "tie" || relation === "unknown") return relation;
+  const actsFirst = trickRoom ? relation === "slower" : relation === "faster";
+  return actsFirst ? "first" : "second";
 }
 
 export function validateChampionsStatPoints(statPoints) {
@@ -112,7 +113,7 @@ export function getChampionsSpeedRecommendation({ baseSpeed, targetSpeed, nature
   const requiredSp = minimumTrainingToOutspeed({ baseSpeed, targetSpeed, nature });
   const favorableRequiredSp = normalizeNature(nature) === "favorable"
     ? null
-    : minimumTrainingToOutspeed({ baseSpeed, targetSpeed, nature: "favorable" });
+    : minimumTrainingToOutspeed({ baseSpeed, targetSpeed, nature: "Timid" });
   return {
     availableSpeedSp: available,
     requiredSp,
@@ -123,10 +124,19 @@ export function getChampionsSpeedRecommendation({ baseSpeed, targetSpeed, nature
 }
 
 export function speedNatureFromName(value) {
-  return normalizeNature(value);
+  const nature = getNature(value);
+  if (nature) return nature.name;
+  const category = normalizeNature(value);
+  return ({ favorable: "Timid", neutral: "Serious", unfavorable: "Brave" })[category];
+}
+
+export function resolveSpeedPreviewNature(memberNature, preview) {
+  return preview?.natureTouched ? (getNature(preview.nature)?.name || speedNatureFromName(memberNature)) : speedNatureFromName(memberNature);
 }
 
 export function savedNatureForSpeed(value, previousNature = "") {
+  const actualNature = getNature(value);
+  if (actualNature) return actualNature.name;
   const selected = normalizeNature(value);
   if (selected === normalizeNature(previousNature) && previousNature) return previousNature;
   return ({ favorable: "Timid", neutral: "Serious", unfavorable: "Brave" })[selected];

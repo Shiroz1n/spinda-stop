@@ -3,8 +3,9 @@ import { Link, useLocation } from "react-router";
 import { parseTeam } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
+import { NaturePicker } from "../components/NaturePicker.jsx";
 import { createPokemonSpriteLookup } from "../data/pokemonSprites.js";
-import { calculateChampionsDamage, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
+import { calculateChampionsDamage, calculateChampionsStats, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, damageCalculatorCatalog, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions, getSpreadTargetLimit, isSpreadTargetMove } from "../data/damageCalculator.js";
 
 const statFields = [
   ["hp", "HP"], ["atk", "Atk"], ["def", "Def"],
@@ -83,7 +84,6 @@ function DataLists({ form, comparisonForm }) {
         <datalist id={`damage-${sideName}-species-options`}>{getDamageCatalogOptions("species", side.species).map((name) => <option value={name} key={name} />)}</datalist>
         <datalist id={`damage-${sideName}-item-options`}>{getDamageCatalogOptions("items", side.item).map((name) => <option value={name} key={name} />)}</datalist>
         <datalist id={`damage-${sideName}-ability-options`}>{getDamageCatalogOptions("abilities", side.ability).map((name) => <option value={name} key={name} />)}</datalist>
-        <datalist id={`damage-${sideName}-nature-options`}>{getDamageCatalogOptions("natures", side.nature).map((name) => <option value={name} key={name} />)}</datalist>
       </>
     );
   };
@@ -113,6 +113,12 @@ function SideEditor({ title, side, onChange, sideName, showSpecies = true }) {
   function updateNested(key, child, value) { onChange({ ...side, [key]: { ...side[key], [child]: value } }); }
   const statPointTotal = statFields.reduce((total, [key]) => total + (Number(side.statPoints[key]) || 0), 0);
   const selectedPokemon = findPokemonSprite(side.species);
+  let calculatedStats = null;
+  try {
+    if (side.species) calculatedStats = calculateChampionsStats(side);
+  } catch {
+    calculatedStats = null;
+  }
 
   return (
     <section className="damage-side panel-frame" aria-labelledby={`${sideName}-heading`}>
@@ -123,7 +129,7 @@ function SideEditor({ title, side, onChange, sideName, showSpecies = true }) {
       </div>
       <div className="damage-side-fields">
         {showSpecies ? <CatalogInput label="Pokémon" value={side.species} onChange={(value) => update("species", value)} list={`damage-${sideName}-species-options`} placeholder="Buscar no catálogo" /> : <p className="damage-shared-target-note">O mesmo set defensivo vale para cada espécie da lista.</p>}
-        <CatalogInput label="Nature" value={side.nature} onChange={(value) => update("nature", value)} list={`damage-${sideName}-nature-options`} placeholder="Serious" />
+        <NaturePicker id={`damage-${sideName}-nature`} label="Nature" value={side.nature} onChange={(value) => update("nature", value)} className="damage-nature-picker" />
         <CatalogInput label="Habilidade" value={side.ability} onChange={(value) => update("ability", value)} list={`damage-${sideName}-ability-options`} placeholder="Padrão da espécie" />
         <CatalogInput label="Item" value={side.item} onChange={(value) => update("item", value)} list={`damage-${sideName}-item-options`} placeholder="Sem item" />
         <label className="damage-field">
@@ -151,6 +157,9 @@ function SideEditor({ title, side, onChange, sideName, showSpecies = true }) {
         </div>
         <p className="form-hint" role="status" aria-live="polite">Total informado: {statPointTotal} SP. A legalidade e os limites oficiais de SP não são confirmados.</p>
       </fieldset>
+      {calculatedStats ? <dl className="damage-calculated-stats" aria-live="polite" aria-label={`Stats calculados de ${side.species} com ${side.nature || "Serious"}`}>
+        {statFields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{calculatedStats[key]}</dd></div>)}
+      </dl> : null}
       <details className="damage-advanced">
         <summary>Estágios de atributos</summary>
         <div className="damage-boost-grid">

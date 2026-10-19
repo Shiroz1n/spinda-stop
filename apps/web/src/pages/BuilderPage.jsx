@@ -4,13 +4,14 @@ import { addPokemonToDraft, createEmptyTeam, parseTeam, serializeTeam, setTeamMe
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
-import natureData from "@spinda-stop/data/natures";
 import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
+import { NaturePicker } from "../components/NaturePicker.jsx";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
-import { buildDamageCalculatorSearch, getDamageSpeciesName } from "../data/damageCalculator.js";
-import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, savedNatureForSpeed, speedNatureFromName } from "../data/speedTiers.js";
+import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
+import { getNature, getNatureSpeedClass } from "../data/natures.js";
+import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, compareSpeedOrder, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, resolveSpeedPreviewNature, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
@@ -73,7 +74,8 @@ export function BuilderPage() {
   const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
   const [speedTargetSlug, setSpeedTargetSlug] = useState("");
   const [speedTargetSp, setSpeedTargetSp] = useState(0);
-  const [speedTargetNature, setSpeedTargetNature] = useState("neutral");
+  const [speedTargetNature, setSpeedTargetNature] = useState("Serious");
+  const [speedTrickRoom, setSpeedTrickRoom] = useState(false);
   const [speedPreviews, setSpeedPreviews] = useState({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(0);
@@ -85,8 +87,19 @@ export function BuilderPage() {
     () => selectedMember ? pokemonWithDetails(selectedMember.pokemonId) : null,
     [selectedMember],
   );
+  const selectedComputedStats = useMemo(() => {
+    if (!selectedPokemon || !selectedMember) return null;
+    try {
+      return calculateChampionsStats({
+        species: getDamageSpeciesName(selectedPokemon.slug),
+        nature: selectedMember.nature || "Serious",
+        statPoints: selectedMember.statPoints,
+      });
+    } catch {
+      return null;
+    }
+  }, [selectedPokemon, selectedMember]);
   const moveListId = "move-options";
-  const natureListId = "nature-options";
   const damageOpponents = team.members
     .map((member, index) => ({ member, index, pokemon: member ? pokemonWithDetails(member.pokemonId) : null }))
     .filter(({ member, index, pokemon }) => member && pokemon && index !== selectedSlot);
@@ -99,10 +112,12 @@ export function BuilderPage() {
     const pokemon = member ? pokemonWithDetails(member.pokemonId) : null;
     if (!member || !pokemon || speedTargetValue === null) return { member, pokemon, index, preview: null, speed: null, relation: "unknown", requiredSp: null };
     const savedPreview = speedPreviews[index];
-    const preview = savedPreview || {
+    const preview = {
+      ...savedPreview,
       sp: Number(member.statPoints.spe) || 0,
-      nature: speedNatureFromName(member.nature),
-      natureTouched: false,
+      natureTouched: Boolean(savedPreview?.natureTouched),
+      ...(savedPreview?.sp !== undefined ? { sp: savedPreview.sp } : {}),
+      nature: resolveSpeedPreviewNature(member.nature, savedPreview),
     };
     const availableSpeedSp = maximumLegalSpeedPoints(member.statPoints);
     const previewSpeedPoints = Math.min(availableSpeedSp, CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0));
@@ -112,7 +127,8 @@ export function BuilderPage() {
     const recommendation = appliedPreview.ok
       ? getChampionsSpeedRecommendation({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature, availableSpeedSp })
       : null;
-    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, recommendation, availableSpeedSp };
+    const order = appliedPreview.ok ? compareSpeedOrder(speed, speedTargetValue, speedTrickRoom) : "unknown";
+    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, order, recommendation, availableSpeedSp };
   });
 
   function toDamageSide(member, pokemon) {
@@ -270,10 +286,13 @@ export function BuilderPage() {
   function applySpeedPreview(index) {
     const member = team.members[index];
     if (!member) return;
-    const preview = speedPreviews[index] || {
+    const savedPreview = speedPreviews[index];
+    const preview = {
+      ...savedPreview,
       sp: Number(member.statPoints.spe) || 0,
-      nature: speedNatureFromName(member.nature),
-      natureTouched: false,
+      natureTouched: Boolean(savedPreview?.natureTouched),
+      ...(savedPreview?.sp !== undefined ? { sp: savedPreview.sp } : {}),
+      nature: resolveSpeedPreviewNature(member.nature, savedPreview),
     };
     const speedPoints = Math.min(
       maximumLegalSpeedPoints(member.statPoints),
@@ -291,7 +310,7 @@ export function BuilderPage() {
     const members = [...team.members];
     members[index] = {
       ...member,
-      nature: preview.natureTouched ? savedNatureForSpeed(preview.nature, member.nature) : member.nature,
+      nature: preview.natureTouched ? (getNature(preview.nature)?.name || member.nature) : member.nature,
       statPoints: appliedSpread.statPoints,
     };
     commitTeam({ ...team, members });
@@ -301,7 +320,7 @@ export function BuilderPage() {
   function selectSpeedTarget(pokemon) {
     setSpeedTargetSlug(pokemon.slug);
     setSpeedTargetSp(0);
-    setSpeedTargetNature("neutral");
+    setSpeedTargetNature("Serious");
     setSpeedTargetPickerOpen(false);
   }
 
@@ -434,9 +453,10 @@ export function BuilderPage() {
                   <input id="member-item" className="text-input" value={selectedMember.item} maxLength={100} onChange={(event) => updateMember({ item: event.target.value })} placeholder="Digite um item" />
                 </div>
 
-                <label className="field-label" htmlFor="member-nature">Nature</label>
-                <input id="member-nature" className="text-input" list={natureListId} value={selectedMember.nature} maxLength={100} onChange={(event) => updateMember({ nature: event.target.value })} placeholder="Escolha ou digite" />
-                <datalist id={natureListId}>{natureData.natures.map((nature) => <option key={nature.slug} value={nature.name} />)}</datalist>
+                <NaturePicker id="member-nature" label="Nature do set" value={selectedMember.nature || "Serious"} onChange={(nature) => updateMember({ nature })} className="field-wide" />
+                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os Stat Points">
+                  {[["hp", "HP"], ["atk", "Atk"], ["def", "Def"], ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"]].map(([key, label]) => <div key={key} data-stat={key}><dt>{label}</dt><dd>{selectedComputedStats[key]}</dd></div>)}
+                </dl> : <p className="builder-nature-stats-note field-wide" role="status">Os stats deste set não podem ser calculados até a distribuição e a Nature serem válidas.</p>}
 
                 <label className="field-label" htmlFor="member-level">Nível</label>
                 <input id="member-level" className="text-input short-number-input" type="number" min="1" max="100" value={selectedMember.level} onChange={(event) => updateMember({ level: Math.min(100, Math.max(1, Number(event.target.value) || 1)) })} />
@@ -472,6 +492,7 @@ export function BuilderPage() {
       <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
         <div className="builder-speed-heading">
           <div><p className="page-label">Comparação temporária · Champions</p><h2 id="builder-speed-title">Speed do time</h2></div>
+          <label className="speed-trick-room-toggle"><input type="checkbox" checked={speedTrickRoom} onChange={(event) => setSpeedTrickRoom(event.target.checked)} /><span>Trick Room ativo</span><small>Ordem invertida; Speed bruta preservada.</small></label>
           <Link className="button button-outline button-small" to={speedTargetPokemon ? `/speed-tiers?target=${encodeURIComponent(speedTargetPokemon.slug)}` : "/speed-tiers"}>Abrir Speed Tiers</Link>
         </div>
         <div className={speedTargetPokemon ? "builder-speed-target" : "builder-speed-target is-empty"}>
@@ -479,7 +500,7 @@ export function BuilderPage() {
             <PokemonSprite pokemon={speedTargetPokemon} name={speedTargetPokemon.name} size={52} decorative />
             <div className="builder-speed-target-name"><small>Adversário escolhido</small><strong>{speedTargetPokemon.name}</strong><span>{speedTargetValue} Speed · nível 50</span></div>
             <label><span>SP do alvo</span><input className="text-input" type="number" min="0" max="32" value={speedTargetSp} onChange={(event) => setSpeedTargetSp(Math.min(32, Math.max(0, Number(event.target.value) || 0)))} /></label>
-            <label><span>Nature do alvo</span><select className="text-input" value={speedTargetNature} onChange={(event) => setSpeedTargetNature(event.target.value)}><option value="favorable">Favorável à Speed</option><option value="neutral">Neutra para Speed</option><option value="unfavorable">Desfavorável à Speed</option></select></label>
+            <NaturePicker id="builder-target-nature" label="Nature do alvo" value={speedTargetNature} onChange={setSpeedTargetNature} className="builder-target-nature" />
             <button className="button button-quiet button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Trocar alvo</button>
           </> : <>
             <div className="builder-speed-target-placeholder"><strong>Escolha um adversário</strong><span>Compare os seis do time ao mesmo tempo.</span></div>
@@ -487,7 +508,7 @@ export function BuilderPage() {
           </>}
         </div>
         {speedTargetPokemon ? <div className="builder-speed-grid" aria-label="Comparação dos seis Pokémon do time">
-          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, recommendation, availableSpeedSp }) => {
+          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, order, recommendation, availableSpeedSp }) => {
             if (!member || !pokemon) return <div className="builder-speed-empty" key={index}><span>{String(index + 1).padStart(2, "0")}</span>Posição vazia</div>;
             const appliedSpread = applySpeedPointsToStatSpread(member.statPoints, preview.sp);
             const remainingSp = CHAMPIONS_MAX_TOTAL_POINTS - Object.entries(member.statPoints).reduce((sum, [key, value]) => sum + (key === "spe" ? preview.sp : value), 0);
@@ -500,20 +521,20 @@ export function BuilderPage() {
                   : recommendation.canOutspeed
                     ? `${relation === "tie" ? "Empata · " : ""}${recommendation.requiredSp} SP passa`
                     : `Não passa · precisa ${recommendation.requiredSp} SP; ${availableSpeedSp} disponíveis`;
-            const favorableNatureText = !appliedSpread.ok || relation === "faster" || recommendation.canOutspeed || preview.nature === "favorable"
+            const favorableNatureText = !appliedSpread.ok || relation === "faster" || recommendation.canOutspeed || getNatureSpeedClass(preview.nature) === "favorable"
               ? ""
               : recommendation.favorableRequiredSp === null
-                ? "Nem natureza favorável + 32 SP ultrapassa"
+                ? "Nem Timid (Velocidade ↑) + 32 SP ultrapassa"
                 : recommendation.favorableCanOutspeed
-                  ? `Nature favorável: ${recommendation.favorableRequiredSp} SP passa`
-                  : `Nature favorável: precisa ${recommendation.favorableRequiredSp} SP; ${availableSpeedSp} disponíveis`;
+                  ? `Timid (Velocidade ↑): ${recommendation.favorableRequiredSp} SP passa`
+                  : `Timid (Velocidade ↑): precisa ${recommendation.favorableRequiredSp} SP; ${availableSpeedSp} disponíveis`;
             const remainingText = appliedSpread.ok
               ? `${remainingSp} SP livres`
               : "revise a distribuição";
-            return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation}>
-              <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}</small></div></div>
+            return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation} data-order={order}>
+              <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}{order === "first" ? " · atua antes" : order === "second" ? " · atua depois" : ""}</small></div></div>
               <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div><small>{availableSpeedSp} SP disponíveis em Speed · máximo de 32 por atributo</small></label>
-              <label className="builder-speed-nature"><span>Nature temporária</span><select className="text-input" value={preview.nature} onChange={(event) => updateSpeedPreview(index, "nature", event.target.value)}><option value="favorable">Favorável (+10%)</option><option value="neutral">Neutra</option><option value="unfavorable">Desfavorável (−10%)</option></select></label>
+              <NaturePicker id={`builder-speed-nature-${index}`} label="Nature temporária" value={preview.nature} onChange={(nature) => updateSpeedPreview(index, "nature", nature)} className="builder-speed-nature" />
               <div className="builder-speed-action"><span>{recommendationText} · {remainingText}</span>{favorableNatureText && <small className="builder-speed-favorable-note">{favorableNatureText}</small>}<button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
             </article>;
           })}

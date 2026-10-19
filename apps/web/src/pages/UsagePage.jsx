@@ -161,6 +161,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
           <div className="type-list usage-type-list">
             {selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}
           </div>
+          {Number.isFinite(selectedPokemon.position) ? <p className="usage-selected-rank"><span>Posição na fonte</span><strong>#{selectedPokemon.position}</strong></p> : null}
         </div>
         <span className="usage-format-stamp">Doubles</span>
       </div>

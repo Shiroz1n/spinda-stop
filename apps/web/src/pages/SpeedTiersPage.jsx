@@ -3,14 +3,10 @@ import { Link, useLocation, useNavigate } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import { PokemonSprite } from "../components/PokemonSprite.jsx";
+import { NaturePicker } from "../components/NaturePicker.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
-import { calculateChampionsSpeed, calculateStandardSpeed, compareSpeed, minimumTrainingToOutspeed } from "../data/speedTiers.js";
-
-const NATURE_OPTIONS = [
-  ["favorable", "Favorável à Speed"],
-  ["neutral", "Neutra para Speed"],
-  ["unfavorable", "Desfavorável à Speed"],
-];
+import { getNatureForStat, getNatureSpeedClass } from "../data/natures.js";
+import { calculateChampionsSpeed, calculateStandardSpeed, compareSpeed, compareSpeedOrder, minimumTrainingToOutspeed } from "../data/speedTiers.js";
 const bySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
 
 function baseSpeed(pokemon) {
@@ -37,12 +33,7 @@ function SpeedSettings({ label, model, values, onChange, target = false }) {
   return (
     <fieldset className="speed-settings">
       <legend>{label}</legend>
-      <label className="speed-setting-field">
-        <span>Nature</span>
-        <select className="text-input" value={values.nature} onChange={(event) => onChange("nature", event.target.value)}>
-          {NATURE_OPTIONS.map(([value, title]) => <option key={value} value={value}>{title}</option>)}
-        </select>
-      </label>
+      <NaturePicker id={`speed-${target ? "target" : "candidate"}-nature`} label={`Nature · ${label.toLocaleLowerCase("pt-BR")}`} value={values.nature} onChange={(nature) => onChange("nature", nature)} className={`speed-setting-nature${target ? " speed-nature-target" : ""}`} />
       {model === "champions" ? (
         <label className="speed-setting-field">
           <span>SP de Speed</span>
@@ -68,9 +59,10 @@ export function SpeedTiersPage() {
   const [targetQuery, setTargetQuery] = useState(() => bySlug.get(requestedTarget)?.name || "");
   const [candidateQuery, setCandidateQuery] = useState("");
   const [sort, setSort] = useState("fastest");
+  const [trickRoom, setTrickRoom] = useState(false);
   const [visibleCount, setVisibleCount] = useState(90);
-  const [candidate, setCandidate] = useState({ nature: "neutral", sp: 0, level: 50, iv: 31, ev: 0 });
-  const [target, setTarget] = useState({ nature: "neutral", sp: 0, level: 50, iv: 31, ev: 0 });
+  const [candidate, setCandidate] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0 });
+  const [target, setTarget] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0 });
   const selectedTarget = bySlug.get(targetSlug) || null;
   const targetOptions = useMemo(() => {
     const query = normalizedSearch(targetQuery.trim());
@@ -91,10 +83,12 @@ export function SpeedTiersPage() {
         const required = !Number.isFinite(pokemonBaseSpeed) ? null : model === "champions"
           ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature })
           : minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature, level: candidate.level, iv: candidate.iv });
-        const favorableRequired = required === null && candidate.nature !== "favorable" && Number.isFinite(pokemonBaseSpeed)
-          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: "favorable", level: candidate.level, iv: candidate.iv })
+        const favorableNature = getNatureForStat("spe", "up")?.name || "Timid";
+        const favorableRequired = required === null && getNatureSpeedClass(candidate.nature) !== "favorable" && Number.isFinite(pokemonBaseSpeed)
+          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: favorableNature, level: candidate.level, iv: candidate.iv })
           : null;
-        return { pokemon, value, relation, required, favorableRequired };
+        const order = compareSpeedOrder(value, targetSpeed, trickRoom);
+        return { pokemon, value, relation, order, required, favorableRequired, favorableNature };
       })
       .sort((left, right) => {
         if (left.value === null && right.value !== null) return 1;
@@ -105,7 +99,7 @@ export function SpeedTiersPage() {
           ? leftSpeed - rightSpeed || left.pokemon.name.localeCompare(right.pokemon.name)
           : rightSpeed - leftSpeed || left.pokemon.name.localeCompare(right.pokemon.name);
       });
-  }, [selectedTarget, targetSpeed, candidateQuery, model, candidate, sort]);
+  }, [selectedTarget, targetSpeed, candidateQuery, model, candidate, sort, trickRoom]);
   const visibleRows = ranked.slice(0, visibleCount);
 
   function updateCandidate(key, value) {
@@ -155,6 +149,7 @@ export function SpeedTiersPage() {
             <span>Ordenar</span>
             <select className="text-input" value={sort} onChange={(event) => setSort(event.target.value)}><option value="fastest">Mais rápidos primeiro</option><option value="slowest">Mais lentos primeiro</option></select>
           </label>
+          <label className="speed-trick-room-toggle"><input type="checkbox" checked={trickRoom} onChange={(event) => setTrickRoom(event.target.checked)} /><span>Trick Room ativo</span><small>A Speed bruta não muda; a ordem é invertida.</small></label>
         </div>
 
         <div className="speed-assumptions">
@@ -175,15 +170,15 @@ export function SpeedTiersPage() {
           <div className="speed-results-toolbar"><div><strong>{ranked.length.toLocaleString("pt-BR")}</strong> entradas no catálogo</div><label>Buscar na lista <input className="text-input" value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setVisibleCount(90); }} placeholder="Espécie ou forma" /></label></div>
           <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
           <div className="speed-results-list" aria-live="polite">
-            {visibleRows.map(({ pokemon, value, relation, required, favorableRequired }) => (
+            {visibleRows.map(({ pokemon, value, relation, order, required, favorableRequired, favorableNature }) => (
               <article className={`speed-result-row is-${relation}`} key={pokemon.slug}>
                 <div className="speed-result-pokemon"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>#{pokemon.speciesId} · {pokemon.formId === "default" ? "forma base" : pokemon.formId}</small><span className="type-list">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</span></div></div>
                 <strong className="speed-result-number">{value ?? "—"}</strong>
-                <span className={`speed-relation speed-relation-${relation}`}>{relation === "faster" ? "Ultrapassa" : relation === "tie" ? "Empata" : relation === "slower" ? "Abaixo" : "Sem dado"}</span>
+                <span className={`speed-relation speed-relation-${relation}`}>{relation === "faster" ? "Ultrapassa" : relation === "tie" ? "Empata" : relation === "slower" ? "Abaixo" : "Sem dado"}{order === "first" ? " · atua antes" : order === "second" ? " · atua depois" : ""}</span>
                 <span className="speed-threshold">
                   <span>{relation === "faster" ? "—" : required === null ? (model === "champions" ? (candidate.nature === "favorable" ? "Não passa com natureza favorável e 32 SP" : "Não passa com até 32 SP") : "Não alcança no modelo") : `${required} ${model === "champions" ? "SP" : "EV"}`}</span>
-                  {required === null && favorableRequired !== null && <small>Nature favorável (simulação): {favorableRequired} {model === "champions" ? "SP" : "EV"}</small>}
-                  {required === null && candidate.nature !== "favorable" && favorableRequired === null && model === "champions" && <small>Nem natureza favorável + 32 SP ultrapassa</small>}
+                  {required === null && favorableRequired !== null && <small>{favorableNature} (Velocidade ↑ · simulação): {favorableRequired} {model === "champions" ? "SP" : "EV"}</small>}
+                  {required === null && getNatureSpeedClass(candidate.nature) !== "favorable" && favorableRequired === null && model === "champions" && <small>Nem Timid (Velocidade ↑) + 32 SP ultrapassa</small>}
                 </span>
               </article>
             ))}

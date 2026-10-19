@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateChampionsStats, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -10,6 +10,55 @@ const side = (species, options = {}) => ({
   status: "",
   statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, ...options.statPoints },
   boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+});
+
+test("as Natures reais mudam stats e dano, sem aplicar modificador ao HP", () => {
+  const base = side("Garchomp", { statPoints: { atk: 32, spe: 32 } });
+  const statsFor = (nature) => calculateChampionsStats({ ...base, nature });
+  const serious = statsFor("Serious");
+  const adamant = statsFor("Adamant");
+  const jolly = statsFor("Jolly");
+  const timid = statsFor("Timid");
+  const brave = statsFor("Brave");
+  const modest = statsFor("Modest");
+
+  assert.equal(adamant.hp, serious.hp);
+  assert.equal(jolly.hp, serious.hp);
+  assert.equal(timid.hp, serious.hp);
+  assert.equal(brave.hp, serious.hp);
+  assert.equal(modest.hp, serious.hp);
+  assert.ok(adamant.atk > serious.atk);
+  assert.ok(adamant.spa < serious.spa);
+  assert.ok(jolly.spe > serious.spe);
+  assert.ok(jolly.spa < serious.spa);
+  assert.ok(timid.spe > serious.spe);
+  assert.ok(timid.atk < serious.atk);
+  assert.ok(brave.atk > serious.atk);
+  assert.ok(brave.spe < serious.spe);
+  assert.ok(modest.spa > serious.spa);
+  assert.ok(modest.atk < serious.atk);
+
+  const seriousDamage = calculateChampionsDamage({ attacker: base, defender: side("Garchomp"), move: "Earthquake" });
+  const adamantDamage = calculateChampionsDamage({ attacker: { ...base, nature: "Adamant" }, defender: side("Garchomp"), move: "Earthquake" });
+  assert.equal(seriousDamage.rolls.length, 16);
+  assert.equal(adamantDamage.rolls.length, 16);
+  assert.ok(adamantDamage.max > seriousDamage.max);
+});
+
+test("a prévia de stats ignora item e habilidade desconhecidos sem perder a Nature", () => {
+  const base = side("Garchomp", { nature: "Jolly", statPoints: { atk: 8, spe: 32 } });
+  const expected = calculateChampionsStats(base);
+  const freeTextBattleFields = calculateChampionsStats({
+    ...base,
+    ability: "Habilidade criada pelo usuário",
+    item: "Clear Amulet",
+  });
+  const adamant = calculateChampionsStats({ ...base, nature: "Adamant" });
+
+  assert.deepEqual(freeTextBattleFields, expected);
+  assert.equal(freeTextBattleFields.hp, expected.hp);
+  assert.ok(adamant.atk > expected.atk);
+  assert.ok(adamant.spe < expected.spe);
 });
 
 test("confere a faixa do caso público exibido no Pokémon Showdown", () => {
@@ -617,6 +666,22 @@ test("time contra um alvo calcula golpes do builder e preserva os 16 rolls", () 
   assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Helping Hand"));
   assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Reflect"));
   assert.equal(rows[1].status, "empty");
+});
+
+test("a Nature salva no set muda os golpes na comparação Time vs 1", () => {
+  const member = {
+    species: "Garchomp",
+    ability: "Rough Skin",
+    item: "",
+    statPoints: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: ["Earthquake", "", "", ""],
+  };
+  const target = side("Gardevoir-Mega");
+  const neutral = calculateDamageFromTeamAgainstTarget([{ ...member, nature: "Serious" }], target);
+  const adamant = calculateDamageFromTeamAgainstTarget([{ ...member, nature: "Adamant" }], target);
+  assert.equal(neutral[0].moves[0].result.rolls.length, 16);
+  assert.equal(adamant[0].moves[0].result.rolls.length, 16);
+  assert.ok(adamant[0].moves[0].result.max > neutral[0].moves[0].result.max);
 });
 
 test("compara os golpes preenchidos dos seis integrantes contra o mesmo alvo", () => {
