@@ -330,6 +330,8 @@ async function runViewport(viewportName, viewport) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.locator(".home-hero").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("heading", { name: "Seu próximo time começa aqui.", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   if (viewportName === "desktop") {
     const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
     assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");
@@ -525,7 +527,8 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "pokedex-restored", { fullPage: false });
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Monte seu time" }).waitFor({ state: "visible", timeout: 10_000 });
+  const builderTitle = viewport.width <= 420 ? "Meu time" : "Monte seu time";
+  await page.getByRole("heading", { name: builderTitle, exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-empty", { audit: true });
   const emptySpeedTarget = page.locator(".builder-speed-target.is-empty");
   await emptySpeedTarget.scrollIntoViewIfNeeded();
@@ -1134,7 +1137,7 @@ async function runViewport(viewportName, viewport) {
   const teamRollCount = await firstValidMember.locator(".damage-rolls li").count();
   if (teamRollCount !== 16) failures.push(`${viewportName}: um golpe calculável de Time vs 1 não preservou os 16 rolls.`);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: viewport.width > 720 });
+  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: true });
 
   await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });
