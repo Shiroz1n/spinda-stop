@@ -905,6 +905,8 @@ async function runViewport(viewportName, viewport) {
   await page.getByLabel("Comparar cenários").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".damage-editor-disclosure > summary").click();
+  const moveAndFieldTask = page.locator(".damage-edit-task").filter({ hasText: "Golpes e campo" });
+  if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
   await page.getByLabel("Golpe B").fill("Dragon Claw");
   const comparisonResults = page.locator(".damage-comparison-results .damage-result");
   await comparisonResults.nth(1).getByRole("heading", { name: "Garchomp usa Dragon Claw" }).waitFor({ state: "visible", timeout: 10_000 });
