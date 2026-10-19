@@ -13,7 +13,7 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
 
   function getPopupStyle(details = detailsRef.current) {
     const bounds = details?.querySelector("summary")?.getBoundingClientRect();
-    if (!bounds || !details?.open) return null;
+    if (!bounds || !details) return null;
 
     const gutter = 10;
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
@@ -66,6 +66,23 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
     const isOpen = event.currentTarget.open;
     setOpen(isOpen);
     applyPopupStyle(isOpen ? getPopupStyle(event.currentTarget) : null, event.currentTarget);
+    if (isOpen) {
+      const details = event.currentTarget;
+      window.requestAnimationFrame(() => {
+        if (details.open) applyPopupStyle(getPopupStyle(details), details);
+      });
+    }
+  }
+
+  function handleTriggerClick(event) {
+    const details = event.currentTarget.parentElement;
+    const willOpen = !details.open;
+    applyPopupStyle(willOpen ? getPopupStyle(details) : null, details);
+    window.requestAnimationFrame(() => {
+      const isOpen = details.open;
+      setOpen(isOpen);
+      applyPopupStyle(isOpen ? getPopupStyle(details) : null, details);
+    });
   }
 
   useLayoutEffect(() => {
@@ -126,6 +143,7 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
           aria-controls={optionsId}
           aria-expanded={open}
           aria-labelledby={`${labelId} ${valueId}`}
+          onClick={handleTriggerClick}
         >
           <span id={valueId}><strong>{selected?.name || value || "Serious"}</strong><small>{getNatureEffectSummary(value || "Serious")}</small></span>
           <span className="nature-picker-caret" aria-hidden="true">{open ? "−" : "+"}</span>

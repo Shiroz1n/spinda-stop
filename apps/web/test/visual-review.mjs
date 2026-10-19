@@ -24,6 +24,8 @@ const representativeCaptures = new Set([
   "builder-nature-after",
   "builder-six-speed-vs-mega-garchomp-z",
   "builder-speed-budget-nature",
+  "calculator-comparison",
+  "calculator-comparison-rolls",
   "calculator-one-v-many",
   "calculator-team-vs-one",
   "speed-tiers-mega-garchomp-z-results",
@@ -594,6 +596,7 @@ async function runViewport(viewportName, viewport) {
   await natureTrigger.focus();
   await natureTrigger.press("Enter");
   await page.locator("#member-nature-options").waitFor({ state: "visible" });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const natureMenuBounds = await page.locator("#member-nature-options").evaluate((menu) => {
     const rect = menu.getBoundingClientRect();
     const nav = document.querySelector(".mobile-primary-nav");
@@ -606,11 +609,13 @@ async function runViewport(viewportName, viewport) {
       bottom: Math.round(rect.bottom),
       viewportWidth: window.innerWidth,
       visibleBottom: navVisible ? Math.round(navBounds.top) : window.innerHeight,
+      position: getComputedStyle(menu).position,
     };
   });
   observations.push({ viewport: viewportName, name: "builder-nature-menu-bounds", ...natureMenuBounds });
   if (natureMenuBounds.left < -1 || natureMenuBounds.right > natureMenuBounds.viewportWidth + 1
-    || natureMenuBounds.top < -1 || natureMenuBounds.bottom > natureMenuBounds.visibleBottom + 1) {
+    || natureMenuBounds.top < -1 || natureMenuBounds.bottom > natureMenuBounds.visibleBottom + 1
+    || natureMenuBounds.position !== "fixed") {
     failures.push(`${viewportName}: o menu de Nature do builder deve caber acima da navegação fixa.`);
   }
   await safeCapture(page, viewportName, "builder-nature-picker-open", { fullPage: false });
@@ -1251,6 +1256,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator("#speed-target-nature").press("Enter");
   const speedTargetNatureMenu = page.locator("#speed-target-nature-options");
   await speedTargetNatureMenu.waitFor({ state: "visible", timeout: 10_000 });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const speedTargetNatureBounds = await speedTargetNatureMenu.evaluate((menu) => {
     const rect = menu.getBoundingClientRect();
     const nav = document.querySelector(".mobile-primary-nav");
