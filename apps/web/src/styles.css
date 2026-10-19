@@ -3225,3 +3225,23 @@ h2 { letter-spacing: 0; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+@media (max-width: 360px) {
+  .damage-comparison-results { gap: 6px; }
+  .damage-comparison-results .damage-result { padding: 6px; }
+  .damage-comparison-results .damage-result-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 58px;
+    align-items: center;
+    gap: 4px;
+  }
+  .damage-comparison-results .damage-result-copy .page-label { font-size: 0.52rem; line-height: 1.1; }
+  .damage-comparison-results .damage-result-copy h2 { font-size: 0.7rem; line-height: 1.08; }
+  .damage-comparison-results .damage-result-copy .form-hint { font-size: 0.55rem; line-height: 1.15; }
+  .damage-comparison-results .damage-result-range { min-height: 0; width: auto; padding: 4px; }
+  .damage-comparison-results .damage-result-range strong { font-size: 0.95rem; }
+  .damage-comparison-results .damage-result-range span { font-size: 0.53rem; }
+  .damage-comparison-results .damage-percent { margin: 4px 0 0; font-size: 0.58rem; line-height: 1.2; }
+  .damage-comparison-results .damage-result-more { margin-top: 4px; padding-top: 4px; }
+  .damage-comparison-results .damage-result-more > summary { min-height: 30px; padding: 3px; font-size: 0.56rem; line-height: 1.15; }
+}

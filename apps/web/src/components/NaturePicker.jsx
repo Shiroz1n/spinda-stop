@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getNature, getNatureEffectSummary, NATURES } from "../data/natures.js";
 
 export function NaturePicker({ id, label = "Nature", value, onChange, className = "" }) {
@@ -22,25 +22,56 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
   function handleToggle(event) {
     const isOpen = event.currentTarget.open;
     setOpen(isOpen);
-    if (!isOpen || !keepPopupInViewport || window.innerWidth > 420) {
-      setPopupStyle(null);
-      return;
-    }
-
-    const trigger = event.currentTarget.querySelector("summary");
-    const bounds = trigger?.getBoundingClientRect();
-    if (!bounds) return;
-
-    const gutter = 10;
-    const width = Math.min(620, window.innerWidth - gutter * 2);
-    const maxHeight = Math.min(420, window.innerHeight * 0.58);
-    const left = Math.max(gutter, Math.min(bounds.right - width, window.innerWidth - width - gutter));
-    const below = bounds.bottom + 5;
-    const top = below + maxHeight <= window.innerHeight - gutter
-      ? below
-      : Math.max(gutter, bounds.top - maxHeight - 5);
-    setPopupStyle({ position: "fixed", left: `${left}px`, top: `${top}px`, width: `${width}px` });
+    if (!isOpen || !keepPopupInViewport) setPopupStyle(null);
   }
+
+  useLayoutEffect(() => {
+    if (!open || !keepPopupInViewport) return undefined;
+
+    let frame = 0;
+    const positionPopup = () => {
+      const details = detailsRef.current;
+      const bounds = details?.querySelector("summary")?.getBoundingClientRect();
+      if (!bounds || !details?.open) return;
+
+      const gutter = 10;
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const width = Math.max(1, Math.min(620, viewportWidth - gutter * 2));
+      const maxHeight = Math.max(80, Math.min(420, viewportHeight - gutter * 2));
+      const belowSpace = Math.max(0, viewportHeight - bounds.bottom - gutter - 5);
+      const aboveSpace = Math.max(0, bounds.top - gutter - 5);
+      const openBelow = belowSpace >= Math.min(240, maxHeight) || belowSpace >= aboveSpace;
+      const availableHeight = openBelow ? belowSpace : aboveSpace;
+      const height = Math.max(80, Math.min(maxHeight, availableHeight));
+      const left = Math.max(gutter, Math.min(bounds.left, viewportWidth - width - gutter));
+      const top = openBelow ? bounds.bottom + 5 : Math.max(gutter, bounds.top - height - 5);
+
+      setPopupStyle({
+        position: "fixed",
+        left: `${left}px`,
+        right: "auto",
+        top: `${top}px`,
+        bottom: "auto",
+        width: `${width}px`,
+        maxHeight: `${height}px`,
+        boxSizing: "border-box",
+      });
+    };
+    const schedulePosition = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(positionPopup);
+    };
+
+    positionPopup();
+    window.addEventListener("resize", schedulePosition);
+    window.addEventListener("scroll", schedulePosition, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedulePosition);
+      window.removeEventListener("scroll", schedulePosition, true);
+    };
+  }, [keepPopupInViewport, open]);
 
   useEffect(() => {
     if (!open) return undefined;

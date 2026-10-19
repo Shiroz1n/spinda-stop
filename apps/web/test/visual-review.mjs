@@ -1059,8 +1059,8 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
   const damageEditor = page.locator(".damage-editor-disclosure");
   if (!(await damageEditor.evaluate((details) => details.open))) await damageEditor.locator(":scope > summary").click();
-      const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
-      if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
+  const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
+  if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
   const attackerEditor = page.locator('.damage-side[aria-labelledby="attacker-heading"]');
   await attackerEditor.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("Habilidade criada pelo usuário");
@@ -1090,12 +1090,16 @@ async function runViewport(viewportName, viewport) {
     const ranges = cards.map((card) => {
       const range = card.querySelector(".damage-result-range");
       const rect = range?.getBoundingClientRect();
-      return Boolean(rect && rect.top >= 0 && rect.bottom <= visibleBottom);
+      return {
+        visible: Boolean(rect && rect.top >= 0 && rect.bottom <= visibleBottom),
+        top: rect ? Math.round(rect.top) : null,
+        bottom: rect ? Math.round(rect.bottom) : null,
+      };
     });
     return { count: cards.length, ranges, visibleBottom, cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)) };
   });
   observations.push({ viewport: viewportName, name: "calculator-comparison-first-fold", ...comparisonFirstFold });
-  if (viewport.width <= 420 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((visible) => !visible))) {
+  if (viewport.width <= 420 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
     failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
   }
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img");
