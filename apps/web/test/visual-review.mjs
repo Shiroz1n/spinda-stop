@@ -943,8 +943,17 @@ async function runViewport(viewportName, viewport) {
   if (!multiTargetMegaSprite.src.endsWith("10309.png") || multiTargetMegaSprite.width !== 512 || !multiTargetMegaSprite.loaded) {
     failures.push(`${viewportName}: o segundo alvo da calculadora não exibiu o sprite próprio de Mega Garchomp Z antes da captura.`);
   }
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await waitForSpritePaint(page, ".damage-multi-row .pokemon-art img");
-  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: false });
+  const visibleMultiTargetResults = await page.locator(".damage-multi-row").evaluateAll((rows) => rows.map((row) => {
+    const rect = row.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, hasSprite: Boolean(row.querySelector(".pokemon-art img")) };
+  }));
+  observations.push({ viewport: viewportName, name: "calculator-one-v-many-results-visible", rows: visibleMultiTargetResults });
+  if (visibleMultiTargetResults.length !== 2 || visibleMultiTargetResults.some((row) => !row.hasSprite)) {
+    failures.push(`${viewportName}: a comparação de vários alvos precisa capturar as duas linhas de resultado com sprites.`);
+  }
+  await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: viewport.width <= 420 });
 
   await page.getByRole("button", { name: "Um alvo" }).click();
   await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
