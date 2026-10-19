@@ -590,6 +590,15 @@ async function runViewport(viewportName, viewport) {
   }).length);
   observations.push({ viewport: viewportName, name: "builder-six-members-first-fold-visible-slots", count: firstFoldSlots });
   if (firstFoldSlots !== 6) failures.push(`${viewportName}: os seis slots preenchidos devem caber na primeira dobra, acima da navegação mobile.`);
+  const builderTitleLayout = await page.locator(".builder-heading h1").evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return { lineCount: range.getClientRects().length, width: element.clientWidth, scrollWidth: element.scrollWidth };
+  });
+  observations.push({ viewport: viewportName, name: "builder-title-compact-layout", ...builderTitleLayout });
+  if (viewport.width <= 420 && (builderTitleLayout.lineCount !== 1 || builderTitleLayout.scrollWidth > builderTitleLayout.width + 1)) {
+    failures.push(`${viewportName}: o título do builder deve caber em uma linha sem overflow horizontal.`);
+  }
   await safeCapture(page, viewportName, "builder-six-members-first-fold", { fullPage: false });
   await page.getByRole("link", { name: "Comparar Speed" }).click();
   await page.locator("#builder-speed-title").waitFor({ state: "visible", timeout: 10_000 });
