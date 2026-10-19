@@ -2955,7 +2955,7 @@ h2 { letter-spacing: 0; }
   box-shadow: inset 0 3px #5f8790, 0 3px 0 #d6b853;
 }
 .brand-mark { color: #f2cf69; filter: drop-shadow(2px 2px 0 #173c52); }
-.nav-link.is-active { border-color: #872d2b; background: #c8493c; color: #fff9e2; box-shadow: inset 0 0 0 2px #f0c267, 2px 2px 0 #173c52; }
+.nav-link.is-active { border-color: #872d2b; background: #872d2b; color: #fff9e2; box-shadow: inset 0 0 0 2px #f0c267, 2px 2px 0 #173c52; }
 .nav-link.is-active::before { color: #ffea99; }
 .site-header .button-primary { border-color: #183f54 !important; background: #f1d36f !important; color: #173748 !important; box-shadow: 2px 2px 0 #173c52, inset 0 0 0 1px #fff1b9; }
 .mobile-primary-nav { border-top-color: #173c52; background: #315f68; box-shadow: 0 -3px 0 #d6b853; }
@@ -2993,7 +2993,7 @@ h2 { letter-spacing: 0; }
 .team-slot { position: relative; border-color: #5d756d; border-left-color: #9aaa89; background: #fff9df; }
 .team-slot.is-selected { border-color: #173c52; border-left: 6px solid #c74739; background: #f3e2a6; box-shadow: inset 0 0 0 2px #fff3c2, 2px 2px 0 #173c52; }
 .team-slot.is-selected::after { position: absolute; top: 4px; right: 5px; padding: 2px 4px; border: 1px solid #173c52; background: #173c52; color: #fff9df; content: "✓ ATIVO"; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.02em; }
-.slot-number { color: #314a55; font-size: 0.78rem; }
+.slot-number { color: #fff4bd; font-size: 0.78rem; }
 .slot-copy b { color: #173748; font-size: 0.9rem; }
 .slot-copy small { color: #3d555d; font-size: 0.72rem; }
 .set-editor-art, .team-slot-art, .builder-speed-identity .pokemon-art, .speed-target-banner > .pokemon-art {

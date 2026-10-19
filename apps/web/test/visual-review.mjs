@@ -132,6 +132,12 @@ async function capture(page, viewport, name, { audit = false, fullPage = true } 
       };
       const opaqueBackground = (element) => {
         for (let current = element; current; current = current.parentElement) {
+          const image = getComputedStyle(current).backgroundImage;
+          const gradientColor = image.match(/#[0-9a-f]{6}/i)?.[0];
+          if (gradientColor) {
+            const channels = [1, 3, 5].map((offset) => Number.parseInt(gradientColor.slice(offset, offset + 2), 16));
+            return `rgb(${channels.join(", ")})`;
+          }
           const color = getComputedStyle(current).backgroundColor;
           const channels = color.match(/[0-9.]+/g) || [];
           const alpha = channels.length > 3 ? Number(channels[3]) : 1;
@@ -723,6 +729,7 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: o menu de Nature do alvo de Speed deve caber na largura da tela.`);
   }
   await page.keyboard.press("Escape");
+  await targetNatureMenu.waitFor({ state: "hidden", timeout: 2_000 });
   const targetNameGeometry = await page.locator(".builder-speed-target").evaluate((container) => {
     const artwork = container.querySelector(":scope > .pokemon-art").getBoundingClientRect();
     const name = container.querySelector(".builder-speed-target-name strong").getBoundingClientRect();
@@ -1047,6 +1054,8 @@ async function runViewport(viewportName, viewport) {
   await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
   await page.locator('input[list="damage-move-options"]').fill("Earthquake");
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
+  const damageEditor = page.locator(".damage-editor-disclosure");
+  if (!(await damageEditor.evaluate((details) => details.open))) await damageEditor.locator(":scope > summary").click();
   const attackerEditor = page.locator('.damage-side[aria-labelledby="attacker-heading"]');
   await attackerEditor.getByLabel("Item", { exact: true }).fill("Clear Amulet");
   await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("Habilidade criada pelo usuário");
