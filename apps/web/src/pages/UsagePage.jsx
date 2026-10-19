@@ -186,27 +186,14 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
 
       {usage ? (
         <>
-          <div className="usage-provenance" aria-label="Fonte e período dos dados">
-            <div className="usage-provenance-source">
-              <span>Fonte</span>
-              <a href={source.url} target="_blank" rel="noreferrer">
-                {source.attribution}
-              </a>
-            </div>
-            <div>
-              <span>Período da fonte</span>
-              <strong>
-                Temporada {usage.season || "não informada"}
-                <span className="usage-provenance-separator"> · </span>
-                {formatSnapshotDate(usage.date)}
-              </strong>
-            </div>
-            <div>
-              <span>Consulta do app</span>
-              <strong>{formatTimestamp(usage.appFetchedAt)}</strong>
-            </div>
+          <div className="usage-provenance usage-provenance-inline" aria-label="Fonte e período dos dados">
+            <a className="usage-provenance-source" href={source.url} target="_blank" rel="noreferrer">
+              {source.attribution}
+            </a>
+            <span><strong>Temporada {usage.season || "não informada"}</strong> · {formatSnapshotDate(usage.date)}</span>
+            <span>Consultado {formatTimestamp(usage.appFetchedAt)}</span>
             <details className="usage-source-help">
-              <summary>Detalhes da captura</summary>
+              <summary>Sobre esta captura</summary>
               {usage.sourceFile ? <p>Arquivo de origem: <code>{usage.sourceFile}</code></p> : null}
               <p>Temporada é o rótulo devolvido pela fonte. A amostra e o denominador não foram publicados; percentuais de distribuição não são taxa de partidas.</p>
             </details>
@@ -415,7 +402,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           <a href={provider.source.url} target="_blank" rel="noreferrer">
             {provider.source.attribution}
           </a>
-          <span>Doubles · fonte e período preservados</span>
+          <span>Doubles</span>
         </div>
         <details className="usage-source-details">
           <summary>Sobre os dados</summary>
@@ -717,10 +704,6 @@ export function UsagePage() {
   return (
     <>
       <div className="page-wrap usage-page usage-source-switcher">
-        <div className="usage-source-switch-copy">
-          <p className="page-label">Fonte de dados</p>
-          <p>Veja uma fonte por vez. Períodos e percentuais não são combinados.</p>
-        </div>
         <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
           <button
             aria-pressed={sourceId === "pokemon-champions-battle-data"}

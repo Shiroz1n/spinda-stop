@@ -218,9 +218,9 @@ function DamageResultPanel({ calculation, form, label, compactMatchup = false })
       <div className="damage-result-heading">
         {!compactMatchup ? (
           <div className="damage-result-matchup">
-            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={result.attacker.name} size={82} decorative />
+            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={result.attacker.name} size={82} priority decorative />
             <span className="damage-versus" aria-hidden="true">VS</span>
-            <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={result.defender.name} size={82} decorative />
+            <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={result.defender.name} size={82} priority decorative />
           </div>
         ) : null}
         <div className="damage-result-copy">

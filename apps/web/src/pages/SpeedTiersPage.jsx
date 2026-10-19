@@ -157,7 +157,6 @@ export function SpeedTiersPage() {
         <div className="speed-assumptions">
           <SpeedSettings label="Pokémon comparados" model={model} values={candidate} onChange={updateCandidate} />
           <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />
-          {model === "champions" ? <p className="speed-model-note">Nível 50 · fórmula do modelo Champions do <code>@smogon/calc</code>. O editor aceita 0–999 SP para comparar; isso não confirma limites ou legalidade do jogo.</p> : <p className="speed-model-note">Modelo geral de stats no nível escolhido. IVs e EVs são hipóteses para cálculo e não dizem se o set é permitido em Pokémon Champions.</p>}
         </div>
       </section>
 
@@ -186,7 +185,7 @@ export function SpeedTiersPage() {
           {visibleCount < ranked.length ? <button className="button button-outline speed-load-more" type="button" onClick={() => setVisibleCount((count) => Math.min(ranked.length, count + 90))}>Mostrar mais {Math.min(90, ranked.length - visibleCount)}</button> : <p className="speed-end">Fim da lista · {ranked.length.toLocaleString("pt-BR")} entradas</p>}
         </>
       )}
-      <details className="speed-about"><summary>Sobre os dados e a fórmula</summary><p>Speed calculada a partir dos stats base e do modelo escolhido. Empate significa o mesmo valor bruto; Trick Room não altera Speed, apenas a ordem de atuação. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Tier calculado não é ranking de uso.</p><p>Champions usa a fórmula no nível 50 exposta pelo modo Champions do <code>@smogon/calc</code>: <code>floor((base + SP + 20) × nature)</code>. O modelo geral usa base, IV, EV e nível. As formas vêm do catálogo da PokéAPI.</p></details>
+      <details className="speed-about"><summary>Sobre os dados e a fórmula</summary><p>Speed calculada a partir dos stats base e do modelo escolhido. Empate significa o mesmo valor bruto; Trick Room não altera Speed, apenas a ordem de atuação. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Tier calculado não é ranking de uso.</p><p>Champions usa a fórmula no nível 50 exposta pelo modo Champions do <code>@smogon/calc</code>: <code>floor((base + SP + 20) × nature)</code>. O campo explora 0–999 SP; esse intervalo não confirma limites ou legalidade no jogo. O modelo geral usa base, IV, EV e nível como hipóteses de cálculo, não como validação de set. As formas vêm do catálogo da PokéAPI.</p></details>
     </div>
   );
 }

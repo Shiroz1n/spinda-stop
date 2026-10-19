@@ -566,11 +566,11 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
                 ) : null}
                 {entry ? (
                   <>
-                    <div className="usage-provenance metaroll-provenance">
-                      <div className="usage-provenance-source"><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
-                      <div><span>Período da fonte</span><strong>Temporada {entryCapture?.season || "não informada"} · captura {formatCapture(entryCapture?.capturedAt)}</strong></div>
-                      <div><span>Consulta do app</span><strong>{formatCapture(entryCapture?.appFetchedAt)}</strong></div>
-                      <details className="usage-source-help usage-provenance-notes"><summary>Interpretação e limites</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Stat Points não são EVs e a fonte não pareia spread com natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
+                    <div className="usage-provenance usage-provenance-inline metaroll-provenance">
+                      <a className="usage-provenance-source" href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a>
+                      <span><strong>Temporada {entryCapture?.season || "não informada"}</strong> · captura {formatCapture(entryCapture?.capturedAt)}</span>
+                      <span>Consultado {formatCapture(entryCapture?.appFetchedAt)}</span>
+                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Stat Points não são EVs e a fonte não pareia spread com natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
                     </div>
                     <div className="metaroll-rank-summary">
                       <div><span>Posição nesta captura</span><strong>#{entry.rank ?? "não informada"}</strong></div>

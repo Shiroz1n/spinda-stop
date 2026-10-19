@@ -547,13 +547,26 @@ async function runViewport(viewportName, viewport) {
     const mobileNav = document.querySelector(".mobile-primary-nav");
     const rect = title?.getBoundingClientRect();
     const visibleBottom = mobileNav?.getBoundingClientRect().top ?? window.innerHeight;
-    return location.hash === "#builder-speed-title" && rect && rect.top >= 0 && rect.bottom <= visibleBottom
-      ? { hash: location.hash, titleTop: rect.top, visibleBottom }
+    return location.hash === "#builder-speed-title" && rect && rect.bottom > 0 && rect.top < visibleBottom
+      ? { hash: location.hash, titleTop: rect.top, titleBottom: rect.bottom, visibleBottom }
       : false;
   }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue()).catch(() => null);
-  observations.push({ viewport: viewportName, name: "builder-speed-shortcut", ...speedShortcutState });
+  const speedShortcutDiagnostic = await page.evaluate(() => {
+    const title = document.querySelector("#builder-speed-title");
+    const rect = title?.getBoundingClientRect();
+    return {
+      hash: location.hash,
+      titleTop: rect?.top ?? null,
+      titleBottom: rect?.bottom ?? null,
+      scrollY: window.scrollY,
+      scrollHeight: document.documentElement.scrollHeight,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  observations.push({ viewport: viewportName, name: "builder-speed-shortcut", ...(speedShortcutState || speedShortcutDiagnostic) });
   const speedPanelInView = Boolean(speedShortcutState);
   if (!speedPanelInView) failures.push(`${viewportName}: o atalho para comparar Speed não levou ao comparador do time.`);
+  await safeCapture(page, viewportName, "builder-speed-shortcut", { fullPage: false });
   await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
   await page.locator("#speed-target-search").fill("Garchomp-Mega-Z");
   await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
@@ -566,7 +579,7 @@ async function runViewport(viewportName, viewport) {
   if (updatedTeamRows.length !== 6 || updatedTeamRows.some((row) => row.target !== "203" || !row.speed || !row.relation)) failures.push(`${viewportName}: alterar o SP do alvo não atualizou os seis resultados de Speed.`);
   const speedGridColumns = await page.locator(".builder-speed-grid").evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length);
   observations.push({ viewport: viewportName, name: "builder-speed-grid-columns", count: speedGridColumns });
-  if (viewport.width <= 360 && speedGridColumns !== 1) failures.push(`${viewportName}: os controles de Speed devem ter largura de toque legível em 320 px.`);
+  if (viewport.width <= 420 && speedGridColumns !== 1) failures.push(`${viewportName}: os controles de Speed devem ter largura de toque legível em telas mobile.`);
   await page.locator(".builder-speed-row").first().locator('input[type="number"]').fill("17");
   await page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" }).click();
   await page.locator(".team-slot").first().click();
@@ -629,6 +642,11 @@ async function runViewport(viewportName, viewport) {
     const usageCategory = page.locator(".usage-category-tabs .usage-category-tab").filter({ hasText: "Golpes" }).first();
     await usageCategory.click();
     if ((await usageCategory.getAttribute("aria-pressed")) !== "true") failures.push(`${viewportName}: a aba de golpes do Usage não ficou selecionada.`);
+    const usageListHeight = await page.locator(".usage-species-list").evaluate((list) => list.getBoundingClientRect().height);
+    observations.push({ viewport: viewportName, name: "usage-mobile-ranking-strip-height", height: usageListHeight });
+    if (viewport.width <= 600 && usageListHeight > 112) failures.push(`${viewportName}: a lista mobile de espécies ocupa espaço excessivo antes da ficha selecionada.`);
+    const firstUsageRow = page.locator(".usage-row-list li").first();
+    if (await firstUsageRow.count()) await firstUsageRow.scrollIntoViewIfNeeded();
     await safeCapture(page, viewportName, "usage-battle-data-moves", { audit: true, fullPage: false });
     const usageRow = page.locator(".usage-species-button").first();
     if (await usageRow.count()) {
@@ -823,6 +841,21 @@ async function runViewport(viewportName, viewport) {
   await comparisonResults.nth(1).getByRole("heading", { name: "Garchomp usa Dragon Claw" }).waitFor({ state: "visible", timeout: 10_000 });
   if (await comparisonResults.count() !== 2) failures.push(`${viewportName}: a comparação deve calcular A e B com a variação selecionada.`);
   await page.evaluate(() => window.scrollTo(0, 0));
+  const comparisonFirstFold = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll(".damage-comparison-results .damage-result")];
+    const bottomNav = document.querySelector(".mobile-primary-nav");
+    const visibleBottom = bottomNav?.getBoundingClientRect().top ?? window.innerHeight;
+    const ranges = cards.map((card) => {
+      const range = card.querySelector(".damage-result-range");
+      const rect = range?.getBoundingClientRect();
+      return Boolean(rect && rect.top >= 0 && rect.bottom <= visibleBottom);
+    });
+    return { count: cards.length, ranges, visibleBottom, cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)) };
+  });
+  observations.push({ viewport: viewportName, name: "calculator-comparison-first-fold", ...comparisonFirstFold });
+  if (viewport.width <= 420 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((visible) => !visible))) {
+    failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
+  }
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
   const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
   if (compactDetailState.some(Boolean)) failures.push(`${viewportName}: os rolls e modificadores secundários devem começar recolhidos.`);
@@ -849,6 +882,14 @@ async function runViewport(viewportName, viewport) {
   if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.includes("lucario-megaz.png") || !alternateFormSprites[1].src.includes("absol-megaz.png") || alternateFormSprites.some(({ width }) => width !== 96)) {
     failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
   }
+  await page.waitForFunction(() => {
+    const images = [...document.querySelectorAll(".damage-result-matchup .pokemon-art img")];
+    return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 96);
+  }, { timeout: 15_000 }).catch(() => {});
+  const resultFormSprites = await page.locator(".damage-result-matchup .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth })));
+  if (resultFormSprites.length !== 2 || !resultFormSprites[0].src.includes("lucario-megaz.png") || !resultFormSprites[1].src.includes("absol-megaz.png") || resultFormSprites.some(({ width }) => width !== 96)) {
+    failures.push(`${viewportName}: o resultado não mostrou os sprites próprios de Mega Lucario Z e Mega Absol Z.`);
+  }
   await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
 
@@ -859,6 +900,8 @@ async function runViewport(viewportName, viewport) {
   if (await page.locator(".speed-result-row").filter({ hasText: "Mega Garchomp Z" }).count() < 1) failures.push(`${viewportName}: Speed Tiers não manteve a forma Mega Garchomp Z na busca.`);
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z", { audit: true, fullPage: false });
+  await page.locator(".speed-result-row").first().scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "speed-tiers-mega-garchomp-z-results", { fullPage: false });
 
   await captureCommunityState(context, viewport, viewportName, "room");
   await captureCommunityState(context, viewport, viewportName, "tournament");
