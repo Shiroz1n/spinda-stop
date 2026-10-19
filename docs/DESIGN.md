@@ -23,7 +23,7 @@ Dados, formulários e textos usam uma sans legível. Press Start 2P fica restrit
 
 O cabeçalho e o favicon usam o mesmo sprite `327.png` de Spinda na coleção Black/White de PokeAPI/sprites, fixado na revisão `7a7d66b1620e646f69afd48dc1273da9033ede9c`. O navegador carrega essa imagem pela URL versionada do host; o arquivo não é copiado para o repositório. Os demais sprites também vêm da revisão fixada, com mapeamento explícito de espécies e formas. As origens e os direitos das imagens estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
 
-`PokemonSprite` usa um único mapeamento: ID da PokéAPI para forma base e ID próprio do Pokémon/forma para formas alternativas. Formas Mega, regionais e especiais não herdam a imagem base se a imagem correta não estiver disponível. O fallback mostra uma inicial identificável e informa que o sprite está indisponível. Listas usam carregamento sob demanda e mantêm espaço reservado.
+`PokemonSprite` usa um mapeamento explícito por forma. As 49 Megas recentes do catálogo usam o PNG HOME cujo número corresponde ao ID próprio na revisão fixa; esses renders de 512 px mantêm suavização normal. Formas antigas e regionais usam seu asset próprio quando presente; nenhuma forma alternativa herda silenciosamente a imagem base. O fallback mostra uma inicial identificável e informa que o sprite está indisponível. Listas usam carregamento sob demanda e mantêm espaço reservado.
 
 Tipos usam o símbolo de Pokémon Champions hospedado em PokeAPI/sprites, com o nome sempre visível. Itens usam o slug da PokéAPI quando há sprite; nomes continuam disponíveis sem a imagem. A origem e os limites de uso estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
 

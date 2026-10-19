@@ -4,10 +4,9 @@ import {
   createPokemonSpriteLookup,
   itemSpriteUrl,
   POKEAPI_SPRITES_BASE,
+  POKEAPI_HOME_FORM_SPRITES,
   resolvePokemonSpriteUrl,
   resolveCompetitivePokemonSprite,
-  SHOWDOWN_FORM_SPRITES,
-  SHOWDOWN_FORM_SPRITES_BASE,
   typeIconUrl,
 } from "../src/data/pokemonSprites.js";
 
@@ -38,33 +37,29 @@ test("an alternate form without its own sprite ID has no base-form fallback", ()
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "default" }), `${POKEAPI_SPRITES_BASE}/pokemon/versions/generation-v/black-white/6.png`);
 });
 
-test("Mega Z-A uses exact form assets instead of the species base sprite", () => {
-  for (const [slug, file] of Object.entries(SHOWDOWN_FORM_SPRITES)) {
+test("all 49 catalogued Legends: Z-A Megas map to exact pinned PokeAPI HOME assets", () => {
+  for (const [slug, file] of Object.entries(POKEAPI_HOME_FORM_SPRITES)) {
     assert.equal(
-      resolvePokemonSpriteUrl({ slug, speciesId: 445, spriteId: 10309, formId: "mega-z", isDefault: false }),
-      `${SHOWDOWN_FORM_SPRITES_BASE}/${file}`,
+      resolvePokemonSpriteUrl({ slug, speciesId: 445, spriteId: Number.parseInt(file, 10), formId: "mega", isDefault: false }),
+      `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${file}`,
     );
   }
-  assert.equal(SHOWDOWN_FORM_SPRITES["garchomp-mega-z"], "garchomp-megaz.png");
-  assert.equal(SHOWDOWN_FORM_SPRITES["absol-mega-z"], "absol-megaz.png");
-  assert.equal(SHOWDOWN_FORM_SPRITES["lucario-mega-z"], "lucario-megaz.png");
-  for (const [slug, file] of Object.entries({
-    "starmie-mega": "starmie-mega.png",
-    "dragonite-mega": "dragonite-mega.png",
-    "meganium-mega": "meganium-mega.png",
-    "feraligatr-mega": "feraligatr-mega.png",
-    "skarmory-mega": "skarmory-mega.png",
-    "froslass-mega": "froslass-mega.png",
-    "emboar-mega": "emboar-mega.png",
-    "meowstic-male-mega": "meowstic-mmega.png",
-    "meowstic-female-mega": "meowstic-fmega.png",
-  })) {
-    assert.equal(SHOWDOWN_FORM_SPRITES[slug], file);
-  }
-  assert.equal(Object.keys(SHOWDOWN_FORM_SPRITES).length, 27);
+  assert.equal(Object.keys(POKEAPI_HOME_FORM_SPRITES).length, 49);
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["garchomp-mega-z"], "10309.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["absol-mega-z"], "10307.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["lucario-mega-z"], "10310.png");
+});
+
+test("Mega Raichu X and Y use their exact pinned PokeAPI HOME sprites", () => {
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["raichu-mega-x"], "10304.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["raichu-mega-y"], "10305.png");
   assert.equal(
     resolvePokemonSpriteUrl({ slug: "raichu-mega-x", speciesId: 26, spriteId: 10304, formId: "mega-x", isDefault: false }),
-    `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/10304.gif`,
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/home/10304.png`,
+  );
+  assert.equal(
+    resolvePokemonSpriteUrl({ slug: "raichu-mega-y", speciesId: 26, spriteId: 10305, formId: "mega-y", isDefault: false }),
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/home/10305.png`,
   );
 });
 

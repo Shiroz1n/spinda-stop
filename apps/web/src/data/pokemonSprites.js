@@ -1,38 +1,59 @@
 export const POKEAPI_SPRITES_REVISION = "7a7d66b1620e646f69afd48dc1273da9033ede9c";
 export const POKEAPI_SPRITES_BASE = `https://raw.githubusercontent.com/PokeAPI/sprites/${POKEAPI_SPRITES_REVISION}/sprites`;
-export const SHOWDOWN_FORM_SPRITES_BASE = "https://play.pokemonshowdown.com/sprites/gen5";
 
-// The numeric files for these recently added forms are absent from the pinned
-// PokeAPI sprite tree. Each key is an exact PokéAPI form slug; none falls back
-// to the base species image.
-export const SHOWDOWN_FORM_SPRITES = Object.freeze({
-  "absol-mega-z": "absol-megaz.png",
-  "baxcalibur-mega": "baxcalibur-mega.png",
-  "chandelure-mega": "chandelure-mega.png",
-  "chesnaught-mega": "chesnaught-mega.png",
-  "chimecho-mega": "chimecho-mega.png",
-  "crabominable-mega": "crabominable-mega.png",
-  "dragonite-mega": "dragonite-mega.png",
-  "delphox-mega": "delphox-mega.png",
-  "drampa-mega": "drampa-mega.png",
-  "emboar-mega": "emboar-mega.png",
-  "excadrill-mega": "excadrill-mega.png",
-  "feraligatr-mega": "feraligatr-mega.png",
-  "floette-mega": "floette-mega.png",
-  "froslass-mega": "froslass-mega.png",
-  "garchomp-mega-z": "garchomp-megaz.png",
-  "glimmora-mega": "glimmora-mega.png",
-  "golisopod-mega": "golisopod-mega.png",
-  "golurk-mega": "golurk-mega.png",
-  "greninja-mega": "greninja-mega.png",
-  "hawlucha-mega": "hawlucha-mega.png",
-  "lucario-mega-z": "lucario-megaz.png",
-  "meganium-mega": "meganium-mega.png",
-  "meowstic-male-mega": "meowstic-mmega.png",
-  "meowstic-female-mega": "meowstic-fmega.png",
-  "scovillain-mega": "scovillain-mega.png",
-  "skarmory-mega": "skarmory-mega.png",
-  "starmie-mega": "starmie-mega.png",
+// Exact Legends: Z-A Mega forms in the pinned PokeAPI HOME set. The keys are
+// catalog slugs and the numeric files are the corresponding PokeAPI Pokémon IDs.
+// These 512px renders keep natural smoothing in the UI.
+export const POKEAPI_HOME_FORM_SPRITES = Object.freeze({
+  "clefable-mega": "10278.png",
+  "victreebel-mega": "10279.png",
+  "starmie-mega": "10280.png",
+  "dragonite-mega": "10281.png",
+  "meganium-mega": "10282.png",
+  "feraligatr-mega": "10283.png",
+  "skarmory-mega": "10284.png",
+  "froslass-mega": "10285.png",
+  "emboar-mega": "10286.png",
+  "excadrill-mega": "10287.png",
+  "scolipede-mega": "10288.png",
+  "scrafty-mega": "10289.png",
+  "eelektross-mega": "10290.png",
+  "chandelure-mega": "10291.png",
+  "chesnaught-mega": "10292.png",
+  "delphox-mega": "10293.png",
+  "greninja-mega": "10294.png",
+  "pyroar-mega": "10295.png",
+  "floette-mega": "10296.png",
+  "malamar-mega": "10297.png",
+  "barbaracle-mega": "10298.png",
+  "dragalge-mega": "10299.png",
+  "hawlucha-mega": "10300.png",
+  "zygarde-mega": "10301.png",
+  "drampa-mega": "10302.png",
+  "falinks-mega": "10303.png",
+  "raichu-mega-x": "10304.png",
+  "raichu-mega-y": "10305.png",
+  "chimecho-mega": "10306.png",
+  "absol-mega-z": "10307.png",
+  "staraptor-mega": "10308.png",
+  "garchomp-mega-z": "10309.png",
+  "lucario-mega-z": "10310.png",
+  "heatran-mega": "10311.png",
+  "darkrai-mega": "10312.png",
+  "golurk-mega": "10313.png",
+  "meowstic-male-mega": "10314.png",
+  "crabominable-mega": "10315.png",
+  "golisopod-mega": "10316.png",
+  "magearna-mega": "10317.png",
+  "magearna-original-mega": "10318.png",
+  "zeraora-mega": "10319.png",
+  "scovillain-mega": "10320.png",
+  "glimmora-mega": "10321.png",
+  "tatsugiri-curly-mega": "10322.png",
+  "tatsugiri-droopy-mega": "10323.png",
+  "tatsugiri-stretchy-mega": "10324.png",
+  "baxcalibur-mega": "10325.png",
+  "meowstic-female-mega": "10326.png",
 });
 
 const TYPE_IDS = Object.freeze({
@@ -119,8 +140,8 @@ export function resolveCompetitivePokemonSprite(lookup, { id, name }) {
 
 export function resolvePokemonSpriteUrl(pokemon) {
   if (!pokemon || typeof pokemon !== "object") return null;
-  const exactFormAsset = SHOWDOWN_FORM_SPRITES[pokemon.slug];
-  if (exactFormAsset) return `${SHOWDOWN_FORM_SPRITES_BASE}/${exactFormAsset}`;
+  const exactHomeFormAsset = POKEAPI_HOME_FORM_SPRITES[pokemon.slug];
+  if (exactHomeFormAsset) return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${exactHomeFormAsset}`;
   const isDefault = pokemon.formId === "default" || pokemon.isDefault === true;
   const spriteId = Number(pokemon.spriteId);
 

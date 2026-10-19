@@ -409,6 +409,50 @@ async function runViewport(viewportName, viewport) {
   if (returnedDexState.query !== "Garchomp" || returnedDexState.type !== "dragon" || returnedDexState.generation !== "4") {
     failures.push(`${viewportName}: a Pokédex perdeu busca ou filtros ao voltar da ficha.`);
   }
+  await dexTypeFilter.selectOption("");
+  await dexGenerationFilter.selectOption("");
+  await search.fill("Mega Raichu");
+  await page.waitForFunction(() => document.querySelectorAll(".pokemon-card").length === 2, null, { timeout: 10_000 });
+  const megaRaichuCards = page.locator(".pokemon-card");
+  const megaRaichuNames = await page.locator(".pokemon-card-title").allTextContents();
+  if (megaRaichuNames.length !== 2 || !megaRaichuNames.some((name) => name.includes("Mega Raichu X")) || !megaRaichuNames.some((name) => name.includes("Mega Raichu Y"))) {
+    failures.push(`${viewportName}: a Pokédex não distinguiu Mega Raichu X e Y na busca pelas formas de Z-A.`);
+  }
+  const megaRaichuSprites = [];
+  for (let index = 0; index < await megaRaichuCards.count(); index += 1) {
+    const card = megaRaichuCards.nth(index);
+    await card.scrollIntoViewIfNeeded();
+    const image = card.locator(".pokemon-card-art .pokemon-art img");
+    await image.waitFor({ state: "attached", timeout: 10_000 });
+    await page.waitForFunction((expected) => [...document.querySelectorAll(".pokemon-card")].some((entry) => {
+      const img = entry.querySelector(".pokemon-card-art .pokemon-art img");
+      return img?.getAttribute("src")?.endsWith(expected) && img.complete && img.naturalWidth === 512 && !img.closest(".pokemon-art")?.classList.contains("is-loading");
+    }), index === 0 ? "10304.png" : "10305.png", { timeout: 15_000 });
+    megaRaichuSprites.push(await image.evaluate((element) => ({
+      src: element.getAttribute("src"), width: element.naturalWidth, loaded: !element.closest(".pokemon-art")?.classList.contains("is-loading"),
+    })));
+  }
+  const expectedRaichuAssets = ["10304.png", "10305.png"];
+  if (megaRaichuSprites.length !== 2 || megaRaichuSprites.some((sprite) => !expectedRaichuAssets.some((asset) => sprite.src?.endsWith(asset)) || sprite.width !== 512 || !sprite.loaded)) {
+    failures.push(`${viewportName}: Mega Raichu X/Y não carregaram os sprites HOME próprios da forma.`);
+  }
+  observations.push({ viewport: viewportName, name: "pokedex-mega-raichu-z-a-exact-sprites", names: megaRaichuNames, sprites: megaRaichuSprites });
+  await safeCapture(page, viewportName, "pokedex-mega-raichu-z-a", { fullPage: true });
+  await search.fill("Mega Garchomp Z");
+  await page.getByText("Mega Garchomp Z", { exact: true }).first().waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForFunction(() => {
+    const image = document.querySelector(".pokemon-card-art .pokemon-art img");
+    return image?.getAttribute("src")?.endsWith("10309.png")
+      && image.complete && image.naturalWidth === 512
+      && !image.closest(".pokemon-art")?.classList.contains("is-loading");
+  }, null, { timeout: 15_000 });
+  const garchompZDexSprite = await page.locator(".pokemon-card-art .pokemon-art img").first().evaluate((image) => ({ src: image.getAttribute("src"), width: image.naturalWidth }));
+  observations.push({ viewport: viewportName, name: "pokedex-mega-garchomp-z-home-sprite", ...garchompZDexSprite });
+  await safeCapture(page, viewportName, "pokedex-mega-garchomp-z", { fullPage: true });
+  await dexTypeFilter.selectOption("dragon");
+  await dexGenerationFilter.selectOption("4");
+  await search.fill("Garchomp");
+  await page.locator(".pokemon-card-title").first().waitFor({ state: "visible", timeout: 10_000 });
   await search.fill("spindastop-no-match-457");
   await page.locator(".empty-state-panel").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokedex-empty", { fullPage: false });
@@ -546,18 +590,23 @@ async function runViewport(viewportName, viewport) {
     const title = document.querySelector("#builder-speed-title");
     const mobileNav = document.querySelector(".mobile-primary-nav");
     const rect = title?.getBoundingClientRect();
-    const visibleBottom = mobileNav?.getBoundingClientRect().top ?? window.innerHeight;
+    const navStyle = mobileNav ? getComputedStyle(mobileNav) : null;
+    const navVisible = Boolean(mobileNav && navStyle?.display !== "none" && navStyle?.visibility !== "hidden");
+    const visibleBottom = navVisible ? mobileNav.getBoundingClientRect().top : window.innerHeight;
     return location.hash === "#builder-speed-title" && rect && rect.bottom > 0 && rect.top < visibleBottom
       ? { hash: location.hash, titleTop: rect.top, titleBottom: rect.bottom, visibleBottom }
       : false;
   }, null, { timeout: 10_000 }).then((handle) => handle.jsonValue()).catch(() => null);
   const speedShortcutDiagnostic = await page.evaluate(() => {
     const title = document.querySelector("#builder-speed-title");
+    const mobileNav = document.querySelector(".mobile-primary-nav");
     const rect = title?.getBoundingClientRect();
+    const navStyle = mobileNav ? getComputedStyle(mobileNav) : null;
     return {
       hash: location.hash,
       titleTop: rect?.top ?? null,
       titleBottom: rect?.bottom ?? null,
+      mobileNavVisible: Boolean(mobileNav && navStyle?.display !== "none" && navStyle?.visibility !== "hidden"),
       scrollY: window.scrollY,
       scrollHeight: document.documentElement.scrollHeight,
       viewportHeight: window.innerHeight,
@@ -572,8 +621,13 @@ async function runViewport(viewportName, viewport) {
   await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
   await page.locator(".builder-speed-row").nth(5).waitFor({ state: "visible", timeout: 10_000 });
   if (await page.locator(".builder-speed-row").count() !== 6) failures.push(`${viewportName}: a comparação do builder não atualizou os seis integrantes juntos.`);
+  await page.waitForFunction(() => {
+    const image = document.querySelector(".builder-speed-target .pokemon-art img");
+    return image?.getAttribute("src")?.endsWith("10309.png") && image.complete && image.naturalWidth === 512
+      && !image.closest(".pokemon-art")?.classList.contains("is-loading");
+  }, null, { timeout: 15_000 });
   const megaZTargetImage = await page.locator(".builder-speed-target .pokemon-art img").evaluate((image) => ({ src: image.src, width: image.naturalWidth }));
-  if (!megaZTargetImage.src.includes("garchomp-megaz.png") || megaZTargetImage.width !== 96) failures.push(`${viewportName}: Mega Garchomp Z não carregou o sprite específico de 96 px.`);
+  if (!megaZTargetImage.src.endsWith("10309.png") || megaZTargetImage.width !== 512) failures.push(`${viewportName}: Mega Garchomp Z não carregou o sprite HOME específico da forma.`);
   await page.getByLabel("SP do alvo").fill("32");
   const updatedTeamRows = await page.locator(".builder-speed-row").evaluateAll((rows) => rows.map((row) => ({ speed: row.dataset.speed, target: row.dataset.targetSpeed, relation: row.dataset.relation })));
   if (updatedTeamRows.length !== 6 || updatedTeamRows.some((row) => row.target !== "203" || !row.speed || !row.relation)) failures.push(`${viewportName}: alterar o SP do alvo não atualizou os seis resultados de Speed.`);
@@ -877,17 +931,17 @@ async function runViewport(viewportName, viewport) {
   await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
   await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
   await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
-  await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 96), { timeout: 15_000 }).catch(() => {});
-  const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth })));
-  if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.includes("lucario-megaz.png") || !alternateFormSprites[1].src.includes("absol-megaz.png") || alternateFormSprites.some(({ width }) => width !== 96)) {
+  await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading")), null, { timeout: 15_000 }).catch(() => {});
+  const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+  if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.endsWith("10310.png") || !alternateFormSprites[1].src.endsWith("10307.png") || alternateFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
     failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
   }
   await page.waitForFunction(() => {
     const images = [...document.querySelectorAll(".damage-result-matchup .pokemon-art img")];
-    return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 96);
-  }, { timeout: 15_000 }).catch(() => {});
-  const resultFormSprites = await page.locator(".damage-result-matchup .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth })));
-  if (resultFormSprites.length !== 2 || !resultFormSprites[0].src.includes("lucario-megaz.png") || !resultFormSprites[1].src.includes("absol-megaz.png") || resultFormSprites.some(({ width }) => width !== 96)) {
+    return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading"));
+  }, null, { timeout: 15_000 }).catch(() => {});
+  const resultFormSprites = await page.locator(".damage-result-matchup .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+  if (resultFormSprites.length !== 2 || !resultFormSprites[0].src.endsWith("10310.png") || !resultFormSprites[1].src.endsWith("10307.png") || resultFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
     failures.push(`${viewportName}: o resultado não mostrou os sprites próprios de Mega Lucario Z e Mega Absol Z.`);
   }
   await page.evaluate(() => window.scrollTo(0, 0));

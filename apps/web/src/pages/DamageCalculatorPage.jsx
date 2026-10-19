@@ -438,12 +438,12 @@ export function DamageCalculatorPage() {
       <div className={comparison.enabled ? "damage-quickbar damage-quickbar-comparison" : "damage-quickbar"}>
         <div className="damage-quickbar-matchup" role="group" aria-label={`Atacante ${form.attacker.species || "não escolhido"}; alvo ${form.defender.species || "não escolhido"}`}>
           <div className="damage-quickbar-side">
-            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species || "Atacante não escolhido"} size={52} decorative />
+            <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species || "Atacante não escolhido"} size={52} priority decorative />
             <span><small>Atacante</small><strong>{form.attacker.species || "Escolha Pokémon"}</strong><small>{calculation?.result ? `${calculation.result.attacker.stats.hp} HP calculado` : "HP —"}</small></span>
           </div>
           <span className="damage-versus" aria-hidden="true">VS</span>
           <div className="damage-quickbar-side">
-            {targetMode === "one" ? <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={form.defender.species || "Alvo não escolhido"} size={52} decorative /> : <span className="damage-target-count" aria-hidden="true">{selectedTargets.length || "…"}</span>}
+            {targetMode === "one" ? <PokemonSprite pokemon={findPokemonSprite(form.defender.species)} name={form.defender.species || "Alvo não escolhido"} size={52} priority decorative /> : <span className="damage-target-count" aria-hidden="true">{selectedTargets.length || "…"}</span>}
             <span><small>Alvo{targetMode === "many" ? "s" : ""}</small><strong>{targetMode === "many" ? `${selectedTargets.length || "Escolha"} alvos` : form.defender.species || "Escolha Pokémon"}</strong><small>{calculation?.result ? `${calculation.result.defender.stats.hp} HP calculado` : "HP —"}</small></span>
           </div>
           <strong className="damage-quickbar-move">{form.move || "Escolha um golpe"}</strong>
