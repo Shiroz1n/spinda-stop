@@ -587,9 +587,10 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: o nome do Pokémon selecionado está cortado no slot do builder.`);
   }
   await page.getByLabel("Item", { exact: true }).fill("Clear Amulet");
+  const natureTrigger = page.locator("#member-nature");
+  await natureTrigger.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
   const natureStatsBefore = await page.locator(".builder-nature-stats").innerText();
   await safeCapture(page, viewportName, "builder-nature-before", { fullPage: false });
-  const natureTrigger = page.locator("#member-nature");
   await natureTrigger.focus();
   await natureTrigger.press("Enter");
   await page.locator("#member-nature-options").waitFor({ state: "visible" });
@@ -1072,7 +1073,9 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   await page.getByLabel("Comparar cenários").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
-  await page.locator(".damage-editor-disclosure > summary").click();
+  if (!(await page.locator(".damage-editor-disclosure").evaluate((details) => details.open))) {
+    await page.locator(".damage-editor-disclosure > summary").click();
+  }
   const moveAndFieldTask = page.locator(".damage-edit-task").filter({ hasText: "Golpes e campo" });
   if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
   await page.getByLabel("Golpe B").fill("Dragon Claw");
