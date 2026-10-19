@@ -173,6 +173,13 @@ async function warmVisibleListSprites(page, selector, viewportHeight = 800) {
   return spriteState;
 }
 
+async function waitForSpritePaint(page, selector) {
+  await page.locator(selector).evaluateAll(async (images) => {
+    await Promise.all(images.map((image) => image.decode().catch(() => {})));
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
 async function waitForEither(page, selector, timeout = 35_000) {
   try {
     await page.locator(selector).first().waitFor({ state: "visible", timeout: timeout });
@@ -886,6 +893,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator('input[list="damage-move-options"]').fill("Earthquake");
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
   await page.evaluate(() => window.scrollTo(0, 0));
+  await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   await page.getByLabel("Comparar com outro cenário").check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
@@ -910,6 +918,7 @@ async function runViewport(viewportName, viewport) {
   if (viewport.width <= 420 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((visible) => !visible))) {
     failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
   }
+  await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img");
   await safeCapture(page, viewportName, "calculator-comparison", { audit: true, fullPage: false });
   const compactDetailState = await page.locator(".damage-result-more").evaluateAll((elements) => elements.map((element) => element.open));
   if (compactDetailState.some(Boolean)) failures.push(`${viewportName}: os rolls e modificadores secundários devem começar recolhidos.`);
@@ -934,6 +943,7 @@ async function runViewport(viewportName, viewport) {
   if (!multiTargetMegaSprite.src.endsWith("10309.png") || multiTargetMegaSprite.width !== 512 || !multiTargetMegaSprite.loaded) {
     failures.push(`${viewportName}: o segundo alvo da calculadora não exibiu o sprite próprio de Mega Garchomp Z antes da captura.`);
   }
+  await waitForSpritePaint(page, ".damage-multi-row .pokemon-art img");
   await safeCapture(page, viewportName, "calculator-one-v-many", { audit: true, fullPage: false });
 
   await page.getByRole("button", { name: "Um alvo" }).click();
@@ -955,6 +965,7 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: o resultado não mostrou os sprites próprios de Mega Lucario Z e Mega Absol Z.`);
   }
   await page.evaluate(() => window.scrollTo(0, 0));
+  await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
   await safeCapture(page, viewportName, "calculator-lucario-z-vs-absol-z", { audit: true, fullPage: false });
 
   await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "networkidle" });
