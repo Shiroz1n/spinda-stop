@@ -2580,6 +2580,7 @@ h1 { margin-bottom: 7px; font-size: clamp(1.72rem, 2.8vw, 2.35rem); letter-spaci
   .usage-provenance-inline > span { font-size: 0.68rem; }
   .usage-provenance-inline .usage-source-help { margin-left: 0; }
   .builder-speed-grid { grid-template-columns: minmax(0, 1fr); }
+  .builder-speed-row { grid-template-columns: minmax(0, 1fr); }
   .damage-comparison-results { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
   .damage-comparison-results .damage-result { padding: 8px; border-width: 2px; }
   .damage-comparison-results .damage-result-heading { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }

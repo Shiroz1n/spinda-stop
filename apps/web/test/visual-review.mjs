@@ -202,10 +202,17 @@ async function warmVisibleListSprites(page, selector, viewportHeight = 800) {
   return spriteState;
 }
 
-async function waitForSpritePaint(page, selector) {
-  await page.locator(selector).evaluateAll(async (images) => {
-    await Promise.all(images.map((image) => image.decode().catch(() => {})));
-  });
+async function waitForSpritePaint(page, selector, includeOffscreen = false) {
+  await page.locator(selector).evaluateAll((images, includeAll) => {
+    const targets = includeAll ? images : images.filter((image) => {
+      const rect = image.getBoundingClientRect();
+      return rect.bottom >= 0 && rect.top <= window.innerHeight;
+    });
+    return Promise.all(targets.map((image) => Promise.race([
+      image.decode().catch(() => {}),
+      new Promise((resolve) => window.setTimeout(resolve, 1_000)),
+    ])));
+  }, includeOffscreen);
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
@@ -710,8 +717,9 @@ async function runViewport(viewportName, viewport) {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Comparar Speed" }).click();
   await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
-  await page.locator("#speed-target-search").fill("Mega Mewtwo Y");
-  await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
+  await page.locator("#speed-target-search").fill("Alakazam");
+  await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').getByText("Alakazam", { exact: true }).click();
+  await page.getByLabel("SP do alvo").fill("20");
   const budgetRow = page.locator(".builder-speed-row").first();
   const budgetRecommendation = await budgetRow.locator(".builder-speed-action").innerText();
   const favorableNatureAlternative = await budgetRow.locator(".builder-speed-favorable-note").innerText();
@@ -1117,7 +1125,10 @@ async function runViewport(viewportName, viewport) {
   for (const move of inverseMoveNames) {
     if (!inverseRows.some(({ text }) => text.includes(move))) failures.push(`${viewportName}: o golpe ${move} do builder não apareceu na comparação inversa.`);
   }
-  await waitForSpritePaint(page, ".damage-team-member .pokemon-art img, .damage-team-results-heading .pokemon-art img");
+  const teamSpriteSelector = ".damage-team-member .pokemon-art img, .damage-team-results-heading .pokemon-art img";
+  if (viewport.width > 720) await warmVisibleListSprites(page, teamSpriteSelector, viewport.height);
+  await waitForSpritePaint(page, teamSpriteSelector, viewport.width > 720);
+  await markProgress(viewportName, "calculator-team-vs-one", "sprites-ready");
   const firstValidMember = page.locator(".damage-team-member.is-ready").first();
   await firstValidMember.locator(".damage-team-move-details > summary").first().click();
   const teamRollCount = await firstValidMember.locator(".damage-rolls li").count();
