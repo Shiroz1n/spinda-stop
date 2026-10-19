@@ -631,8 +631,11 @@ async function runViewport(viewportName, viewport) {
   observations.push({ viewport: viewportName, name: "builder-six-members-first-fold-visible-slots", count: firstFoldSlots });
   if (firstFoldSlots !== 6) failures.push(`${viewportName}: os seis slots preenchidos devem caber na primeira dobra, acima da navegação mobile.`);
   const builderTitleLayout = await page.locator(".builder-heading h1").evaluate((element) => {
+    const visibleTitle = element.querySelector(window.matchMedia("(max-width: 420px)").matches
+      ? ".builder-heading-title-compact"
+      : ".builder-heading-title-full") ?? element;
     const range = document.createRange();
-    range.selectNodeContents(element);
+    range.selectNodeContents(visibleTitle);
     const title = element.getBoundingClientRect();
     const action = element.closest(".builder-heading")?.querySelector(".builder-speed-jump")?.getBoundingClientRect();
     const overlapsAction = Boolean(action && title.left < action.right && title.right > action.left && title.top < action.bottom && title.bottom > action.top);
