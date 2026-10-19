@@ -732,25 +732,25 @@ async function runViewport(viewportName, viewport) {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   if (viewportName === "desktop") {
-    const invalidTeamSnapshot = await page.evaluate(() => {
+    await page.evaluate(() => {
       const key = "spinda-stop.team.v1";
       const team = JSON.parse(window.localStorage.getItem(key));
       team.members[0].statPoints = { hp: 32, atk: 32, def: 3, spa: 0, spd: 0, spe: 0 };
-      const serialized = JSON.stringify(team);
-      window.localStorage.setItem(key, serialized);
-      return serialized;
+      window.localStorage.setItem(key, JSON.stringify(team));
     });
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
     await page.getByRole("link", { name: "Comparar Speed" }).click();
     await page.getByRole("button", { name: "Selecionar Pokémon" }).click();
     await page.locator("#speed-target-search").fill("Garchomp-Mega-Z");
     await page.locator('.species-dialog[aria-labelledby="speed-target-dialog-title"] .picker-result').first().click();
+    const invalidTeamSnapshotAfterHydration = await page.evaluate(() => window.localStorage.getItem("spinda-stop.team.v1"));
     const invalidApplyButton = page.locator(".builder-speed-row").first().getByRole("button", { name: "Aplicar ao set" });
     const disabledForInvalidSet = await invalidApplyButton.isDisabled();
     await invalidApplyButton.dispatchEvent("click");
     const savedAfterInvalidApply = await page.evaluate(() => window.localStorage.getItem("spinda-stop.team.v1"));
-    observations.push({ viewport: viewportName, name: "builder-speed-invalid-apply", disabled: disabledForInvalidSet, unchanged: savedAfterInvalidApply === invalidTeamSnapshot });
-    if (!disabledForInvalidSet || savedAfterInvalidApply !== invalidTeamSnapshot) {
+    observations.push({ viewport: viewportName, name: "builder-speed-invalid-apply", disabled: disabledForInvalidSet, unchanged: savedAfterInvalidApply === invalidTeamSnapshotAfterHydration });
+    if (!disabledForInvalidSet || savedAfterInvalidApply !== invalidTeamSnapshotAfterHydration) {
       failures.push(`${viewportName}: Aplicar ao set deve bloquear e preservar uma distribuição de SP inválida.`);
     }
     await page.evaluate((snapshot) => window.localStorage.setItem("spinda-stop.team.v1", snapshot), validTeamSnapshot);

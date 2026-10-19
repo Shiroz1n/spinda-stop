@@ -339,7 +339,7 @@ export function BuilderPage() {
       <div className="page-heading-row builder-heading">
         <div>
           <p className="page-label">Construtor local · Doubles</p>
-          <h1>Monte seu time</h1>
+          <h1><span className="builder-heading-title-full">Monte seu time</span><span className="builder-heading-title-compact">Meu time</span></h1>
           <p className="page-intro">Seis posições para o seu time de Doubles.</p>
         </div>
         <a className="button button-outline button-small builder-speed-jump" href="#builder-speed-title">Comparar Speed</a>

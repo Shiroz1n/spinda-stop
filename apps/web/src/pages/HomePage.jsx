@@ -34,14 +34,12 @@ export function HomePage() {
             <span className="scene-label">CATÁLOGO GERAL</span>
             <div className="featured-pokemon-row">
               {featured.map((pokemon, index) => (
-                <Link className={`featured-pokemon featured-pokemon-${index + 1}`} to={`/dex/${pokemon.slug}`} key={pokemon.slug} aria-label={`Ver ficha de ${pokemon.name}`}>
+                <Link className={`featured-pokemon featured-pokemon-${index + 1}`} to={`/dex/${pokemon.slug}`} key={pokemon.slug}>
                   <PokemonSprite pokemon={pokemon} name={pokemon.name} size={index === 1 ? 110 : 96} decorative priority={index < 2} />
+                  <span className="featured-pokemon-name">{pokemon.name}</span>
                 </Link>
               ))}
             </div>
-          </div>
-          <div className="roster-caption">
-            {featured.slice(0, 3).map((pokemon) => <span key={pokemon.slug}>{pokemon.name}</span>)}
           </div>
         </div>
       </section>
