@@ -6,7 +6,7 @@
 |---|---|
 | `apps/web` | Rotas, telas, componentes e persistência local do rascunho. |
 | `packages/domain` | Busca, estrutura de equipe e importação/exportação; funções puras. |
-| `packages/data` | Importador versionado e metadados da PokéAPI. Dados gerados ficam fora do Git. |
+| `packages/data` | Importador versionado da PokéAPI, índice compacto da Dex, ficha e blocos de aprendibilidade/evolução. Dados gerados ficam fora do Git. |
 | `apps/api` | API Node, OAuth do GitHub, autorização de equipe/sala, PostgreSQL e migrações SQL. |
 
 O editor não depende de uma conta nem de servidor. Um rascunho fica no navegador. A UI não contém regras de formato: elas entram por um `Ruleset` versionado.
@@ -23,4 +23,4 @@ O piloto de Usage fica em `apps/web/src/data/usage/providers/`. A tela depende d
 
 O navegador lê `/api` e, para a espécie selecionada, `/api/battle/Doubles/{showdownId}`. A resposta fica em cache somente na memória por cinco minutos, com até 16 entradas; o navegador não grava uma cópia HTTP. Não há endpoint próprio do Spinda Stop nem arquivo espelho. MetaRoll continua fora deste provedor.
 
-As imagens usam `apps/web/src/components/PokemonSprite.jsx` e `data/pokemonSprites.js`. A PokéAPI fornece um ID de sprite separado do número nacional; formas alternativas usam o ID próprio de Pokémon, com fallback explícito quando o asset não existe. Sprites de listas carregam sob demanda. A revisão da coleção e os créditos estão em `docs/THIRD_PARTY_LICENSES.md`.
+O índice compacto preserva o número de ordem da fonte, total dos seis stats-base e relação direta de espécie. `pokemon_evolution.csv` agrega método, condições nomeadas e grupos de versão quando os campos coincidem; aprendibilidade permanece em blocos por ID exato de forma. Nenhum desses campos declara elegibilidade em Champions. As imagens usam `apps/web/src/components/PokemonSprite.jsx` e `data/pokemonSprites.js`. A PokéAPI fornece um ID de sprite separado do número nacional; formas alternativas usam o ID próprio de Pokémon, com fallback explícito quando o asset não existe. Sprites de listas carregam sob demanda. A revisão da coleção e os créditos estão em `docs/THIRD_PARTY_LICENSES.md`.

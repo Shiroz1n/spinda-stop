@@ -17,9 +17,13 @@ const accessibilityIssues = [];
 const representativeCaptures = new Set([
   "home",
   "pokedex-loaded-more",
+  "pokedex-base-stat-filter-open",
   "pokedex-empty",
   "pokemon-sheet",
+  "pokemon-sprite-unavailable",
   "pokemon-evolution",
+  "pokemon-alolan-raichu-evolution",
+  "pokemon-form-learnset-empty",
   "pokemon-learnset-filtered",
   "usage-battle-data",
   "usage-index-loading",
@@ -42,8 +46,11 @@ const representativeCaptures = new Set([
   "calculator-comparison-rolls",
   "calculator-one-v-many",
   "calculator-team-vs-one",
+  "calculator-team-vs-one-first-fold",
+  "calculator-team-vs-one-team",
   "calculator-empty-choice",
   "speed-tiers-mega-garchomp-z",
+  "speed-tiers-target-nature-open",
   "speed-tiers-mega-garchomp-z-results",
   "room-state-flow",
   "rooms-signed-out",
@@ -485,14 +492,43 @@ async function runViewport(viewportName, viewport) {
   observations.push({ viewport: viewportName, name: "pokedex-form-sprites-ready", sprites: formSpriteStates });
   await page.evaluate(() => window.scrollTo(0, 0));
   await safeCapture(page, viewportName, "pokedex-filtered", { fullPage: viewport.width > 720 });
+  const statFilter = page.locator(".dex-stat-filter");
+  await statFilter.locator("summary").click();
+  await safeCapture(page, viewportName, "pokedex-base-stat-filter-open", { fullPage: false });
+  const minimumBaseStatInput = statFilter.locator(".dex-stat-filter-fields input").first();
+  const maximumBaseStatInput = statFilter.locator(".dex-stat-filter-fields input").nth(1);
+  if (await maximumBaseStatInput.getAttribute("max") !== "1125") failures.push(`${viewportName}: o filtro do total base não aceita o maior total da forma no catálogo fixado.`);
+  await minimumBaseStatInput.fill("700");
+  await page.waitForFunction(() => document.querySelectorAll(".pokemon-card").length === 2);
+  const baseStatFilteredNames = await page.locator(".pokemon-card-title").allTextContents();
+  if (!baseStatFilteredNames.includes("Mega Garchomp") || !baseStatFilteredNames.includes("Mega Garchomp Z")) {
+    failures.push(`${viewportName}: o limite de total base não filtrou as duas formas de Garchomp esperadas.`);
+  }
+  await minimumBaseStatInput.fill("");
+  await page.locator(".dex-sort-field select").selectOption("number");
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
+  const missingSpritePage = await context.newPage();
+  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/25.png", (route) => route.abort());
+  await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
+  const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
+  await missingSprite.waitFor({ state: "visible", timeout: 10_000 });
+  await missingSpritePage.locator(".detail-stage-art .pokemon-art.is-fallback").waitFor({ state: "visible", timeout: 10_000 });
+  const missingSpriteLabel = await missingSprite.getAttribute("aria-label");
+  observations.push({ viewport: viewportName, name: "pokemon-sprite-unavailable-state", ariaLabel: missingSpriteLabel });
+  if (!missingSpriteLabel?.includes("sprite indisponível")) failures.push(`${viewportName}: o sprite ausente deve informar seu estado pelo nome acessível.`);
+  await safeCapture(missingSpritePage, viewportName, "pokemon-sprite-unavailable", { audit: true, fullPage: false });
+  await missingSpritePage.close();
   const evolutionSection = page.locator(".detail-evolutions");
   await evolutionSection.waitFor({ state: "visible", timeout: 10_000 });
   const evolutionNames = await evolutionSection.locator(".evolution-list strong").allTextContents();
   if (!evolutionNames.includes("Gabite") || !evolutionNames.includes("Garchomp")) {
     failures.push(`${viewportName}: a ficha de Garchomp não mostrou sua relação evolutiva direta.`);
+  }
+  const evolutionText = await evolutionSection.innerText();
+  if (!evolutionText.includes("Subir de nível") || !evolutionText.includes("Nível mínimo 48")) {
+    failures.push(`${viewportName}: a ficha não exibiu método e nível mínimo da evolução de Garchomp conforme a revisão fixada.`);
   }
   if (viewport.width <= 370) {
     const currentNameHeight = await evolutionSection.locator(".evolution-list li.is-current strong").evaluate((element) => element.getBoundingClientRect().height);
@@ -506,15 +542,31 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".detail-move-list").waitFor({ state: "visible", timeout: 15_000 });
   const learnsetFilters = learnsetSection.locator(".detail-learnset-filters");
   const learnsetSearch = learnsetFilters.locator('input[type="search"]');
-  const versionFilter = learnsetFilters.locator("select").nth(0);
-  const methodFilter = learnsetFilters.locator("select").nth(1);
-  const typeFilter = learnsetFilters.locator("select").nth(2);
-  const categoryFilter = learnsetFilters.locator("select").nth(3);
+  const formFilter = learnsetFilters.locator("select").nth(0);
+  const versionFilter = learnsetFilters.locator("select").nth(1);
+  const methodFilter = learnsetFilters.locator("select").nth(2);
+  const typeFilter = learnsetFilters.locator("select").nth(3);
+  const categoryFilter = learnsetFilters.locator("select").nth(4);
   await learnsetSearch.focus();
   await page.keyboard.press("Tab");
-  if (!(await versionFilter.evaluate((element) => element === document.activeElement))) {
+  if (!(await formFilter.evaluate((element) => element === document.activeElement))) {
     failures.push(`${viewportName}: os filtros de aprendibilidade não seguem a ordem de teclado apresentada.`);
   }
+  await versionFilter.selectOption({ label: "Todos os jogos" });
+  const clearMoveFilters = learnsetFilters.getByRole("button", { name: "Limpar filtros" });
+  if (await clearMoveFilters.isDisabled()) failures.push(`${viewportName}: o filtro Todos os jogos não habilitou uma ação para voltar à versão padrão.`);
+  await clearMoveFilters.click();
+  if (await versionFilter.inputValue() === "") failures.push(`${viewportName}: Limpar filtros não restaurou a versão padrão da fonte.`);
+  await formFilter.selectOption("garchomp-mega-z");
+  await page.waitForURL("**/dex/garchomp-mega-z");
+  await page.locator(".detail-learnset-empty").waitFor({ state: "visible", timeout: 10_000 });
+  if (!(await page.locator("#pokemon-title").innerText()).includes("Mega Garchomp Z")) {
+    failures.push(`${viewportName}: a busca de aprendibilidade não manteve o nome da forma selecionada.`);
+  }
+  await safeCapture(page, viewportName, "pokemon-form-learnset-empty", { fullPage: false });
+  await page.locator(".detail-learnset-filters select").nth(0).selectOption("garchomp");
+  await page.waitForURL("**/dex/garchomp");
+  await page.locator(".detail-move-list").waitFor({ state: "visible", timeout: 10_000 });
   await versionFilter.selectOption({ label: "Scarlet / Violet" });
   await methodFilter.selectOption({ label: "Máquina" });
   await typeFilter.selectOption("ground");
@@ -617,6 +669,28 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: a Pokédex não restaurou o filtro e a posição após abrir e voltar da ficha.`);
   }
   await safeCapture(page, viewportName, "pokedex-restored", { fullPage: false });
+
+  const formEvolutionPage = await context.newPage();
+  await formEvolutionPage.goto(`${baseUrl}/dex/raichu-alola`, { waitUntil: "domcontentloaded" });
+  await formEvolutionPage.getByRole("heading", { name: "Alolan Raichu", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  const alolanRaichuRule = formEvolutionPage.locator(".detail-evolutions");
+  await alolanRaichuRule.waitFor({ state: "visible", timeout: 10_000 });
+  const alolanRaichuState = await formEvolutionPage.evaluate(() => ({
+    title: document.querySelector("#pokemon-title")?.textContent?.trim(),
+    types: document.querySelector(".detail-types")?.innerText?.replace(/\s+/g, " ").trim(),
+    total: document.querySelector("#detail-stats .section-heading > span")?.textContent?.trim(),
+    sprite: document.querySelector(".detail-stage-art .pokemon-art img")?.getAttribute("src"),
+    evolution: document.querySelector(".detail-evolutions")?.innerText,
+  }));
+  observations.push({ viewport: viewportName, name: "pokemon-alolan-raichu-exact-form", ...alolanRaichuState });
+  if (alolanRaichuState.title !== "Alolan Raichu" || !alolanRaichuState.types?.includes("Psíquico") || alolanRaichuState.total !== "Total 485" || !alolanRaichuState.sprite?.endsWith("10100.gif")) {
+    failures.push(`${viewportName}: a forma Alolan Raichu não atualizou nome, tipos, stats e sprite pelo ID exato da forma.`);
+  }
+  if (!alolanRaichuState.evolution?.includes("Forma resultante: Alola") || !alolanRaichuState.evolution.includes("Thunder Stone")) {
+    failures.push(`${viewportName}: a condição de evolução para a forma Alola não correspondeu à revisão fixa da PokéAPI.`);
+  }
+  await safeCapture(formEvolutionPage, viewportName, "pokemon-alolan-raichu-evolution", { audit: true, fullPage: false });
+  await formEvolutionPage.close();
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
   await page.locator(".builder-heading h1").waitFor({ state: "visible", timeout: 10_000 });
@@ -1422,7 +1496,24 @@ async function runViewport(viewportName, viewport) {
   const teamRollCount = await firstValidMember.locator(".damage-rolls li").count();
   if (teamRollCount !== 16) failures.push(`${viewportName}: um golpe calculável de Time vs 1 não preservou os 16 rolls.`);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  await safeCapture(page, viewportName, "calculator-team-vs-one", { audit: true, fullPage: true });
+  const firstTeamDamage = await firstValidMember.locator(".damage-team-move-range").first().evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const nav = document.querySelector(".mobile-primary-nav");
+    const navStyle = nav ? getComputedStyle(nav) : null;
+    return {
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      availableBottom: nav && navStyle?.display !== "none" ? Math.round(nav.getBoundingClientRect().top) : window.innerHeight,
+      text: element.textContent?.trim(),
+    };
+  });
+  observations.push({ viewport: viewportName, name: "calculator-team-vs-one-first-damage", ...firstTeamDamage });
+  if (viewport.width <= 420 && (firstTeamDamage.top < 0 || firstTeamDamage.bottom > firstTeamDamage.availableBottom)) {
+    failures.push(`${viewportName}: o primeiro dano do Time vs 1 ficou fora da primeira dobra ou atrás da navegação fixa.`);
+  }
+  await safeCapture(page, viewportName, "calculator-team-vs-one-first-fold", { audit: true, fullPage: false });
+  await safeCapture(page, viewportName, "calculator-team-vs-one-team", { fullPage: true });
+  await safeCapture(page, viewportName, "calculator-team-vs-one", { fullPage: viewport.width > 720 });
 
   await page.goto(`${baseUrl}/speed-tiers?target=garchomp-mega-z`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Speed Tiers" }).waitFor({ state: "visible", timeout: 10_000 });
@@ -1460,6 +1551,7 @@ async function runViewport(viewportName, viewport) {
     || speedTargetNatureBounds.position !== "fixed") {
     failures.push(`${viewportName}: o menu de Nature do alvo em Speed Tiers deve caber na largura da tela.`);
   }
+  await safeCapture(page, viewportName, "speed-tiers-target-nature-open", { audit: true, fullPage: false });
   await page.keyboard.press("Escape");
   await speedAssumptionsDisclosure.locator(":scope > summary").click();
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();

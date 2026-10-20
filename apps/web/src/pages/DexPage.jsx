@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
-import { searchPokemon } from "@spinda-stop/domain";
+import { Link, useSearchParams } from "react-router";
+import { searchPokemon, sortPokemon } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonCard } from "../components/PokemonCard.jsx";
 import { typeLabel } from "../components/TypeTag.jsx";
@@ -8,6 +8,7 @@ import { typeLabel } from "../components/TypeTag.jsx";
 const BATCH_SIZE = 36;
 const RESTORE_KEY = "spinda-dex-view";
 const RESTORE_TTL = 15 * 60 * 1000;
+const MAX_BASE_STAT_TOTAL = Math.max(...dexData.pokemon.map((entry) => entry.baseStatTotal || 0));
 
 function readSavedView() {
   try {
@@ -19,21 +20,29 @@ function readSavedView() {
 }
 
 export function DexPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [initialView] = useState(readSavedView);
   const restoreRef = useRef(initialView);
-  const [query, setQuery] = useState(() => initialView?.query || "");
+  const [query, setQuery] = useState(() => searchParams.get("q") || initialView?.query || "");
   const [type, setType] = useState(() => initialView?.type || "");
   const [generation, setGeneration] = useState(() => initialView?.generation || "");
+  const [minimumBaseStatTotal, setMinimumBaseStatTotal] = useState(() => initialView?.minimumBaseStatTotal || "");
+  const [maximumBaseStatTotal, setMaximumBaseStatTotal] = useState(() => initialView?.maximumBaseStatTotal || "");
+  const [sort, setSort] = useState(() => initialView?.sort || "number");
   const [visibleCount, setVisibleCount] = useState(() => Math.max(BATCH_SIZE, initialView?.visibleCount || BATCH_SIZE));
   const sentinelRef = useRef(null);
-  const results = useMemo(
-    () => searchPokemon(dexData.pokemon, query, { type, generation }),
-    [query, type, generation],
-  );
+  const filtered = useMemo(() => searchPokemon(dexData.pokemon, query, {
+    type,
+    generation,
+    minimumBaseStatTotal,
+    maximumBaseStatTotal,
+  }), [query, type, generation, minimumBaseStatTotal, maximumBaseStatTotal]);
+  const results = useMemo(() => sortPokemon(filtered, sort), [filtered, sort]);
   const visible = results.slice(0, visibleCount);
-  const filterCount = Number(Boolean(type)) + Number(Boolean(generation));
+  const filterCount = Number(Boolean(type)) + Number(Boolean(generation))
+    + Number(Boolean(minimumBaseStatTotal)) + Number(Boolean(maximumBaseStatTotal));
   const hasMore = visible.length < results.length;
-  const filterKey = `${query}\u0000${type}\u0000${generation}`;
+  const filterKey = `${query}\u0000${type}\u0000${generation}\u0000${minimumBaseStatTotal}\u0000${maximumBaseStatTotal}\u0000${sort}`;
   const previousFilterKey = useRef(filterKey);
 
   useEffect(() => {
@@ -83,6 +92,10 @@ export function DexPage() {
     setQuery("");
     setType("");
     setGeneration("");
+    setMinimumBaseStatTotal("");
+    setMaximumBaseStatTotal("");
+    setSort("number");
+    if (searchParams.has("q")) setSearchParams({}, { replace: true });
   }
 
   function rememberPosition() {
@@ -91,6 +104,9 @@ export function DexPage() {
         query,
         type,
         generation,
+        minimumBaseStatTotal,
+        maximumBaseStatTotal,
+        sort,
         visibleCount,
         scrollY: window.scrollY,
         savedAt: Date.now(),
@@ -111,7 +127,7 @@ export function DexPage() {
         <Link className="button button-outline desktop-only" to="/builder">Levar ao construtor</Link>
       </div>
 
-      <section className="dex-toolbar" aria-label="Busca e filtros da Pokédex">
+      <section className="dex-toolbar" aria-label="Busca, filtros e ordenação da Pokédex">
         <label className="search-field">
           <span className="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.6" /><path d="m16 16 4.2 4.2" /></svg></span>
           <span className="sr-only">Buscar espécie, forma ou número</span>
@@ -119,7 +135,7 @@ export function DexPage() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar Pokémon, forma ou nº"
+            placeholder="Espécie ou forma"
           />
         </label>
         <label className="filter-field">
@@ -138,11 +154,34 @@ export function DexPage() {
             ))}
           </select>
         </label>
+        <label className="filter-field dex-sort-field">
+          <span>Ordenar por</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+            <option value="number">Número</option>
+            <option value="name">Nome A–Z</option>
+            <option value="total-desc">Total base · maior</option>
+            <option value="total-asc">Total base · menor</option>
+          </select>
+        </label>
+        <details className="dex-stat-filter" open={Boolean(minimumBaseStatTotal || maximumBaseStatTotal)}>
+          <summary>Filtrar por total base{minimumBaseStatTotal || maximumBaseStatTotal ? " · ativo" : ""}</summary>
+          <div className="dex-stat-filter-fields">
+            <label>
+              <span>Mínimo</span>
+              <input type="number" inputMode="numeric" min="0" max={MAX_BASE_STAT_TOTAL} step="1" value={minimumBaseStatTotal} onChange={(event) => setMinimumBaseStatTotal(event.target.value)} placeholder="0" />
+            </label>
+            <label>
+              <span>Máximo</span>
+              <input type="number" inputMode="numeric" min="0" max={MAX_BASE_STAT_TOTAL} step="1" value={maximumBaseStatTotal} onChange={(event) => setMaximumBaseStatTotal(event.target.value)} placeholder={String(MAX_BASE_STAT_TOTAL)} />
+            </label>
+            <p>Total dos seis stats base na PokéAPI; não representa stats finais no Champions.</p>
+          </div>
+        </details>
         {filterCount > 0 || query ? <button className="button button-quiet clear-filter" type="button" onClick={clearFilters}>Limpar filtros</button> : null}
       </section>
 
       <div className="results-line">
-        <p aria-live="polite"><strong>{results.length.toLocaleString("pt-BR")}</strong> entradas{filterCount > 0 ? ` · ${filterCount} filtro${filterCount > 1 ? "s" : ""}` : ""}</p>
+        <p aria-live="polite"><strong>{results.length.toLocaleString("pt-BR")}</strong> formas{filterCount > 0 || query ? ` · ${filterCount + Number(Boolean(query))} filtro${filterCount + Number(Boolean(query)) > 1 ? "s" : ""}` : ""}</p>
         <p>{visible.length.toLocaleString("pt-BR")} de {results.length.toLocaleString("pt-BR")}</p>
       </div>
 

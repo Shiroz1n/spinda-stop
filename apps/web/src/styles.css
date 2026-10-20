@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #dce8dc;
-  --color-surface: #fffbe7;
-  --color-ink: #173746;
-  --color-blue: #2e7896;
-  --color-coral: #b84538;
-  --color-green: #326b45;
-  --color-gold: #8e6817;
+  --color-paper: #f1f2e8;
+  --color-surface: #fffdf7;
+  --color-ink: #18382f;
+  --color-blue: #267186;
+  --color-coral: #bc5546;
+  --color-green: #39764b;
+  --color-gold: #8a6516;
 }
 
 :root {
@@ -15,27 +15,27 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   color-scheme: light;
-  --paper: #dce8dc;
-  --paper-shadow: #b7cbbd;
-  --surface: #fffbe7;
-  --surface-alt: #e8efd7;
-  --field: #f4f2dd;
-  --sky: #c9e2dd;
-  --grass: #98b77a;
-  --selection: #f2dda0;
-  --ink: #173746;
-  --muted: #465d5e;
-  --line: #84988c;
-  --blue: #2e7896;
-  --blue-dark: #234f63;
-  --coral: #b84538;
-  --coral-dark: #8d342d;
-  --green: #326b45;
-  --gold: #8e6817;
-  --fire-ink: #8d342d;
+  --paper: #f1f2e8;
+  --paper-shadow: #d6ded2;
+  --surface: #fffdf7;
+  --surface-alt: #e5eddf;
+  --field: #fcfbf5;
+  --sky: #d8e9e3;
+  --grass: #9dbf82;
+  --selection: #f2e2b0;
+  --ink: #18382f;
+  --muted: #52675e;
+  --line: #bdc9bf;
+  --blue: #267186;
+  --blue-dark: #1f4d5b;
+  --coral: #bc5546;
+  --coral-dark: #82382f;
+  --green: #39764b;
+  --gold: #8a6516;
+  --fire-ink: #82382f;
   --focus: #005c9a;
-  --radius: 3px;
-  --pixel-edge: 2px 2px 0 var(--paper-shadow);
+  --radius: 8px;
+  --pixel-edge: 0 3px 12px rgb(24 56 47 / 8%);
   color: var(--ink);
   background: var(--paper);
 }

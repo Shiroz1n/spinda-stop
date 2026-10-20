@@ -20,6 +20,8 @@ Exemplos de arquivos fixados: [`10304.png` (Mega Raichu X)](https://github.com/P
 
 Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares; atribuição ao repositório que hospeda os arquivos não transfere direitos. O MIT deste projeto cobre somente o código original.
 
+O ZIP de pesquisa fornecido para esta reformulação contém capturas de referência do DataDex e de outras interfaces. Elas foram abertas para análise, não foram copiadas para o bundle do produto nem distribuídas como assets. Essas imagens não demonstram cobertura/licença de sprites shiny ou modelos por forma. Qualquer galeria exige uma fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
+
 ## `@smogon/calc` 0.12.0
 
 O motor de cálculo está disponível sob a licença MIT. A origem é [smogon/damage-calc](https://github.com/smogon/damage-calc); o arquivo de licença oficial está em [LICENSE](https://github.com/smogon/damage-calc/blob/master/LICENSE). O pacote publica a licença como MIT nos metadados do npm.

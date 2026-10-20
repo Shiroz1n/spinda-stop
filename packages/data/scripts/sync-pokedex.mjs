@@ -30,6 +30,31 @@ const FILES = [
   "pokemon_move_methods.csv",
   "natures.csv",
   "nature_names.csv",
+  "pokemon_evolution.csv",
+  "evolution_triggers.csv",
+  "items.csv",
+  "item_names.csv",
+  "locations.csv",
+  "location_names.csv",
+  "regions.csv",
+  "region_names.csv",
+];
+const EVOLUTION_CSV_FILES = [
+  "pokemon_evolution.csv",
+  "evolution_triggers.csv",
+  "items.csv",
+  "item_names.csv",
+  "locations.csv",
+  "location_names.csv",
+  "regions.csv",
+  "region_names.csv",
+  "pokemon_species.csv",
+  "pokemon_species_names.csv",
+  "move_names.csv",
+  "moves.csv",
+  "types.csv",
+  "version_groups.csv",
+  "pokemon_forms.csv",
 ];
 const LANGUAGE_ENGLISH = "9";
 const STAT_KEYS = {
@@ -164,6 +189,7 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
     name: natureNames.get(entry.id)?.name ?? titleFromSlug(entry.identifier),
   }));
   const types = [...new Set([...typeNames.values()])].sort();
+  const evolutionBySpeciesId = buildEvolutionRules(csvByFilename);
 
   return {
     metadata: {
@@ -177,6 +203,7 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
       note: "Dados gerais. Disponibilidade e legalidade no Pokémon Champions não foram verificadas.",
     },
     types,
+    evolutionBySpeciesId,
     pokemon: pokemon.sort((a, b) => a.speciesId - b.speciesId || a.order - b.order || a.pokemonId - b.pokemonId),
     moves: moves.sort((a, b) => a.name.localeCompare(b.name, "en")),
     natures: natures.sort((a, b) => a.name.localeCompare(b.name, "en")),
@@ -184,7 +211,9 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
 }
 
 export function toDexIndex(pokemon) {
-  return pokemon.map((entry) => ({
+  return pokemon.map((entry) => {
+    const baseStats = Object.values(STAT_KEYS).map((key) => entry.stats[key]);
+    return {
     slug: entry.slug,
     spriteId: entry.pokemonId,
     speciesId: entry.speciesId,
@@ -196,9 +225,102 @@ export function toDexIndex(pokemon) {
     speciesName: entry.speciesName,
     formName: entry.formName,
     generation: entry.generation,
+    order: entry.order,
     types: entry.types,
     stats: Object.fromEntries(["atk", "spa", "spe"].map((key) => [key, entry.stats[key]])),
-  }));
+    baseStatTotal: baseStats.every(Number.isFinite)
+      ? baseStats.reduce((total, value) => total + value, 0)
+      : null,
+    };
+  });
+}
+
+export function buildEvolutionRules(csvByFilename) {
+  if (EVOLUTION_CSV_FILES.some((name) => typeof csvByFilename[name] !== "string")) return {};
+
+  const read = (name) => parseCsv(csvByFilename[name]);
+  const species = new Map(read("pokemon_species.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const speciesNames = englishNameMap(read("pokemon_species_names.csv"), "pokemon_species_id", "name");
+  const moves = englishNameMap(read("move_names.csv"), "move_id", "name");
+  const moveSlugs = new Map(read("moves.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const typeNames = new Map(read("types.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const triggerNames = new Map(read("evolution_triggers.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const itemSlugs = new Map(read("items.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const itemNames = englishNameMap(read("item_names.csv"), "item_id", "name");
+  const locationSlugs = new Map(read("locations.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const locationNames = englishNameMap(read("location_names.csv"), "location_id", "name");
+  const regionSlugs = new Map(read("regions.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const regionNames = englishNameMap(read("region_names.csv"), "region_id", "name");
+  const versionGroups = new Map(read("version_groups.csv").map((entry) => [Number(entry.id), entry.identifier]));
+  const formNames = new Map(read("pokemon_forms.csv").map((entry) => [Number(entry.id), entry.form_identifier || entry.identifier]));
+  const rowsBySpecies = new Map();
+
+  function namedValue(id, names, slugs, fallback = "") {
+    if (!id) return "";
+    return names.get(String(id))?.name || names.get(Number(id))?.name || slugs.get(Number(id)) || fallback || String(id);
+  }
+
+  function collectConditions(row) {
+    const conditions = [];
+    const add = (key, value) => {
+      if (value !== "" && value !== null && value !== undefined) conditions.push({ key, value });
+    };
+    const addNumber = (key, value) => { if (value !== "") add(key, Number(value)); };
+    const addFlag = (key, value) => { if (value === "1") add(key, true); };
+
+    addNumber("minimum_level", row.minimum_level);
+    add("gender_id", row.gender_id === "0" ? "genderless" : row.gender_id === "1" ? "male" : row.gender_id === "2" ? "female" : "");
+    add("location", namedValue(row.location_id, locationNames, locationSlugs));
+    add("trigger_item", namedValue(row.trigger_item_id, itemNames, itemSlugs));
+    add("held_item", namedValue(row.held_item_id, itemNames, itemSlugs));
+    add("time_of_day", row.time_of_day);
+    add("known_move", namedValue(row.known_move_id, moves, moveSlugs));
+    add("known_move_type", typeNames.get(Number(row.known_move_type_id)) || "");
+    addNumber("minimum_happiness", row.minimum_happiness);
+    addNumber("minimum_beauty", row.minimum_beauty);
+    addNumber("minimum_affection", row.minimum_affection);
+    add("relative_physical_stats", row.relative_physical_stats === "-1" ? "attack-lower" : row.relative_physical_stats === "0" ? "attack-equal" : row.relative_physical_stats === "1" ? "attack-higher" : "");
+    add("party_species", namedValue(row.party_species_id, speciesNames, species));
+    add("party_type", typeNames.get(Number(row.party_type_id)) || "");
+    add("trade_species", namedValue(row.trade_species_id, speciesNames, species));
+    addFlag("overworld_rain", row.needs_overworld_rain);
+    addFlag("turn_upside_down", row.turn_upside_down);
+    addFlag("multiplayer", row.needs_multiplayer);
+    addFlag("near_special_rock", row.near_special_rock);
+    add("region", namedValue(row.region_id, regionNames, regionSlugs));
+    add("required_pokemon_form", formNames.get(Number(row.required_pokemon_form_id)) || "");
+    add("evolved_pokemon_form", formNames.get(Number(row.evolved_pokemon_form_id)) || "");
+    add("used_move", namedValue(row.used_move_id, moves, moveSlugs));
+    addNumber("minimum_move_count", row.minimum_move_count);
+    addNumber("minimum_steps", row.minimum_steps);
+    addNumber("minimum_damage_taken", row.minimum_damage_taken);
+    add("nature_bitmask", row.nature_bitmask);
+    add("condition_expression", row.condition_expression);
+    addNumber("percentage_chance", row.percentage_chance);
+    return conditions.filter((condition) => condition.value !== "");
+  }
+
+  for (const row of read("pokemon_evolution.csv")) {
+    const speciesId = Number(row.evolved_species_id);
+    if (!Number.isInteger(speciesId) || speciesId < 1) continue;
+    const rule = {
+      trigger: triggerNames.get(Number(row.evolution_trigger_id)) || `unknown-${row.evolution_trigger_id}`,
+      conditions: collectConditions(row),
+      versionGroups: row.version_group_id ? [versionGroups.get(Number(row.version_group_id)) || String(row.version_group_id)] : [],
+      isDefault: row.is_default === "1",
+    };
+    const signature = JSON.stringify({ trigger: rule.trigger, conditions: rule.conditions, isDefault: rule.isDefault });
+    const candidates = rowsBySpecies.get(speciesId) ?? new Map();
+    const current = candidates.get(signature) ?? { ...rule, versionGroups: [] };
+    if (!current.versionGroups.includes(rule.versionGroups[0]) && rule.versionGroups[0]) current.versionGroups.push(rule.versionGroups[0]);
+    candidates.set(signature, current);
+    rowsBySpecies.set(speciesId, candidates);
+  }
+
+  return Object.fromEntries([...rowsBySpecies].map(([speciesId, rules]) => [speciesId,
+    [...rules.values()].map((rule) => ({ ...rule, versionGroups: rule.versionGroups.sort() }))
+      .sort((left, right) => Number(right.isDefault) - Number(left.isDefault) || left.trigger.localeCompare(right.trigger, "en")),
+  ]));
 }
 
 export function buildPokemonMoveLearnsets(csvByFilename, generatedAt = new Date().toISOString()) {
@@ -319,7 +441,11 @@ async function run() {
         readFile(resolve(LEARNSETS_DIRECTORY, `${String(index).padStart(2, "0")}.json`), "utf8")
           .then((content) => JSON.parse(content))));
       const spriteIndexIsCurrent = Array.isArray(existing[0]?.pokemon)
-        && existing[0].pokemon.every((entry) => Number.isInteger(entry.spriteId) && typeof entry.formId === "string");
+        && existing[0].pokemon.every((entry) => Number.isInteger(entry.spriteId)
+          && typeof entry.formId === "string"
+          && Number.isInteger(entry.order)
+          && Number.isFinite(entry.baseStatTotal))
+        && Object.keys(existing[0]?.evolutionBySpeciesId || {}).length > 0;
       if (spriteIndexIsCurrent && existing.every((data) => data.metadata?.sourceCommit === POKEAPI_COMMIT)
         && learnsetShards.every((shard) => shard.metadata?.sourceCommit === POKEAPI_COMMIT)) {
         console.log(`Catálogo local já está na revisão ${POKEAPI_COMMIT.slice(0, 7)}.`);

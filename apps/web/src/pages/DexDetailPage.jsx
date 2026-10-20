@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
@@ -28,20 +28,97 @@ function formLabel(pokemon) {
   return pokemon.formName || pokemon.formId.replaceAll("-", " ");
 }
 
+const EVOLUTION_TRIGGER_LABELS = {
+  "level-up": "Subir de nível",
+  trade: "Troca",
+  "use-item": "Usar item",
+  shed: "Separação Shedinja",
+  spin: "Girar",
+  "tower-of-darkness": "Torre das Trevas",
+  "tower-of-waters": "Torre das Águas",
+  "three-critical-hits": "Acertar três críticos",
+  "take-damage": "Receber dano",
+  "other": "Outro método",
+  "meltan-candies": "Critério de doces de Meltan",
+  "agile-style-move": "Usar golpe no Estilo Ágil",
+  "recoil-damage": "Receber dano de recuo",
+  "strong-style-move": "Usar golpe no Estilo Forte",
+  "use-move": "Usar um golpe",
+  "in-battle-level-up": "Subir de nível em batalha",
+  "three-defeated-bisharp": "Derrotar três Bisharp",
+  "gimmighoul-coins": "Critério de moedas do Gimmighoul",
+};
+
+const EVOLUTION_CONDITION_LABELS = {
+  minimum_level: (value) => `Nível mínimo ${value}`,
+  gender_id: (value) => ({ genderless: "Sem sexo", male: "Sexo masculino", female: "Sexo feminino" })[value] || `Sexo: ${value}`,
+  location: (value) => `Local: ${value}`,
+  trigger_item: (value) => `Usar ${value}`,
+  held_item: (value) => `Segurar ${value}`,
+  time_of_day: (value) => `Período: ${value}`,
+  known_move: (value) => `Conhecer ${value}`,
+  known_move_type: (value) => `Conhecer um golpe do tipo ${typeLabel(value)}`,
+  minimum_happiness: (value) => `Felicidade mínima ${value}`,
+  minimum_beauty: (value) => `Beleza mínima ${value}`,
+  minimum_affection: (value) => `Carinho mínimo ${value}`,
+  relative_physical_stats: (value) => ({
+    "attack-lower": "Ataque menor que Defesa",
+    "attack-equal": "Ataque igual à Defesa",
+    "attack-higher": "Ataque maior que Defesa",
+  })[value] || `Relação de stats ${value}`,
+  party_species: (value) => `Ter ${value} na equipe`,
+  party_type: (value) => `Ter um Pokémon do tipo ${typeLabel(value)} na equipe`,
+  trade_species: (value) => `Trocar por ${value}`,
+  overworld_rain: () => "Chuva no mundo aberto",
+  turn_upside_down: () => "Virar o dispositivo de cabeça para baixo",
+  multiplayer: () => "Ativar modo multijogador",
+  near_special_rock: () => "Estar perto de uma rocha especial",
+  region: (value) => `Região: ${value}`,
+  required_pokemon_form: (value) => `Forma necessária: ${titleCase(value)}`,
+  evolved_pokemon_form: (value) => `Forma resultante: ${titleCase(value)}`,
+  used_move: (value) => `Usar ${value}`,
+  minimum_move_count: (value) => `Usar o golpe ao menos ${value} vezes`,
+  minimum_steps: (value) => `Percorrer ao menos ${value} passos`,
+  minimum_damage_taken: (value) => `Receber ao menos ${value} de dano`,
+  nature_bitmask: (value) => `Máscara de Nature registrada: ${value}`,
+  condition_expression: (value) => `Condição técnica da fonte: ${value}`,
+  percentage_chance: (value) => `Chance registrada pela fonte: ${value}%`,
+};
+
+function formatEvolutionRule(rule) {
+  const trigger = EVOLUTION_TRIGGER_LABELS[rule.trigger] || titleCase(rule.trigger);
+  const conditions = rule.conditions.map(({ key, value }) =>
+    (EVOLUTION_CONDITION_LABELS[key] || ((entry) => `${titleCase(key)}: ${entry}`))(value));
+  const versionGroups = rule.versionGroups.map(formatVersionGroup);
+  return [trigger, ...conditions, versionGroups.length ? `Jogos: ${versionGroups.join(", ")}` : ""].filter(Boolean).join(" · ");
+}
+
+function titleCase(value) {
+  return String(value).replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toLocaleUpperCase("pt-BR"));
+}
+
 function EvolutionSection({ pokemon }) {
   const chain = getEvolutionNeighbors(dexData.pokemon, pokemon.speciesId);
   if (!chain.previous && chain.next.length === 0) return null;
 
+  const ruleFor = (target) => {
+    const rules = dexData.evolutionBySpeciesId?.[target.speciesId] || [];
+    const formRules = rules.filter((rule) => rule.conditions.some(({ key }) => key === "evolved_pokemon_form"));
+    if (!formRules.length) return rules;
+    if (target.formId === "default") return rules.filter((rule) => !rule.conditions.some(({ key }) => key === "evolved_pokemon_form"));
+    return formRules.filter((rule) => rule.conditions.some(({ key, value }) =>
+      key === "evolved_pokemon_form" && value.toLocaleLowerCase("en") === target.formId.toLocaleLowerCase("en")));
+  };
   const entries = [
-    ...(chain.previous ? [{ pokemon: chain.previous, label: "Pré-evolução" }] : []),
-    ...(chain.current ? [{ pokemon: chain.current, label: "Espécie atual" }] : []),
-    ...chain.next.map((entry) => ({ pokemon: entry, label: "Evolução" })),
+    ...(chain.previous ? [{ pokemon: chain.previous, label: "Pré-evolução", rules: [] }] : []),
+    ...(chain.current ? [{ pokemon, label: "Forma selecionada", rules: ruleFor(pokemon) }] : []),
+    ...chain.next.map((entry) => ({ pokemon: entry, label: "Evolução", rules: ruleFor(entry) })),
   ];
   return (
     <section className="detail-evolutions" id="detail-evolution" aria-labelledby="evolution-heading">
-      <div className="section-heading"><h2 id="evolution-heading">Linha evolutiva</h2><span>PokéAPI · relação por espécie</span></div>
+      <div className="section-heading"><h2 id="evolution-heading">Linha evolutiva</h2><a className="source-link" href={dexData.metadata.sourceUrl} target="_blank" rel="noreferrer">PokéAPI {dexData.metadata.sourceCommit.slice(0, 7)} ↗</a></div>
       <ol className="evolution-list">
-        {entries.map(({ pokemon: entry, label }) => (
+        {entries.map(({ pokemon: entry, label, rules }) => (
           <li className={entry.speciesId === pokemon.speciesId ? "is-current" : ""} key={entry.speciesId}>
             <span>{label}</span>
             <Link to={`/dex/${entry.slug}`} aria-current={entry.speciesId === pokemon.speciesId ? "page" : undefined}>
@@ -49,6 +126,9 @@ function EvolutionSection({ pokemon }) {
               <strong>{entry.name}</strong>
               <small>{entry.types.map(typeLabel).join(" / ")}</small>
             </Link>
+            {rules.length ? <ul className="evolution-conditions" aria-label={`Método e condição para ${entry.name}`}>
+              {rules.map((rule, index) => <li key={`${rule.trigger}-${index}`}>{formatEvolutionRule(rule)}</li>)}
+            </ul> : entry.speciesId === pokemon.speciesId ? <small className="evolution-condition-missing">Método para esta forma não listado nesta revisão.</small> : null}
           </li>
         ))}
       </ol>
@@ -57,8 +137,8 @@ function EvolutionSection({ pokemon }) {
   );
 }
 
-function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
-  const [filters, setFilters] = useState({ query: "", type: "", category: "", methodId: "", versionGroupId: null });
+function MoveLearnsetSection({ pokemon, forms, learnsetState, onRetry, onFormChange, initialFilters }) {
+  const [filters, setFilters] = useState(() => ({ query: "", type: "", category: "", methodId: "", versionGroupId: null, ...initialFilters }));
   const learnsets = learnsetState.data;
   const defaultVersionGroupId = getDefaultLearnsetVersionGroupId(learnsets?.versionGroups);
   const selectedVersionGroupId = filters.versionGroupId === null
@@ -75,23 +155,33 @@ function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
 
   const methods = learnsets?.methods || [];
   const versions = learnsets?.versionGroups || [];
+  const activeFilterCount = Number(Boolean(filters.query)) + Number(Boolean(filters.type))
+    + Number(Boolean(filters.category)) + Number(Boolean(filters.methodId))
+    + Number(filters.versionGroupId !== null && filters.versionGroupId !== String(defaultVersionGroupId ?? ""));
+  function clearFilters() {
+    setFilters({ query: "", type: "", category: "", methodId: "", versionGroupId: null });
+  }
+
   return (
     <section className="detail-learnsets" id="detail-moves" aria-labelledby="learnsets-heading">
       <div className="section-heading detail-learnsets-heading">
         <div><p className="page-label">Por jogo e forma</p><h2 id="learnsets-heading">Golpes aprendidos</h2></div>
         <span>{learnsetState.status === "ready" ? `${rows.length} registros` : "PokéAPI"}</span>
       </div>
-      <p className="detail-learnset-scope">Aprendibilidade geral. Scarlet / Violet começa selecionado para reduzir a lista; “Todos os jogos” consulta outras versões. Isso não confirma compatibilidade do set nem legalidade em Pokémon Champions.</p>
+      <p className="detail-learnset-scope">Aprendibilidade geral por forma e versão. Legalidade em Pokémon Champions: não verificada.</p>
       {learnsetState.status === "loading" ? <p className="form-hint" role="status">Carregando os dados da forma…</p> : null}
       {learnsetState.status === "error" ? <div className="detail-learnset-error" role="alert"><p>{learnsetState.error}</p><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar novamente</button></div> : null}
       {learnsets ? <>
         <div className="detail-learnset-filters" aria-label="Filtros de golpes">
           <label><span>Golpe</span><input type="search" value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar golpe" /></label>
+          {forms.length > 1 ? <label><span>Forma consultada</span><select value={pokemon.slug} onChange={(event) => onFormChange(event.target.value, filters)}>{forms.map((form) => <option value={form.slug} key={form.slug}>{form.name}</option>)}</select></label> : null}
           <label><span>Versão</span><select value={selectedVersionGroupId} onChange={(event) => updateFilter("versionGroupId", event.target.value)}><option value="">Todos os jogos</option>{versions.map((version) => <option value={version.id} key={version.id}>{formatVersionGroup(version.name)}</option>)}</select></label>
           <label><span>Método</span><select value={filters.methodId} onChange={(event) => updateFilter("methodId", event.target.value)}><option value="">Todos</option>{methods.map((method) => <option value={method.id} key={method.id}>{formatMoveLearnMethod(method.name)}</option>)}</select></label>
           <label><span>Tipo do golpe</span><select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}><option value="">Todos</option>{dexData.types.map((type) => <option value={type} key={type}>{typeLabel(type)}</option>)}</select></label>
           <label><span>Categoria</span><select value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">Todas</option><option value="physical">Físico</option><option value="special">Especial</option><option value="status">Status</option></select></label>
+          <button className="button button-quiet button-small detail-clear-move-filters" type="button" onClick={clearFilters} disabled={!activeFilterCount}>Limpar filtros</button>
         </div>
+        <p className="detail-move-count" aria-live="polite">{rows.length} {rows.length === 1 ? "registro" : "registros"} · {pokemon.name} · {selectedVersionGroupId ? formatVersionGroup(versions.find((version) => String(version.id) === selectedVersionGroupId)?.name) : "todos os jogos"}</p>
         {rows.length ? <ul className="detail-move-list">{rows.map((row) => {
           const search = new URLSearchParams({ attacker: pokemon.name, move: row.move.name });
           const methodLabel = formatMoveLearnMethod(methods.find((method) => method.id === row.methodId)?.name);
@@ -112,6 +202,8 @@ function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
 
 export function DexDetailPage() {
   const { slug = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const summary = dexData.pokemon.find((entry) => entry.slug === slug);
   const pokemon = summary ? { ...summary, ...detailData.pokemonBySlug[slug] } : null;
   const [learnsetState, setLearnsetState] = useState({ requestKey: "", status: "idle", data: null, error: "" });
@@ -184,6 +276,7 @@ export function DexDetailPage() {
         <a href="#detail-types">Relações de tipo</a>
         <a href="#detail-moves">Golpes aprendidos</a>
         <a href="#detail-profile">Dados da espécie</a>
+        <span className="detail-nav-hint" aria-hidden="true">Arraste →</span>
       </nav>
 
       <EvolutionSection pokemon={pokemon} />
@@ -258,8 +351,11 @@ export function DexDetailPage() {
 
       <MoveLearnsetSection
         pokemon={pokemon}
+        forms={forms}
         learnsetState={currentLearnsetState}
         onRetry={() => setLearnsetRetry((current) => current + 1)}
+        initialFilters={location.state?.learnsetFilters}
+        onFormChange={(nextSlug, learnsetFilters) => navigate(`/dex/${nextSlug}`, { state: { learnsetFilters } })}
       />
     </div>
   );

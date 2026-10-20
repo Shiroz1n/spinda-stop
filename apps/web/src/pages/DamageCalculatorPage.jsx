@@ -567,7 +567,7 @@ export function DamageCalculatorPage() {
   }
   const teamTargetHp = teamTargetCalculations.flatMap((row) => row.moves).find(({ result }) => result)?.result?.defender.stats.hp;
   return (
-    <div className="page-wrap damage-page">
+    <div className={`page-wrap damage-page is-mode-${targetMode}`}>
       <div className="page-heading-row damage-heading">
         <div>
           <p className="page-label">Combate · Pokémon Champions</p>
