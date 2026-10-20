@@ -1201,6 +1201,10 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 .builder-speed-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 12px; }
 .builder-speed-heading .page-label { margin-bottom: 2px; }
 .builder-speed-heading h2 { margin: 0; font-size: 1.12rem; scroll-margin-top: 88px; }
+.speed-trick-room-toggle { min-width: 0; display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 3px 6px; color: var(--ink); font-size: 0.76rem; font-weight: 800; }
+.speed-trick-room-toggle input { grid-column: 1; grid-row: 1; margin: 0; }
+.speed-trick-room-toggle span { grid-column: 2; grid-row: 1; }
+.speed-trick-room-toggle small { grid-column: 2; grid-row: 2; display: block; color: var(--muted); font-size: 0.68rem; font-weight: 650; line-height: 1.3; }
 .builder-speed-target { display: grid; grid-template-columns: 54px minmax(0, 1fr) minmax(110px, 0.45fr) minmax(160px, 0.7fr) auto; align-items: center; gap: 9px; margin: 9px 12px; padding: 7px 9px; border-left: 4px solid #d8ad36; background: #fffdf1; }
 .builder-speed-target.is-empty { grid-template-columns: minmax(0, 1fr) auto; }
 .builder-speed-target > label { display: grid; gap: 2px; color: var(--muted); font-size: 0.68rem; font-weight: 800; }

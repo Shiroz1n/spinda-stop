@@ -646,6 +646,17 @@ async function runViewport(viewportName, viewport) {
     || emptySpeedTargetLayout.actionRight > emptySpeedTargetLayout.containerRight + 1) {
     failures.push(`${viewportName}: o seletor do alvo de Speed colide com a instrução em largura estreita ou sai do painel.`);
   }
+  const trickRoomToggleLayout = await page.locator(".speed-trick-room-toggle").evaluate((label) => {
+    const checkbox = label.querySelector("input").getBoundingClientRect();
+    const title = label.querySelector("span").getBoundingClientRect();
+    const note = label.querySelector("small").getBoundingClientRect();
+    return { checkboxRight: checkbox.right, titleLeft: title.left, titleBottom: title.bottom, noteTop: note.top };
+  });
+  observations.push({ viewport: viewportName, name: "builder-speed-trick-room-label-layout", ...trickRoomToggleLayout });
+  if (trickRoomToggleLayout.checkboxRight + 3 > trickRoomToggleLayout.titleLeft
+    || trickRoomToggleLayout.noteTop < trickRoomToggleLayout.titleBottom - 1) {
+    failures.push(`${viewportName}: o controle de Trick Room deve separar checkbox, rótulo e explicação.`);
+  }
   await safeCapture(page, viewportName, "builder-empty-speed-target", { audit: true, fullPage: false });
   await page.getByRole("button", { name: "Escolher espécie" }).first().click();
   await page.locator("#species-search").fill("Garchomp");
