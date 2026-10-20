@@ -416,10 +416,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
         <div className="metaroll-capture-note" aria-label="Captura e período da fonte">
           <span><b>Formato</b> Doubles</span>
           <span><b>Temporada</b> {indexData.season || "não informada"}</span>
-          <span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span>
-          <span><b>Última consulta do app</b> {formatCapture(indexData.appFetchedAt)}</span>
-          <span><b>Pokémon no ranking</b> {indexData.count}</span>
-          <details className="usage-source-help"><summary>O que esta captura informa</summary><p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p></details>
+          <details className="metaroll-capture-more"><summary>Sobre esta captura</summary><div><span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span><span><b>Última consulta</b> {formatCapture(indexData.appFetchedAt)}</span><span><b>Pokémon ranqueados</b> {indexData.count}</span></div><p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p></details>
         </div>
       ) : null}
       {view === "species" && indexData ? <button className="button button-outline button-small metaroll-refresh" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>{indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}</button> : null}

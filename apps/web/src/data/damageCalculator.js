@@ -232,10 +232,12 @@ export function getHitOptions(move) {
   return [1];
 }
 
-function getTypeEffectiveness(moveType, defenderTypes) {
+export function getTypeEffectiveness(moveType, defenderTypes) {
   const type = findEntry(generation.types, moveType);
   if (!type) return null;
-  return defenderTypes.reduce((effectiveness, defenderType) => {
+  const resolvedDefenderTypes = defenderTypes.map((defenderType) => findEntry(generation.types, defenderType)?.name);
+  if (resolvedDefenderTypes.some((defenderType) => !defenderType)) return null;
+  return resolvedDefenderTypes.reduce((effectiveness, defenderType) => {
     return effectiveness * (type.effectiveness[defenderType] ?? 1);
   }, 1);
 }

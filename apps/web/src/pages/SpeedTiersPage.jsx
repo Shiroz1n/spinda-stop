@@ -152,10 +152,6 @@ export function SpeedTiersPage() {
           <label className="speed-trick-room-toggle"><input type="checkbox" checked={trickRoom} onChange={(event) => setTrickRoom(event.target.checked)} /><span>Trick Room ativo</span><small>A Speed bruta não muda; a ordem é invertida.</small></label>
         </div>
 
-        <div className="speed-assumptions">
-          <SpeedSettings label="Pokémon comparados" model={model} values={candidate} onChange={updateCandidate} />
-          <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />
-        </div>
       </section>
 
       {!selectedTarget ? (
@@ -167,6 +163,13 @@ export function SpeedTiersPage() {
             <div className="speed-target-copy"><p className="page-label">Alvo · {selectedTarget.formId === "default" ? "forma base" : selectedTarget.formId}</p><h2>{selectedTarget.name}</h2><div className="type-list">{selectedTarget.types.map((type) => <TypeTag type={type} key={type} />)}</div></div>
             <div className="speed-target-value"><strong>{targetSpeed ?? "—"}</strong><span>Speed</span><small>calculada · nível {candidate.level}</small></div>
           </section>
+          <details className="speed-assumptions-disclosure">
+            <summary>Nature e pontos de Speed <span>Comparados: {candidate.nature} · {model === "champions" ? `${candidate.sp} SP` : `${candidate.ev} EV`} | Alvo: {target.nature} · {model === "champions" ? `${target.sp} SP` : `${target.ev} EV`}</span></summary>
+            <div className="speed-assumptions">
+              <SpeedSettings label="Pokémon comparados" model={model} values={candidate} onChange={updateCandidate} />
+              <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />
+            </div>
+          </details>
           <div className="speed-results-toolbar"><div><strong>{ranked.length.toLocaleString("pt-BR")}</strong> entradas no catálogo</div><label>Buscar na lista <input className="text-input" value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setVisibleCount(90); }} placeholder="Espécie ou forma" /></label></div>
           <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
           <div className="speed-results-list" aria-live="polite">

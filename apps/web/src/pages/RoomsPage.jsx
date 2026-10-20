@@ -335,7 +335,6 @@ export function RoomDetailPage() {
       <div className="community-next-step" aria-label="Próxima ação">
         <strong>{ROOM_STATES[room.status]}</strong><span>{nextStep}</span><a href={nextStepTarget}>Abrir etapa <span aria-hidden="true">↓</span></a>
       </div>
-      <p className="community-game-context">As partidas acontecem no Pokémon Champions; o Spinda Stop organiza os participantes e o registro do resultado.</p>
       <ErrorNotice>{actionError}</ErrorNotice>
       {message ? <p className="community-success" role="status">{message}</p> : null}
 
@@ -364,6 +363,7 @@ export function RoomDetailPage() {
         </section>
       </div>
       {room.status === "open" && isHost ? <section id="room-invite" className="community-room-panel community-invite-panel panel-frame"><div className="section-heading"><h2>Convite</h2><span>Expira em 7 dias</span></div><p className="community-muted">Compartilhe o link apenas com quem vai participar. O token fica no fragmento e é removido ao entrar.</p>{inviteUrl ? <div className="invite-copy-row"><input className="text-input" aria-label="Link de convite" readOnly value={inviteUrl} onFocus={(event) => event.target.select()} /><button className="button button-primary button-small" type="button" onClick={copyInvite}>Copiar link</button></div> : <button className="button button-outline button-small" type="button" onClick={copyInvite}>Gerar convite</button>}</section> : null}
+      <details className="community-game-context"><summary>Partida no Pokémon Champions</summary><p>O Spinda Stop organiza os participantes e o registro do resultado; a partida acontece no jogo.</p></details>
       <p className="community-privacy-note">O Spinda Stop organiza pessoas e relatos voluntários. Não valida nem recebe dados da partida dentro do jogo.</p>
     </section>
   );

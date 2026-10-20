@@ -3,11 +3,20 @@ import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import { PokemonSprite } from "../components/PokemonSprite.jsx";
-import { TypeTag } from "../components/TypeTag.jsx";
+import { TypeTag, typeLabel } from "../components/TypeTag.jsx";
+import { getDefensiveTypeEffectiveness, typeEffectivenessChart } from "../data/typeChart.js";
 
 const STAT_LABELS = [
-  ["hp", "HP"], ["atk", "Attack"], ["def", "Defense"],
-  ["spa", "Sp. Atk"], ["spd", "Sp. Def"], ["spe", "Speed"],
+  ["hp", "HP"], ["atk", "Ataque"], ["def", "Defesa"],
+  ["spa", "Atq. Esp."], ["spd", "Def. Esp."], ["spe", "Velocidade"],
+];
+
+const TYPE_RELATIONS = [
+  { multiplier: 4, title: "Fraqueza extrema · 4×", group: "weaknesses" },
+  { multiplier: 2, title: "Fraquezas · 2×", group: "weaknesses" },
+  { multiplier: 0.5, title: "Resistências · ½×", group: "resistances" },
+  { multiplier: 0.25, title: "Resistência extrema · ¼×", group: "resistances" },
+  { multiplier: 0, title: "Imunidades · 0×", group: "immunities" },
 ];
 
 function formLabel(pokemon) {
@@ -33,6 +42,13 @@ export function DexDetailPage() {
 
   const total = STAT_LABELS.reduce((sum, [key]) => sum + (pokemon.stats[key] ?? 0), 0);
   const forms = dexData.pokemon.filter((entry) => entry.speciesId === pokemon.speciesId);
+  const typeRelations = dexData.types.map((type) => ({
+    type,
+    multiplier: getDefensiveTypeEffectiveness(type, pokemon.types),
+  }));
+  const supportedTypeIds = new Set(Object.keys(typeEffectivenessChart));
+  const unsupportedDefenseTypes = pokemon.types.filter((type) => !supportedTypeIds.has(type.toLocaleLowerCase("en")));
+  const unsupportedAttackTypes = dexData.types.filter((type) => !supportedTypeIds.has(type.toLocaleLowerCase("en")));
 
   return (
     <div className="page-wrap detail-page">
@@ -40,8 +56,6 @@ export function DexDetailPage() {
 
       <section className="detail-heading" aria-labelledby="pokemon-title">
         <div className="detail-stage-art">
-          <span className="detail-spark detail-spark-one" aria-hidden="true">✦</span>
-          <span className="detail-spark detail-spark-two" aria-hidden="true">✧</span>
           <PokemonSprite pokemon={pokemon} name={pokemon.name} size={200} priority />
           <span className="detail-number">{formatNationalNumber(pokemon.speciesId)}</span>
         </div>
@@ -58,8 +72,15 @@ export function DexDetailPage() {
         </div>
       </section>
 
+      <nav className="detail-section-nav" aria-label="Seções da ficha">
+        {forms.length > 1 ? <a href="#detail-forms">Formas</a> : null}
+        <a href="#detail-stats">Stats base</a>
+        <a href="#detail-types">Relações de tipo</a>
+        <a href="#detail-profile">Dados da espécie</a>
+      </nav>
+
       {forms.length > 1 ? (
-        <section className="detail-forms" aria-labelledby="forms-heading">
+        <section className="detail-forms" id="detail-forms" aria-labelledby="forms-heading">
           <div className="section-heading"><h2 id="forms-heading">Formas de {pokemon.speciesName}</h2><span>{forms.length}</span></div>
           <div className="form-switcher">
             {forms.map((form) => (
@@ -73,7 +94,7 @@ export function DexDetailPage() {
       ) : null}
 
       <div className="detail-grid">
-        <section className="panel-frame detail-panel" aria-labelledby="stats-heading">
+        <section className="panel-frame detail-panel" id="detail-stats" aria-labelledby="stats-heading">
           <div className="section-heading"><h2 id="stats-heading">Stats base</h2><span>Total {total}</span></div>
           <ul className="stat-list">
             {STAT_LABELS.map(([key, label]) => {
@@ -90,7 +111,7 @@ export function DexDetailPage() {
           <p className="form-hint">Referência geral da PokéAPI; não representa o stat final do Pokémon Champions.</p>
         </section>
 
-        <section className="panel-frame detail-panel" aria-labelledby="profile-heading">
+        <section className="panel-frame detail-panel" id="detail-profile" aria-labelledby="profile-heading">
           <div className="section-heading"><h2 id="profile-heading">Dados da espécie</h2><span>PokéAPI</span></div>
           <dl className="detail-facts">
             <div><dt>Espécie</dt><dd>{pokemon.speciesName}</dd></div>
@@ -102,6 +123,29 @@ export function DexDetailPage() {
           <a className="source-link" href={dexData.metadata.sourceUrl} target="_blank" rel="noreferrer">Revisão da fonte ↗</a>
         </section>
       </div>
+
+      <section className="detail-type-relations" id="detail-types" aria-labelledby="type-relations-heading">
+        <div className="section-heading"><div><p className="page-label">Carta de tipos</p><h2 id="type-relations-heading">Relações defensivas</h2></div><span>Multiplicador por golpe</span></div>
+        {unsupportedDefenseTypes.length ? (
+          <p className="detail-type-source" role="status">O simulador não fornece uma carta completa para o tipo {unsupportedDefenseTypes.map(typeLabel).join(" / ")} desta forma.</p>
+        ) : (
+          <>
+            <div className="type-relation-groups">
+              {TYPE_RELATIONS.map((group) => {
+                const entries = typeRelations.filter((entry) => entry.multiplier === group.multiplier);
+                if (!entries.length) return null;
+                return (
+                  <section className={`type-relation-group is-${group.group}`} key={group.multiplier}>
+                    <h3>{group.title}</h3>
+                    <ul>{entries.map(({ type }) => <li key={type}><TypeTag type={type} /><strong>{group.multiplier === 0.5 ? "½×" : group.multiplier === 0.25 ? "¼×" : `${group.multiplier}×`}</strong></li>)}</ul>
+                  </section>
+                );
+              })}
+            </div>
+            <p className="detail-type-source">Carta de tipos derivada de <code>@smogon/calc</code> 0.12.0. Tipos neutros (1×) ficam omitidos. Relações gerais não indicam golpes legais, presença no jogo ou elegibilidade em regulamento do Champions.{unsupportedAttackTypes.length ? ` Sem multiplicador nesta carta: ${unsupportedAttackTypes.map(typeLabel).join(" / ")}.` : ""}</p>
+          </>
+        )}
+      </section>
     </div>
   );
 }

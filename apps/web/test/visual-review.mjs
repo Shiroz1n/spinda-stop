@@ -19,6 +19,7 @@ const representativeCaptures = new Set([
   "pokedex-loaded-more",
   "pokemon-sheet",
   "usage-battle-data",
+  "usage-ladder",
   "builder-six-members-first-fold",
   "builder-nature-before",
   "builder-nature-picker-open",
@@ -29,6 +30,7 @@ const representativeCaptures = new Set([
   "calculator-comparison-rolls",
   "calculator-one-v-many",
   "calculator-team-vs-one",
+  "speed-tiers-mega-garchomp-z",
   "speed-tiers-mega-garchomp-z-results",
   "room-state-flow",
   "tournament-state-flow",
@@ -345,7 +347,7 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.locator(".home-hero").waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByRole("heading", { name: "Seu próximo time começa aqui.", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("heading", { name: "Prepare seu próximo time.", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   if (viewportName === "desktop") {
     const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
     assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");
@@ -426,8 +428,16 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
-  const firstSpeciesStats = await page.locator(".quick-stats").first().innerText();
-  if (firstSpeciesStats.includes("—")) failures.push(`${viewportName}: a Pokédex mostra stats que o catálogo não fornece.`);
+  const firstCardIdentity = await page.locator(".pokemon-card").first().evaluate((card) => ({
+    number: card.querySelector(".pokemon-card-number")?.textContent?.trim(),
+    name: card.querySelector(".pokemon-card-title")?.textContent?.trim(),
+    hasType: Boolean(card.querySelector(".pokemon-card .type-tag")),
+    hasStats: Boolean(card.querySelector(".quick-stats")),
+  }));
+  observations.push({ viewport: viewportName, name: "pokedex-row-identity", ...firstCardIdentity });
+  if (!firstCardIdentity.number || !firstCardIdentity.name || !firstCardIdentity.hasType || firstCardIdentity.hasStats) {
+    failures.push(`${viewportName}: a linha da Pokédex não mostra número, nome e tipo de forma compacta.`);
+  }
   const search = page.getByPlaceholder("Buscar por nome, forma ou número");
   const dexTypeFilter = page.locator('.dex-toolbar .filter-field:has-text("Tipo") select');
   const dexGenerationFilter = page.locator('.dex-toolbar .filter-field:has-text("Geração") select');
@@ -1067,7 +1077,7 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-metaroll-megas", { audit: true, fullPage: false });
     await safeCapture(page, viewportName, "usage-matchups-history", { fullPage: false });
     await page.getByRole("button", { name: "Ladder de jogadores" }).click();
-    await waitForEither(page, ".metaroll-ladder-capture, .usage-error", 35_000);
+    await waitForEither(page, ".metaroll-ladder-about > summary, .usage-error", 35_000);
     await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
     await page.getByRole("button", { name: "Espécies" }).click();
     await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");
@@ -1289,6 +1299,8 @@ async function runViewport(viewportName, viewport) {
   const speedThresholds = await page.locator(".speed-threshold").allTextContents();
   if (speedThresholds.some((text) => /\b(?:3[3-9]|[4-9]\d)\s*SP\b/.test(text))) failures.push(`${viewportName}: Speed Tiers recomendou mais de 32 SP num único atributo.`);
   if (!speedThresholds.some((text) => text.includes("Não passa com até 32 SP"))) failures.push(`${viewportName}: Speed Tiers não explicou quando o alvo é inalcançável dentro do limite de 32 SP.`);
+  const speedAssumptionsDisclosure = page.locator(".speed-assumptions-disclosure");
+  if (!await speedAssumptionsDisclosure.evaluate((details) => details.open)) await speedAssumptionsDisclosure.locator(":scope > summary").click();
   await page.locator("#speed-target-nature").press("Enter");
   const speedTargetNatureMenu = page.locator("#speed-target-nature-options");
   await speedTargetNatureMenu.waitFor({ state: "visible", timeout: 10_000 });
@@ -1316,6 +1328,7 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: o menu de Nature do alvo em Speed Tiers deve caber na largura da tela.`);
   }
   await page.keyboard.press("Escape");
+  await speedAssumptionsDisclosure.locator(":scope > summary").click();
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();
   const speedTargetLayout = await page.locator(".speed-target-banner").evaluate((banner) => {
     const artwork = banner.querySelector(".pokemon-art").getBoundingClientRect();

@@ -132,17 +132,25 @@ Revisei manualmente as capturas existentes de home, Dex, Usage, builder, calcula
 
 | Tela | Composição a implementar |
 | --- | --- |
-| Home | Uma entrada curta com Spinda e ações reais para Dex, montar time e organizar partida; as três ações ficam próximas e não usam catálogo simulado nem métrica inventada. |
-| Pokédex | Campo de busca e filtros do catálogo inteiro no topo; exploração contínua com linhas compactas no celular e grade curta em desktop. Cada espécie/form mantém número, sprite próprio, nome, forma e tipos. |
-| Ficha | Sprite, número, espécie/forma e tipos como foco; seletor de formas e navegação por tarefa logo abaixo. Stats, golpes, evolução e relações de tipo ficam em seções legíveis. PokéAPI permanece identificada como dado geral, sem sugerir legalidade em Champions. |
-| Usage e ladder | Ranking/lista ativa junto da espécie selecionada e de sua distribuição. Fonte, formato e período aparecem uma vez; denominadores e limites ficam em “Sobre os dados”. Dados Battle Data e MetaRoll permanecem separados. |
-| Builder | Seis integrantes legíveis primeiro, com o set ativo acessível logo em seguida. Golpes, item, habilidade, Nature com ↑/↓ e efeito, e SP continuam editáveis; análise fica secundária sem perder função. |
-| Calculadora | Atacante, alvo e resultado A/B no início; resumo e controles frequentes ficam juntos, com os 16 rolls e modificadores ainda abríveis. Formulários longos ficam depois do resultado. |
-| Speed | Modelo, alvo e controles essenciais compactos; alvo calculado e comparação de tiers vêm imediatamente depois. Speed continua sendo ordem calculada, não ranking de uso; fórmula e limitações ficam em “Sobre os dados”. |
-| Salas | Estado e próxima ação juntos; confronto, participantes e Pokémon compartilhados formam o bloco principal. Convite, permissões e outros formulários seguem depois do contexto da partida. |
-| Torneios | Estado e próxima ação abrem a tela; participantes e chaveamento vêm antes dos controles do host. Convites e operações administrativas ficam após a leitura do andamento. |
+| Home | Uma entrada curta, uma aparição real de Spinda e cinco atalhos diretos para Dex, Builder, Usage, salas e torneios. Sem catálogo simulado nem arte de espaço reservado. |
+| Pokédex | Busca e filtros do catálogo inteiro no topo. Grade densa em 1440, cartões curtos em 390 e linhas horizontais em 320 px. Cada entrada preserva número, sprite próprio, nome, forma e tipos. |
+| Ficha | Sprite, número, espécie/forma e tipos como foco; navegação por âncoras separa formas, stats, relações de tipo e dados da espécie. Multiplicadores são explícitos e a fonte da carta é indicada. A ficha atual não lista golpes aprendíveis: o pacote local tem um catálogo de golpes gerais, sem vínculo por espécie/regulamento que permita afirmar compatibilidade com Champions. |
+| Usage e ladder | A ficha selecionada e seus resultados ficam à frente da busca mobile. Fonte e formato permanecem próximos; horário, captura e limite ficam recolhidos. Filtros de ranking antecedem resultados e histórico. Battle Data e MetaRoll continuam separados. |
+| Builder | Seis sprites/números/nomes legíveis em uma faixa no desktop e três colunas mobile, com o set ativo logo abaixo. Golpes, item, habilidade, Nature com ↑/↓ e efeito, e SP continuam editáveis; controles secundários continuam acessíveis. |
+| Calculadora | Confronto, resultado A/B e controles mais usados vêm antes dos formulários longos. Os 16 rolls e modificadores continuam acessíveis no detalhamento. |
+| Speed | Modelo, alvo e ordenação no topo; Speed calculada e comparação aparecem antes dos ajustes extensos de Nature/SP, que podem ser abertos junto do resultado. Ordem calculada não é ranking de uso; fórmula e limites continuam em “Sobre os dados”. |
+| Salas | Estado, próxima ação, participantes e confronto/resultado ocupam o início. O contexto do jogo, convites, códigos e permissões ficam depois dos envolvidos. |
+| Torneios | Estado e próxima ação abrem a tela; participantes e chaveamento vêm antes de convite e operações do host. A confirmação manual dos resultados segue explícita. |
 
 Essas composições variam por tarefa, usando os tokens existentes e menos molduras concorrentes. Não removem rótulos de tipo, estados, informações de fonte, recursos de domínio ou caminhos de teclado quando têm função.
+
+### Decisões aplicadas nesta rodada — 20/10/2026
+
+- A home passou a usar um único sprite Spinda e cinco atalhos que abrem destinos existentes. A Pokédex removeu stats e a chamada repetida “Abrir ficha”; seus cartões levam menos altura, e em 320 px viram linhas horizontais.
+- A ficha organiza a navegação por formas, stats gerais, relações de tipo e perfil da espécie. Os multiplicadores de defesa usam a matriz derivada de `@smogon/calc` 0.12.0; `npm run sync:type-chart` a reconstrói e o teste compara os 18 tipos e suas combinações duplas ao motor fixado. Tipos que a fonte não cobre ficam declarados. A ficha não ganhou seção de golpes aprendíveis: o pacote local só tem catálogo geral de golpes, sem fonte de compatibilidade por espécie e regulamento Champions.
+- Usage preserva fonte e formato no início, recolhe horários e cobertura em detalhes e mantém a seleção e o ranking antes dos filtros de longa cauda no mobile. Ladder mostra temporada e controles do ranking antes dos detalhes da captura e do histórico; os limites e valores ausentes continuam explícitos.
+- Builder mantém os seis sprites e nomes antes do editor do set; Speed mantém modelo, alvo, ordenação e resultado visíveis, com Nature/SP em detalhes próximos ao resultado. A calculadora mantém os modos, A/B, rolls e modificadores acessíveis. Salas e torneios trazem participantes/resultado ou chave antes do texto contextual e convites.
+- A folha final de CSS consolida a paleta no bloco de tokens `:root` e reaproveita tokens semânticos para fundo, céu, campo, seleção, foco e controles. Foco visível e a navegação por teclado continuam parte do roteiro. A quantidade de lint/axe não foi usada como aprovação visual.
 
 ## Limites e verificação
 

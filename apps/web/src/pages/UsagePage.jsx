@@ -414,11 +414,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
 
       {indexData ? (
         <div className="usage-index-note" aria-label="Atualização do índice">
-          <span>Captura {formatTimestamp(indexData.generatedAt)} · Consultado {formatTimestamp(indexData.appFetchedAt)}</span>
-          <span>{indexData.pokemon.length} Pokémon no índice</span>
+          <span className="usage-period-summary">Doubles · {indexData.pokemon.length} Pokémon no índice</span>
           <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>
             {indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
           </button>
+          <details className="usage-capture-details"><summary>Captura e consulta</summary><span>Captura {formatTimestamp(indexData.generatedAt)} · Consultado {formatTimestamp(indexData.appFetchedAt)}</span></details>
         </div>
       ) : null}
 
