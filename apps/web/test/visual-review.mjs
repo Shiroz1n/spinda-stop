@@ -475,17 +475,22 @@ async function runViewport(viewportName, viewport) {
   if (!evolutionNames.includes("Gabite") || !evolutionNames.includes("Garchomp")) {
     failures.push(`${viewportName}: a ficha de Garchomp não mostrou sua relação evolutiva direta.`);
   }
+  if (viewport.width <= 370) {
+    const currentNameHeight = await evolutionSection.locator(".evolution-list li.is-current strong").evaluate((element) => element.getBoundingClientRect().height);
+    if (currentNameHeight > 22) failures.push(`${viewportName}: o nome da forma atual quebrou em linhas na lista evolutiva.`);
+  }
   await evolutionSection.scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokemon-evolution", { audit: true, fullPage: false });
 
   const learnsetSection = page.locator(".detail-learnsets");
   await learnsetSection.waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".detail-move-list").waitFor({ state: "visible", timeout: 15_000 });
-  const learnsetSearch = page.getByLabel("Golpe");
-  const versionFilter = page.getByLabel("Versão");
-  const methodFilter = page.getByLabel("Método");
-  const typeFilter = page.getByLabel("Tipo do golpe");
-  const categoryFilter = page.getByLabel("Categoria");
+  const learnsetFilters = learnsetSection.locator(".detail-learnset-filters");
+  const learnsetSearch = learnsetFilters.locator('input[type="search"]');
+  const versionFilter = learnsetFilters.locator("select").nth(0);
+  const methodFilter = learnsetFilters.locator("select").nth(1);
+  const typeFilter = learnsetFilters.locator("select").nth(2);
+  const categoryFilter = learnsetFilters.locator("select").nth(3);
   await learnsetSearch.focus();
   await page.keyboard.press("Tab");
   if (!(await versionFilter.evaluate((element) => element === document.activeElement))) {
@@ -504,6 +509,10 @@ async function runViewport(viewportName, viewport) {
   const calculatorHref = await selectedLearnsetRow.locator(".detail-move-calc").getAttribute("href");
   if (calculatorHref !== "/calculator?attacker=Garchomp&move=Earthquake") {
     failures.push(`${viewportName}: a ação contextual do golpe não preservou espécie e golpe para a calculadora.`);
+  }
+  const calculatorAccessibleName = await selectedLearnsetRow.locator(".detail-move-calc").getAttribute("aria-label");
+  if (!calculatorAccessibleName?.includes("Preparar cálculo") || !calculatorAccessibleName.includes("Earthquake")) {
+    failures.push(`${viewportName}: o nome acessível do link contextual não inclui o texto visível e o golpe.`);
   }
   await learnsetSection.scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokemon-learnset-filtered", { audit: true, fullPage: false });

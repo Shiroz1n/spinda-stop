@@ -50,7 +50,7 @@ A fonte comprova que cada golpe listado aparece individualmente na aprendibilida
 - **Time vs 1:** os seis integrantes e quatro golpes são calculados contra o mesmo alvo, com 16 rolls por golpe de dano. Mudanças de golpe, Nature, item, habilidade, SP e campo alteram o cálculo correspondente. Erro por item desconhecido ou sem suporte não impede os outros cinco.
 - **Importar/exportar:** `serializeTeam` seguido de `parseTeam` preserva forma, habilidade, item, Nature, quatro campos de golpe e SP nos seis slots.
 - **Motor:** `@smogon/calc` continua fixado em 0.12.0; não houve alteração na dependência.
-- **Lint/build:** `npm run lint` e `npm run build` passaram. `npm test`: 119 testes, 114 aprovados e 5 ignorados.
+- **Lint/build:** `npm run lint` e `npm run build` passaram. `npm test` local: 120 testes, 115 aprovados e 5 ignorados sem `DATABASE_URL`.
 
 ### Integrações PostgreSQL
 
@@ -58,7 +58,7 @@ No `npm test` local, sem `DATABASE_URL`, os quatro fluxos funcionais são pulado
 
 O container local não permite preparar PostgreSQL 16 conforme `DEVELOPMENT.md`: a configuração falhou com `Cannot open audit interface` ao executar `groupadd`; trocar de usuário falhou com `setgroups: Operation not permitted` e `setresuid: Invalid argument`; `pg_isready -h 127.0.0.1 -p 5432` retornou `no response`. Nenhum `.env`, banco ou credencial de produção foi lido ou usado.
 
-A CI #170 rodou no PostgreSQL 16 descartável declarado em `.github/workflows/ci.yml`. `npm run api:migrate` passou e os quatro casos funcionais passaram: equipe autenticada/sala com duas pessoas, torneio privado com quatro pessoas, rejeição de escrita de outra origem e estado OAuth de uso único com sessão. `npm test` terminou com 118 testes aprovados, zero falhas e zero skips. Contas, salas, torneios, CORS e OAuth ficam verificados pela integração da CI; o ambiente local continua sem servidor de banco.
+A CI #171 rodou no PostgreSQL 16 descartável declarado em `.github/workflows/ci.yml`. `npm run api:migrate` passou e os quatro casos funcionais passaram: equipe autenticada/sala com duas pessoas, torneio privado com quatro pessoas, rejeição de escrita de outra origem e estado OAuth de uso único com sessão. `npm test` terminou com 119 testes aprovados, zero falhas e zero skips. Contas, salas, torneios, CORS e OAuth ficam verificados pela integração da CI; o ambiente local continua sem servidor de banco.
 
 ### Revisão visual local
 

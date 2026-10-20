@@ -100,7 +100,7 @@ function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
             <li key={`${row.move.id}-${row.versionGroupId}-${row.methodId}-${row.level}-${row.order}`}>
               <div className="detail-move-copy"><strong>{row.move.name}</strong><span><TypeTag type={row.move.type} /> <span>{row.move.category === "physical" ? "Físico" : row.move.category === "special" ? "Especial" : row.move.category === "status" ? "Status" : "Categoria não definida"}</span></span></div>
               <div className="detail-move-learning"><span>{formatVersionGroup(versionName)}</span><span>{methodLabel}{row.level > 0 ? ` · nível ${row.level}` : ""}{row.mastery ? " · maestria" : ""}</span></div>
-              <Link className="text-button detail-move-calc" to={`/calculator?${search}`} aria-label={`Preparar ${row.move.name} com ${pokemon.name} na calculadora`}>Preparar cálculo</Link>
+              <Link className="text-button detail-move-calc" to={`/calculator?${search}`} aria-label={`Preparar cálculo de ${row.move.name} com ${pokemon.name}`}>Preparar cálculo</Link>
             </li>
           );
         })}</ul> : <p className="detail-learnset-empty" role="status">A fonte não lista golpes para esta combinação de filtros e forma. Isso não determina compatibilidade ou legalidade em Pokémon Champions.</p>}

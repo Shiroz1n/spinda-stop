@@ -2962,6 +2962,13 @@ a:hover { color: var(--coral-dark); }
   .detail-move-copy > strong { font-size: 0.78rem; }
   .detail-move-learning { font-size: 0.67rem; }
   .detail-move-calc { font-size: 0.67rem; }
+  .evolution-list { display: grid; gap: 0; overflow: visible; }
+  .evolution-list li { min-width: 0; grid-template-columns: 86px minmax(0, 1fr); align-items: center; gap: 6px; padding: 6px 0; border-left: 0; border-bottom: 1px solid var(--line); }
+  .evolution-list li > span { font-size: 0.66rem; }
+  .evolution-list li > a { grid-template-columns: 42px minmax(0, 1fr); gap: 0 4px; }
+  .evolution-list li .pokemon-art { --sprite-size: 40px !important; }
+  .evolution-list li strong { font-size: 0.78rem; overflow-wrap: normal; }
+  .evolution-list li small { font-size: 0.64rem; }
 }
 
 @media (max-width: 370px) {
