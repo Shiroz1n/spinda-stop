@@ -510,7 +510,7 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
-  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/**", (route) => route.abort());
+  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/25.png", (route) => route.abort());
   await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
   const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
   await missingSprite.waitFor({ state: "visible", timeout: 10_000 });
