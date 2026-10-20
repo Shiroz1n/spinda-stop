@@ -27,9 +27,9 @@ export function HomePage() {
           <p className="home-note">Seus rascunhos ficam neste navegador.</p>
         </div>
 
-        <Link className="home-signature" to="/dex/spinda" aria-label="Spinda Stop. Um ponto de partida para sua próxima batalha. Abrir Spinda na Pokédex.">
+        <Link className="home-signature" to="/dex/spinda">
           <span className="home-signature-art"><PokemonSprite pokemon={spinda} name="Spinda" size={176} priority decorative /></span>
-          <span><strong>Spinda Stop</strong><small>Um ponto de partida para sua próxima batalha.</small></span>
+          <span><strong>Spinda Stop</strong><small>Um ponto de partida para sua próxima batalha.</small><span className="sr-only">Abrir Spinda na Pokédex.</span></span>
         </Link>
       </section>
 

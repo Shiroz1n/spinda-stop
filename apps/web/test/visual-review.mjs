@@ -438,7 +438,7 @@ async function runViewport(viewportName, viewport) {
   if (!firstCardIdentity.number || !firstCardIdentity.name || !firstCardIdentity.hasType || firstCardIdentity.hasStats) {
     failures.push(`${viewportName}: a linha da Pokédex não mostra número, nome e tipo de forma compacta.`);
   }
-  const search = page.getByPlaceholder("Buscar por nome, forma ou número");
+  const search = page.getByRole("searchbox", { name: "Buscar espécie, forma ou número" });
   const dexTypeFilter = page.locator('.dex-toolbar .filter-field:has-text("Tipo") select');
   const dexGenerationFilter = page.locator('.dex-toolbar .filter-field:has-text("Geração") select');
   await dexTypeFilter.selectOption("dragon");
