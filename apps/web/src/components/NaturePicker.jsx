@@ -21,18 +21,20 @@ export function NaturePicker({ id, label = "Nature", value, onChange, className 
     const mobileNav = document.querySelector(".mobile-primary-nav");
     const mobileNavBounds = mobileNav?.getBoundingClientRect();
     const mobileNavVisible = mobileNavBounds && mobileNavBounds.height > 0
-      && window.getComputedStyle(mobileNav).display !== "none"
+      && mobileNavBounds.bottom > 0
       && mobileNavBounds.top < viewportHeight;
     const safeBottom = mobileNavVisible ? Math.min(viewportHeight, mobileNavBounds.top) : viewportHeight;
+    const safeBottomLimit = Math.max(gutter + 80, safeBottom - gutter);
     const width = Math.max(1, Math.min(620, viewportWidth - gutter * 2));
-    const maxHeight = Math.max(80, Math.min(420, safeBottom - gutter * 2));
-    const belowSpace = Math.max(0, safeBottom - bounds.bottom - gutter - 5);
+    const maxHeight = Math.max(80, Math.min(420, safeBottomLimit - gutter));
+    const belowSpace = Math.max(0, safeBottomLimit - bounds.bottom - 5);
     const aboveSpace = Math.max(0, bounds.top - gutter - 5);
     const openBelow = belowSpace >= Math.min(240, maxHeight) || belowSpace >= aboveSpace;
     const availableHeight = openBelow ? belowSpace : aboveSpace;
-    const height = Math.max(80, Math.min(maxHeight, availableHeight));
+    const height = Math.min(maxHeight, Math.max(80, availableHeight));
     const left = Math.max(gutter, Math.min(bounds.left, viewportWidth - width - gutter));
-    const top = openBelow ? bounds.bottom + 5 : Math.max(gutter, bounds.top - height - 5);
+    const proposedTop = openBelow ? bounds.bottom + 5 : Math.max(gutter, bounds.top - height - 5);
+    const top = Math.max(gutter, Math.min(proposedTop, safeBottomLimit - height));
 
     return {
       position: "fixed",

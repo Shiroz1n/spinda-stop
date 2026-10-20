@@ -20,6 +20,7 @@ const representativeCaptures = new Set([
   "pokedex-base-stat-filter-open",
   "pokedex-empty",
   "pokemon-sheet",
+  "pokemon-sprite-unavailable",
   "pokemon-evolution",
   "pokemon-alolan-raichu-evolution",
   "pokemon-form-learnset-empty",
@@ -49,6 +50,7 @@ const representativeCaptures = new Set([
   "calculator-team-vs-one-team",
   "calculator-empty-choice",
   "speed-tiers-mega-garchomp-z",
+  "speed-tiers-target-nature-open",
   "speed-tiers-mega-garchomp-z-results",
   "room-state-flow",
   "rooms-signed-out",
@@ -507,6 +509,17 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
+  const missingSpritePage = await context.newPage();
+  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/**", (route) => route.abort());
+  await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
+  const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
+  await missingSprite.waitFor({ state: "visible", timeout: 10_000 });
+  await missingSpritePage.locator(".detail-stage-art .pokemon-art.is-fallback").waitFor({ state: "visible", timeout: 10_000 });
+  const missingSpriteLabel = await missingSprite.getAttribute("aria-label");
+  observations.push({ viewport: viewportName, name: "pokemon-sprite-unavailable-state", ariaLabel: missingSpriteLabel });
+  if (!missingSpriteLabel?.includes("sprite indisponível")) failures.push(`${viewportName}: o sprite ausente deve informar seu estado pelo nome acessível.`);
+  await safeCapture(missingSpritePage, viewportName, "pokemon-sprite-unavailable", { audit: true, fullPage: false });
+  await missingSpritePage.close();
   const evolutionSection = page.locator(".detail-evolutions");
   await evolutionSection.waitFor({ state: "visible", timeout: 10_000 });
   const evolutionNames = await evolutionSection.locator(".evolution-list strong").allTextContents();
@@ -1538,6 +1551,7 @@ async function runViewport(viewportName, viewport) {
     || speedTargetNatureBounds.position !== "fixed") {
     failures.push(`${viewportName}: o menu de Nature do alvo em Speed Tiers deve caber na largura da tela.`);
   }
+  await safeCapture(page, viewportName, "speed-tiers-target-nature-open", { audit: true, fullPage: false });
   await page.keyboard.press("Escape");
   await speedAssumptionsDisclosure.locator(":scope > summary").click();
   await page.locator(".speed-target-banner").scrollIntoViewIfNeeded();

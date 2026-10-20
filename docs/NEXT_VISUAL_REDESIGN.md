@@ -34,4 +34,10 @@ Comparação feita em 20/10/2026 entre as capturas selecionadas do Visual review
 - Sprites existentes permanecem ligados ao ID exato da forma. As capturas DataDex não autorizam redistribuição de artes/modelos e não comprovam cobertura shiny por forma; nenhuma galeria normal/brilhante será simulada nesta PR.
 - Usage segue proveniência e contrato atuais de cada adaptador. Não acrescentamos win rate, rental, catálogo de torneio ou métricas calculadas de marginais.
 
-Este documento descreve as decisões e critérios desta alteração. Os resultados visuais efetivos, capturas e limites da revisão serão acrescentados antes da abertura da PR.
+## Revisão visual e resultados
+
+A primeira execução do Visual review (#136, HEAD `02e2d739`) confirmou os fluxos, mas encontrou defeitos concretos: o link da PokéAPI manteve amarelo de um tema antigo sobre fundo claro; o número da Pokédex se esticou verticalmente sobre o sprite; a faixa intermediária de fonte do Usage reservou o espaço de rodapé mobile entre controles e conteúdo; o controle de Trick Room aproximou explicação do rótulo; em larguras móveis, o seletor de Nature do alvo podia ultrapassar a área útil. Também faltava uma captura forçada para sprite indisponível.
+
+Foram corrigidos os tokens/cascata do rodapé, o posicionamento do número, o espaço do seletor de fonte, a hierarquia do Usage em telas estreitas, o grid de Trick Room e os limites do popover em relação à navegação fixa. A busca e os selects do Dex também receberam texto compacto para 320 px. A revisão repetida adiciona capturas explícitas de sprite ausente e do popover aberto de Nature em Speed Tiers. O artefato e as conclusões da nova execução serão associados à PR #29 quando a automação terminar.
+
+Os quatro viewports automatizados são 1440, 390, 320 e 720 px. Eles conferem reflow, overflow, estados de loading/erro/vazio, conteúdo extenso, navegação por teclado e áreas de foco; não substituem avaliação humana em navegador nem medem zoom real do sistema.
