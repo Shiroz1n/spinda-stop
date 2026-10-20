@@ -119,7 +119,7 @@ export function DexPage() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar por nome, forma ou número"
+            placeholder="Buscar Pokémon, forma ou nº"
           />
         </label>
         <label className="filter-field">

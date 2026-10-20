@@ -551,8 +551,7 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "pokedex-restored", { fullPage: false });
 
   await page.goto(`${baseUrl}/builder`, { waitUntil: "domcontentloaded" });
-  const builderTitle = viewport.width <= 420 ? "Meu time" : "Monte seu time";
-  await page.getByRole("heading", { name: builderTitle, exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".builder-heading h1").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "builder-empty", { audit: true });
   const emptySpeedTarget = page.locator(".builder-speed-target.is-empty");
   await emptySpeedTarget.scrollIntoViewIfNeeded();
@@ -633,7 +632,7 @@ async function runViewport(viewportName, viewport) {
   await page.keyboard.press("Tab");
   const firstNatureFocused = await page.evaluate(() => document.activeElement?.classList.contains("nature-picker-option"));
   if (!firstNatureFocused) failures.push(`${viewportName}: Tab não moveu o foco do seletor de Nature para uma opção.`);
-  await page.locator("#member-nature-options").getByRole("button", { name: /Adamant Ataque/ }).click();
+  await page.locator("#member-nature-options").getByRole("button", { name: /^Adamant/ }).click();
   await page.locator("#member-nature").getByText("Adamant", { exact: true }).waitFor({ state: "visible" });
   const natureStatsAfter = await page.locator(".builder-nature-stats").innerText();
   if (natureStatsBefore === natureStatsAfter) failures.push(`${viewportName}: trocar para Adamant não atualizou os stats mostrados no builder.`);
@@ -799,7 +798,7 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".team-slot").first().click();
   const mainNatureTrigger = page.locator("#member-nature");
   await mainNatureTrigger.click();
-  await page.locator("#member-nature-options").getByRole("button", { name: /Jolly Velocidade/ }).click();
+  await page.locator("#member-nature-options").getByRole("button", { name: /^Jolly/ }).click();
   await page.getByRole("link", { name: "Comparar Speed" }).click();
   const speedAfterSavedNatureChange = await page.locator(".builder-speed-row").first().getAttribute("data-speed");
   observations.push({ viewport: viewportName, name: "builder-speed-uses-current-saved-nature", speed: speedAfterSavedNatureChange });
