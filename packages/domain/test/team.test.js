@@ -7,6 +7,7 @@ import {
   formatNationalNumber,
   parseTeam,
   searchPokemon,
+  sortPokemon,
   setTeamMember,
   serializeTeam,
 } from "../src/index.js";
@@ -151,4 +152,26 @@ test("searches by accents, slug, type, and generation with no filters by default
   assert.equal(searchPokemon(entries, "raichu", { type: "electric", generation: 7 }).length, 1);
   assert.equal(searchPokemon(entries, "nidoran").length, 1);
   assert.equal(formatNationalNumber(25), "#0025");
+});
+
+test("filters by exact base-stat total and sorts deterministically without ranking language", () => {
+  const entries = [
+    { ...catalog[0], slug: "middle", speciesId: 4, name: "Middle", stats: { hp: 50, atk: 50 }, baseStatTotal: 100 },
+    { ...catalog[0], slug: "strong", speciesId: 9, name: "Strong", stats: { hp: 90, atk: 90 }, baseStatTotal: 180 },
+    { ...catalog[0], slug: "small", speciesId: 1, name: "Small", stats: { hp: 25, atk: 25 }, baseStatTotal: 50 },
+  ];
+
+  assert.deepEqual(searchPokemon(entries, "", { minimumBaseStatTotal: 100, maximumBaseStatTotal: 180 }).map(({ slug }) => slug), ["middle", "strong"]);
+  assert.deepEqual(sortPokemon(entries, "total-desc").map(({ slug }) => slug), ["strong", "middle", "small"]);
+  assert.deepEqual(sortPokemon(entries, "name").map(({ slug }) => slug), ["middle", "small", "strong"]);
+  const incomplete = { ...catalog[0], slug: "incomplete", speciesId: 10, stats: { hp: 30 } };
+  assert.deepEqual(searchPokemon([...entries, incomplete], "", { minimumBaseStatTotal: 75 }).map(({ slug }) => slug), ["middle", "strong"]);
+});
+
+test("preserves PokéAPI order when sorting variants by national number", () => {
+  const entries = [
+    { ...catalog[0], slug: "form-later", speciesId: 25, spriteId: 20, order: 20 },
+    { ...catalog[0], slug: "form-first", speciesId: 25, spriteId: 30, order: 10 },
+  ];
+  assert.deepEqual(sortPokemon(entries).map(({ slug }) => slug), ["form-first", "form-later"]);
 });

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPokedex, buildPokemonMoveLearnsets, parseCsv, POKEAPI_COMMIT, shardPokemonMoveLearnsets, toDexIndex } from "../scripts/sync-pokedex.mjs";
+import { buildEvolutionRules, buildPokedex, buildPokemonMoveLearnsets, parseCsv, POKEAPI_COMMIT, shardPokemonMoveLearnsets, toDexIndex } from "../scripts/sync-pokedex.mjs";
 
 test("parses quoted commas, escaped quotes, and line breaks", () => {
   const rows = parseCsv('id,name,description\r\n1,"Mr. Mime","line one,\nline ""two"""\r\n');
@@ -45,6 +45,8 @@ test("builds separate species and form identifiers from source CSVs", () => {
     ["raichu-alola", 10081, "alola"],
   ]);
   assert.equal(index[1].isDefault, false);
+  assert.deepEqual(index.map(({ order }) => order), [35, 999]);
+  assert.deepEqual(index.map(({ baseStatTotal }) => baseStatTotal), [320, null]);
 });
 
 test("preserves evolution parent by species and exact-form identity in the Dex index", () => {
@@ -94,4 +96,50 @@ test("builds form-specific move learnsets with separate game version and learnin
   assert.deepEqual(shards[1].pokemonMovesById["10081"], learnsets.pokemonMovesById["10081"]);
   assert.equal(shards[2].pokemonMovesById["10081"], undefined);
   assert.equal(shards[1].metadata.sourceCommit, POKEAPI_COMMIT);
+});
+
+test("attaches exact evolution triggers, named conditions, and source version groups", () => {
+  const evolutionColumns = "id,evolved_species_id,evolution_trigger_id,version_group_id,is_default,trigger_item_id,minimum_level,gender_id,location_id,held_item_id,time_of_day,known_move_id,known_move_type_id,minimum_happiness,minimum_beauty,minimum_affection,relative_physical_stats,party_species_id,party_type_id,trade_species_id,needs_overworld_rain,turn_upside_down,needs_multiplayer,near_special_rock,region_id,required_pokemon_form_id,evolved_pokemon_form_id,used_move_id,minimum_move_count,minimum_steps,minimum_damage_taken,nature_bitmask,condition_expression,percentage_chance".split(",");
+  const evolutionRow = (values) => evolutionColumns.map((key) => values[key] ?? "").join(",");
+  const evolutionCsv = [
+    evolutionColumns.join(","),
+    evolutionRow({ id: "1", evolved_species_id: "2", evolution_trigger_id: "1", version_group_id: "1", is_default: "1", minimum_level: "16" }),
+    evolutionRow({ id: "2", evolved_species_id: "26", evolution_trigger_id: "3", version_group_id: "1", is_default: "1", trigger_item_id: "83" }),
+    evolutionRow({ id: "3", evolved_species_id: "26", evolution_trigger_id: "3", version_group_id: "17", is_default: "1", trigger_item_id: "83" }),
+    evolutionRow({ id: "4", evolved_species_id: "3", evolution_trigger_id: "1", version_group_id: "1", is_default: "1", minimum_level: "12", gender_id: "0" }),
+  ].join("\n");
+  const rules = buildEvolutionRules({
+    "pokemon_evolution.csv": evolutionCsv,
+    "evolution_triggers.csv": "id,identifier\n1,level-up\n3,use-item",
+    "items.csv": "id,identifier,category_id,cost,fling_power,fling_effect_id\n83,thunder-stone,\n",
+    "item_names.csv": "item_id,local_language_id,name\n83,9,Thunder Stone",
+    "locations.csv": "id,region_id,identifier\n1,1,canalave-city",
+    "location_names.csv": "location_id,local_language_id,name,subtitle\n1,9,Canalave City,",
+    "regions.csv": "id,identifier\n1,kanto",
+    "region_names.csv": "region_id,local_language_id,name\n1,9,Kanto",
+    "pokemon_species.csv": "id,identifier\n1,bulbasaur\n2,ivysaur\n26,raichu",
+    "pokemon_species_names.csv": "pokemon_species_id,local_language_id,name,genus\n2,9,Ivysaur,Seed\n26,9,Raichu,Mouse",
+    "moves.csv": "id,identifier,type_id,power,accuracy,damage_class_id\n85,thunderbolt,13,90,100,3",
+    "move_names.csv": "move_id,local_language_id,name\n85,9,Thunderbolt",
+    "types.csv": "id,identifier,generation_id,damage_class_id\n13,electric,1,3",
+    "version_groups.csv": "id,identifier,generation_id,order\n1,red-blue,1,1\n17,scarlet-violet,9,17",
+    "pokemon_forms.csv": "id,identifier,form_identifier,pokemon_id,is_default,is_battle_only,is_mega,order\n1,bulbasaur,,1,1,0,0,1",
+  });
+
+  assert.deepEqual(rules["2"][0], {
+    trigger: "level-up",
+    conditions: [{ key: "minimum_level", value: 16 }],
+    versionGroups: ["red-blue"],
+    isDefault: true,
+  });
+  assert.deepEqual(rules["26"], [{
+    trigger: "use-item",
+    conditions: [{ key: "trigger_item", value: "Thunder Stone" }],
+    versionGroups: ["red-blue", "scarlet-violet"],
+    isDefault: true,
+  }]);
+  assert.deepEqual(rules["3"][0].conditions, [
+    { key: "minimum_level", value: 12 },
+    { key: "gender_id", value: "genderless" },
+  ]);
 });

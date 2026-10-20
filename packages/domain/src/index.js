@@ -60,6 +60,8 @@ export function addPokemonToDraft(team, pokemon) {
 export function searchPokemon(pokemon, query = "", filters = {}) {
   const normalizedQuery = normalizeText(query.trim());
   const { type = "", generation = "" } = filters;
+  const minimumBaseStatTotal = optionalNumber(filters.minimumBaseStatTotal);
+  const maximumBaseStatTotal = optionalNumber(filters.maximumBaseStatTotal);
 
   return pokemon.filter((entry) => {
     const matchesQuery = !normalizedQuery || normalizeText([
@@ -71,8 +73,48 @@ export function searchPokemon(pokemon, query = "", filters = {}) {
     ].filter(Boolean).join(" ")).includes(normalizedQuery);
     const matchesType = !type || entry.types.includes(type);
     const matchesGeneration = !generation || String(entry.generation) === String(generation);
-    return matchesQuery && matchesType && matchesGeneration;
+    const baseStatTotal = getBaseStatTotal(entry);
+    const matchesMinimumTotal = minimumBaseStatTotal === null || (baseStatTotal !== null && baseStatTotal >= minimumBaseStatTotal);
+    const matchesMaximumTotal = maximumBaseStatTotal === null || (baseStatTotal !== null && baseStatTotal <= maximumBaseStatTotal);
+    return matchesQuery && matchesType && matchesGeneration && matchesMinimumTotal && matchesMaximumTotal;
   });
+}
+
+export function sortPokemon(pokemon, sort = "number") {
+  return pokemon.map((entry, index) => ({ entry, index })).sort((left, right) => {
+    const leftTotal = getBaseStatTotal(left.entry);
+    const rightTotal = getBaseStatTotal(right.entry);
+    const byNumber = Number(left.entry.speciesId) - Number(right.entry.speciesId)
+      || Number(left.entry.order ?? left.entry.spriteId ?? left.entry.pokemonId ?? 0)
+        - Number(right.entry.order ?? right.entry.spriteId ?? right.entry.pokemonId ?? 0);
+  const compareTotal = (direction) => {
+    if (leftTotal === null && rightTotal === null) return byNumber;
+    if (leftTotal === null) return 1;
+    if (rightTotal === null) return -1;
+    return direction * (leftTotal - rightTotal) || byNumber;
+  };
+    const comparison = sort === "name"
+      ? left.entry.name.localeCompare(right.entry.name, "en") || byNumber
+      : sort === "total-asc"
+      ? compareTotal(1)
+        : sort === "total-desc"
+        ? compareTotal(-1)
+          : byNumber;
+    return comparison || left.index - right.index;
+  }).map(({ entry }) => entry);
+}
+
+function getBaseStatTotal(entry) {
+  if (Number.isFinite(entry.baseStatTotal)) return entry.baseStatTotal;
+  const keys = ["hp", "atk", "def", "spa", "spd", "spe"];
+  if (!keys.every((key) => Number.isFinite(entry.stats?.[key]))) return null;
+  return keys.reduce((total, key) => total + entry.stats[key], 0);
+}
+
+function optionalNumber(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 export function formatNationalNumber(speciesId) {

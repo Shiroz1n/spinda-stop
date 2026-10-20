@@ -1,10 +1,10 @@
 # Spinda Stop — design system e fluxos
 
-Estado: direção implementada e revisada no PR #28. Este documento registra os tokens e componentes atuais, a inspeção visual final e os limites de fonte que ainda não podem ser preenchidos. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: direção ampliada na próxima PR, em revisão. A linha de base visual do PR #28 está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); as decisões e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md). Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
-Uma ferramenta competitiva com o reconhecimento imediato de uma Pokédex portátil. A base vem dos menus e sprites de Pokémon FireRed/GBA; a densidade e a precisão vêm de uma ferramenta de análise. O usuário deve ver Pokémon, formato e próxima ação antes de texto sobre infraestrutura. O visual deve ser próprio do Spinda Stop, sem reproduzir componentes ou artes exclusivas dos sites estudados.
+Uma ferramenta competitiva com leitura direta de uma Pokédex portátil. A referência FireRed/GBA aparece em títulos curtos, seleção e sprites; interfaces de dados usam superfícies leves, números alinhados e controles claros. O usuário deve ver Pokémon, forma, formato, resultado e próxima ação antes de texto sobre infraestrutura. O visual é próprio do Spinda Stop, sem reproduzir componentes ou artes exclusivas dos sites estudados.
 
 Na primeira dobra: Dex mostra catálogo e busca; ficha mostra Pokémon e navegação de dados; Usage mostra ranking e espécie; builder mostra seis posições e edição selecionada; calculadora mostra confronto e resultado; Speed mostra alvo e comparação; sala/torneio mostram participantes, estado e próxima ação.
 
@@ -29,22 +29,22 @@ As imagens enviadas pelo usuário servem como referência para revisão. Não in
 
 | Papel | Token | Valor atual |
 | --- | --- | --- |
-| Página | `--paper` | `#dce8dc` |
-| Sombra de superfície | `--paper-shadow` | `#b7cbbd` |
-| Painel | `--surface` | `#fffbe7` |
-| Agrupamento secundário | `--surface-alt` | `#e8efd7` |
-| Campo de formulário | `--field` | `#f4f2dd` |
-| Sprite: céu / chão | `--sky` / `--grass` | `#c9e2dd` / `#98b77a` |
-| Seleção | `--selection` | `#f2dda0` |
-| Texto / texto secundário | `--ink` / `--muted` | `#173746` / `#465d5e` |
-| Divisória | `--line` | `#84988c` |
-| Acento azul / navegação | `--blue` / `--blue-dark` | `#2e7896` / `#234f63` |
-| Ação / ação em texto | `--coral` / `--coral-dark` | `#b84538` / `#8d342d` |
-| Confirmação / seleção em texto | `--green` / `--gold` | `#326b45` / `#8e6817` |
+| Página | `--paper` | `#f1f2e8` |
+| Sombra de superfície | `--paper-shadow` | `#d6ded2` |
+| Painel | `--surface` | `#fffdf7` |
+| Agrupamento secundário | `--surface-alt` | `#e5eddf` |
+| Campo de formulário | `--field` | `#fcfbf5` |
+| Sprite: céu / chão | `--sky` / `--grass` | `#d8e9e3` / `#9dbf82` |
+| Seleção | `--selection` | `#f2e2b0` |
+| Texto / texto secundário | `--ink` / `--muted` | `#18382f` / `#52675e` |
+| Divisória | `--line` | `#bdc9bf` |
+| Acento azul / navegação | `--blue` / `--blue-dark` | `#267186` / `#1f4d5b` |
+| Ação / ação em texto | `--coral` / `--coral-dark` | `#bc5546` / `#82382f` |
+| Confirmação / seleção em texto | `--green` / `--gold` | `#39764b` / `#8a6516` |
 | Foco | `--focus` | `#005c9a` |
-| Geometria / sombra curta | `--radius` / `--pixel-edge` | `3px` / `2px 2px 0 var(--paper-shadow)` |
+| Geometria / sombra de elevação | `--radius` / `--pixel-edge` | `9px` / `0 2px 8px rgb(24 56 47 / 7%)` |
 
-O CSS também mantém `--fire-ink: #8d342d` para texto de ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores novos. Os estados normais, selecionados, desabilitados, erro e foco pertencem ao componente e usam rótulo ou forma além da cor. A revisão verifica foco por teclado e axe; o cálculo de contraste do runner observa navegação e atribuição no rodapé, não todas as combinações. Não há alegação de uma matriz completa de contraste.
+O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores pelo CSS. A linguagem atual reserva borda/fundo destacado para seleção, resultado e estado; demais agrupamentos usam alinhamento e divisórias. Estados selecionados, desabilitados, erro e foco têm rótulo ou forma além da cor. Não há alegação de uma matriz completa de contraste.
 
 ### Tipografia, molduras, imagens e movimento
 
@@ -60,23 +60,23 @@ O CSS também mantém `--fire-ink: #8d342d` para texto de ação/alerta e os tok
 | Componente ou tela | Responsabilidade confirmada |
 | --- | --- |
 | `PokemonSprite` | Sprite da forma disponível, reserva de espaço e fallback com nome quando a imagem falha; evita substituir uma forma sem sprite próprio pela arte base. |
-| `PokemonCard` + `DexPage` | Linha/cartão compacto com número, nome, forma e tipos; busca e filtros percorrem o catálogo inteiro. |
-| `DexDetailPage` | Identidade em primeiro plano, navegação por seção, formas, evolução direta, multiplicadores gerais e aprendibilidade filtrada com fonte. |
+| `PokemonCard` + `DexPage` | Linha compacta com número, nome, forma e tipos; busca, geração, tipo, limites do total base e ordenação percorrem o catálogo inteiro. O total usa os seis stats gerais. |
+| `DexDetailPage` | Identidade exata, navegação de seção acessível, formas, condições e método de evolução por fonte/versão, multiplicadores gerais e aprendibilidade por forma, jogo, método, tipo e categoria. |
 | `TypeTag` | Nome/símbolo e cor contextual para reconhecer tipo sem depender só da cor. |
 | `NaturePicker` + `BuilderPage` | Seleção de Nature com efeitos ↑/↓, seis sets, campos editáveis, importação/exportação e stats recalculados. |
 | `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1, resumo do confronto, resultados e rolls por golpe. |
 | `UsagePage` e vistas MetaRoll | Fonte, formato e período junto da seleção, ranking e filtros publicados por cada fonte. |
 | `RoomsPage` e `TournamentsPage` | Participantes, estado e próxima ação; vazio, erro, convite e resultado em contexto. |
 
-Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicáveis. Busca e filtro preservam contexto ao abrir e voltar. Carregamento, vazio e falha mostram a próxima ação sem páginas de avisos. Fonte, formato, período e captura permanecem visíveis onde qualificam números; detalhes de API ficam em “Sobre os dados”. A [última revisão do PR #28](PR28_FOLLOWUP.md) registra telas e estados exercitados, correções encontradas nas capturas e limites do ambiente.
+Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicáveis. Busca e filtro preservam contexto ao abrir e voltar. Carregamento, vazio e falha mostram a próxima ação sem páginas de avisos. Fonte, formato, período e captura permanecem visíveis onde qualificam números; detalhes de API ficam em “Sobre os dados”. Total de stats e critérios evolutivos vêm de PokéAPI como dados gerais, nunca como declaração de status no Champions. A [revisão do PR #28](PR28_FOLLOWUP.md) registra a linha de base; [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md) registra decisões e resultados desta rodada.
 
 ## Padrões por tela
 
 | Tela | Primeira tarefa e estrutura | Interações a conferir | Fonte e limite |
 | --- | --- | --- | --- |
-| Home | Entradas claras para explorar, montar e calcular; um Pokémon reconhecível, sem hero de SaaS genérico. | Navegação por teclado, foco, celular. | Sem promessas de dados “ao vivo” não verificadas. |
-| Dex | Busca/filtro sobre catálogo inteiro; lista progressiva de espécies e formas, sprite/nome/tipos visíveis. | Scroll, filtro combinado, voltar da ficha com posição preservada. | PokéAPI geral; legalidade Champions desconhecida sem fonte. |
-| Ficha | Sprite/forma/tipos/stats primeiro; abas que separam informações, relações de tipo, golpes e mídia quando existirem dados. | Trocar forma, evoluções, voltar; filtros de golpes; links para Usage/builder/calc. | Mostrar aprendibilidade por jogo/fonte; não afirmar golpes legais em Champions sem regras. Galeria só com assets documentados. |
+| Home | Busca real da Pokédex e entrada para montar time; ferramentas competitivas em uma lista compacta. | Enviar busca, navegar por teclado e testar no celular. | Sem métricas ou promessas de dados “ao vivo”. |
+| Dex | Busca/filtros e ordenação sobre catálogo inteiro; lista densa de espécies/formas com número, sprite e tipos. | Combinar filtros, limitar total base, ordenar e voltar à posição salva. | Stats gerais da PokéAPI; total não é stat de Champions. |
+| Ficha | Sprite/forma/tipos/stats primeiro; seções de evolução/condições, formas, relações de tipo e aprendibilidade. | Trocar forma pela ficha e pelo filtro de golpes; preservar forma exata; alcançar seções por toque/teclado. | Aprendibilidade geral por jogo/versão/método não equivale a compatibilidade de set ou legalidade Champions. Galeria shiny só após licença/cobertura confirmadas. |
 | Usage | Ranking e detalhe de uma espécie, seções compactas para movimentos, item, Nature, SP, parceiros e histórico. | Buscar, selecionar, combinar filtros, trocar fonte/período, atualizar e falhar. | Battle Data e MetaRoll separados; sem inventar denominador. |
 | Builder | Seis slots e set selecionado; Nature com nome e ↑/↓, quatro golpes, SP e orçamento; ações próximas ao set. | Trocar slot, importar/exportar, item desconhecido, golpe não validado, preservar set. | Distinguir `unknown` de `unavailable`; só afirmar validade oficial após fonte. |
 | Calculadora | Confronto e dano/HP primeiro; 1 vs 1, 1 vs vários, Time vs 1; detalhes e rolls recolhíveis. | Alterar golpe/campo, comparar A/B, carregar seis sets válidos, registrar erro por membro. | `@smogon/calc`; não tratar KO empírico como dano teórico. |
@@ -86,7 +86,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 
 ## Oportunidades de produto
 
-1. **Ficha enciclopédica ampliada:** evolução direta por espécie, variantes e relações de tipo já têm fonte e aparecem na ficha. A lista de golpes usa a forma exata, jogo, método, tipo e categoria da revisão fixada da PokéAPI. Grupos de ovos, condições de evolução detalhadas e localização ainda precisam de um contrato de dados por jogo. Localização em Legends Z-A não prova disponibilidade em Pokémon Champions.
+1. **Ficha enciclopédica ampliada:** evolução direta, método e condições estruturadas, variantes, relações de tipo e total base já têm fonte e aparecem na ficha/Dex. A lista de golpes usa a forma exata, jogo/versão, método, tipo e categoria da revisão fixada da PokéAPI. Grupos de ovos e localização orientada a um jogo continuam dependendo de um contrato claro por versão. Localização em Legends Z-A não prova disponibilidade em Pokémon Champions.
 2. **Galeria normal/brilhante da forma exata:** depende de confirmar direitos e cobertura consistente de sprites shiny por forma, com atribuição, fallback e teste dos assets. Não renderizar uma galeria vazia enquanto a fonte não estiver confirmada.
 3. **Golpes permitidos em Pokémon Champions:** aprendibilidade geral já pode ser consultada por jogo e versão. Filtrar ou rotular compatibilidade/legalidade no Champions ainda depende de fonte de regulamento autorizada, formato, temporada e data; uma linha de Legends Z-A ou de Scarlet/Violet não responde isso.
 4. **Análise de tipo explicável:** fraqueza/resistência/imunidade com multiplicador da combinação de tipos já aparece. Habilidades, itens, clima e golpes condicionais são outra camada e só entram quando o motor identifica e modela seu efeito.
@@ -99,4 +99,4 @@ Mantenha oportunidades futuras no inventário com fonte, aceitação e prioridad
 
 ## Protocolo de revisão
 
-Para cada rota, capture a primeira dobra e estados com conteúdo real em 1440, 390 e 320 px; inclua erro, vazio e carregamento quando aplicáveis. Inspecione as imagens manualmente, percorra fluxos reais com teclado e compare com o estado anterior do PR #28. Registre **referência → intenção → alteração própria → captura → limite de dados**. O viewport CI de 720 CSS px ajuda a inspecionar reflow, mas não é zoom real do navegador. O Chrome isolado desta sessão não alcançou a porta local do app; a revisão pós-correção usa o runner Playwright do Actions, que executa o app e os fluxos no ambiente de teste. Consulte [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md) para a última execução, seus estados cobertos e o limite de avaliação manual.
+Para cada rota, capture a primeira dobra e estados com conteúdo real em 1440, 390 e 320 px; inclua erro, vazio e carregamento quando aplicáveis. Inspecione as imagens manualmente, percorra fluxos reais com teclado e compare com o estado anterior do PR #28. Registre **referência → intenção → alteração própria → captura → limite de dados**. O viewport CI de 720 CSS px ajuda a inspecionar reflow, mas não é zoom real do navegador. Nesta reformulação, o download local do Chromium retornou arquivos vazios/corrompidos e o navegador isolado não acessou a porta local; a revisão visual real deve vir do runner Playwright no CI do PR, que publica as capturas como artifact. Isso não substitui a avaliação manual das imagens.
