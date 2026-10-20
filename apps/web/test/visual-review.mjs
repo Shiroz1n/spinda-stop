@@ -378,6 +378,9 @@ async function runViewport(viewportName, viewport) {
   await unavailablePage.route("**/api/auth/status", (route) => route.abort());
   await unavailablePage.goto(`${baseUrl}/rooms`, { waitUntil: "domcontentloaded" });
   await unavailablePage.locator(".community-auth-card .community-error").waitFor({ state: "visible", timeout: 10_000 });
+  const authUnavailableCopy = await unavailablePage.locator(".community-auth-card .community-config-note").innerText();
+  assert.equal(authUnavailableCopy, "Não foi possível verificar o acesso com GitHub. Tente novamente.", "a indisponibilidade do login deve orientar a pessoa sem expor detalhes internos de configuração");
+  observations.push({ viewport: viewportName, name: "rooms-auth-unavailable-copy", text: authUnavailableCopy });
   await safeCapture(unavailablePage, viewportName, "rooms-api-error", { audit: true });
   await unavailablePage.close();
   await page.keyboard.press("Tab");
@@ -1622,7 +1625,7 @@ try {
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
     ["mobile-320", { width: 320, height: 760 }],
-    ["zoom200", { width: 720, height: 960 }],
+    ["reflow-720", { width: 720, height: 960 }],
   ];
   for (const [name, viewport] of viewports) {
     try {
@@ -1637,7 +1640,6 @@ try {
     viewports: viewports.map(([name, viewport]) => ({
       name,
       cssWidth: viewport.width,
-      zoomEquivalent: name === "zoom200" ? "720 CSS px viewport, equivalent to 200% zoom from 1440 CSS px" : null,
     })),
     status: failures.length || accessibilityIssues.length ? "needs-review" : "passed",
     observations,

@@ -135,7 +135,7 @@ export function RoomsPage() {
           <p>Usamos o identificador e o nome público do GitHub. Não pedimos e-mail, senha do jogo nem dados da Nintendo.</p>
           {error ? <ErrorNotice>{error}</ErrorNotice> : null}
           {authStatus?.githubOAuthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : authStatus ? <p className="community-config-note">A entrada com GitHub não está disponível agora.</p> : null}
-          {authStatus === null && error ? <p className="community-config-note">Não foi possível consultar a configuração do login. Tente verificar o serviço novamente.</p> : null}
+          {authStatus === null && error ? <p className="community-config-note">Não foi possível verificar o acesso com GitHub. Tente novamente.</p> : null}
           <button className="text-button" type="button" onClick={refresh}>Verificar de novo</button>
         </section>
       ) : null}
