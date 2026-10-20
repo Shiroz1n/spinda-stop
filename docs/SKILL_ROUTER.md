@@ -4,7 +4,7 @@ Use poucas referências que se aplicam ao trabalho; não instale coleções inte
 
 | Tarefa | Revisões úteis |
 |---|---|
-| React e visual | frontend-design, React, Impeccable, responsividade e revisão de código. |
+| React e visual | Leia `UI_HUMANIZER.md` e `SPINDA_STOP_DESIGN_SYSTEM.md`; aplique frontend-design, React, Impeccable, responsividade e revisão de código quando as respectivas skills estiverem realmente disponíveis. |
 | Formulário ou importação | validação, acessibilidade, segurança e testes de domínio. |
 | Fonte de dados | documentação do fornecedor, licença, cache, proveniência e indisponibilidade. |
 | API e torneios | segurança, autorização por recurso, privacidade, rate limit e concorrência. |

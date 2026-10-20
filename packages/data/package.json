@@ -6,7 +6,8 @@
     "./pokedex": "./generated/pokedex.json",
     "./details": "./generated/details.json",
     "./moves": "./generated/moves.json",
-    "./natures": "./generated/natures.json"
+    "./natures": "./generated/natures.json",
+    "./learnsets/*": "./generated/learnsets/*.json"
   },
   "scripts": {
     "sync": "node scripts/sync-pokedex.mjs"

@@ -1,0 +1,247 @@
+{
+  "metadata": {
+    "source": "PokéAPI v2 CSV",
+    "sourceCommit": "6fd69dfe90465ba96534f6816fc817737d1f97f6",
+    "sourceUrl": "https://github.com/PokeAPI/pokeapi/tree/6fd69dfe90465ba96534f6816fc817737d1f97f6/data/v2/csv",
+    "versionGroup": "scarlet-violet",
+    "versionGroupId": 25,
+    "note": "Cada golpe aparece na aprendibilidade geral da forma em Scarlet/Violet. Relações por golpe não confirmam coexistência dos quatro no mesmo Pokémon, obtenção concreta, compatibilidade ou legalidade em Pokémon Champions."
+  },
+  "pokemon": {
+    "garchomp": {
+      "pokemonId": 445,
+      "speciesId": 445,
+      "formId": "default",
+      "abilities": [
+        "Sand Veil",
+        "Rough Skin"
+      ],
+      "moves": [
+        {
+          "moveId": 89,
+          "name": "Earthquake",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 337,
+          "name": "Dragon Claw",
+          "method": "level-up",
+          "level": 42,
+          "mastery": false
+        },
+        {
+          "moveId": 14,
+          "name": "Swords Dance",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 182,
+          "name": "Protect",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        }
+      ]
+    },
+    "arboliva": {
+      "pokemonId": 930,
+      "speciesId": 930,
+      "formId": "default",
+      "abilities": [
+        "Seed Sower",
+        "Harvest"
+      ],
+      "moves": [
+        {
+          "moveId": 412,
+          "name": "Energy Ball",
+          "method": "level-up",
+          "level": 34,
+          "mastery": false
+        },
+        {
+          "moveId": 605,
+          "name": "Dazzling Gleam",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 414,
+          "name": "Earth Power",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 182,
+          "name": "Protect",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        }
+      ]
+    },
+    "incineroar": {
+      "pokemonId": 727,
+      "speciesId": 727,
+      "formId": "default",
+      "abilities": [
+        "Blaze",
+        "Intimidate"
+      ],
+      "moves": [
+        {
+          "moveId": 394,
+          "name": "Flare Blitz",
+          "method": "level-up",
+          "level": 58,
+          "mastery": false
+        },
+        {
+          "moveId": 252,
+          "name": "Fake Out",
+          "method": "egg",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 575,
+          "name": "Parting Shot",
+          "method": "egg",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 282,
+          "name": "Knock Off",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        }
+      ]
+    },
+    "rillaboom": {
+      "pokemonId": 812,
+      "speciesId": 812,
+      "formId": "default",
+      "abilities": [
+        "Overgrow",
+        "Grassy Surge"
+      ],
+      "moves": [
+        {
+          "moveId": 803,
+          "name": "Grassy Glide",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 452,
+          "name": "Wood Hammer",
+          "method": "level-up",
+          "level": 46,
+          "mastery": false
+        },
+        {
+          "moveId": 369,
+          "name": "U-turn",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 182,
+          "name": "Protect",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        }
+      ]
+    },
+    "charizard": {
+      "pokemonId": 6,
+      "speciesId": 6,
+      "formId": "default",
+      "abilities": [
+        "Blaze",
+        "Solar Power"
+      ],
+      "moves": [
+        {
+          "moveId": 257,
+          "name": "Heat Wave",
+          "method": "level-up",
+          "level": 1,
+          "mastery": false
+        },
+        {
+          "moveId": 403,
+          "name": "Air Slash",
+          "method": "level-up",
+          "level": 0,
+          "mastery": false
+        },
+        {
+          "moveId": 337,
+          "name": "Dragon Claw",
+          "method": "level-up",
+          "level": 1,
+          "mastery": false
+        },
+        {
+          "moveId": 182,
+          "name": "Protect",
+          "method": "machine",
+          "level": 0,
+          "mastery": false
+        }
+      ]
+    },
+    "pelipper": {
+      "pokemonId": 279,
+      "speciesId": 279,
+      "formId": "default",
+      "abilities": [
+        "Keen Eye",
+        "Drizzle",
+        "Rain Dish"
+      ],
+      "moves": [
+        {
+          "moveId": 542,
+          "name": "Hurricane",
+          "method": "level-up",
+          "level": 55,
+          "mastery": false
+        },
+        {
+          "moveId": 56,
+          "name": "Hydro Pump",
+          "method": "level-up",
+          "level": 62,
+          "mastery": false
+        },
+        {
+          "moveId": 366,
+          "name": "Tailwind",
+          "method": "level-up",
+          "level": 1,
+          "mastery": false
+        },
+        {
+          "moveId": 182,
+          "name": "Protect",
+          "method": "level-up",
+          "level": 1,
+          "mastery": false
+        }
+      ]
+    }
+  }
+}

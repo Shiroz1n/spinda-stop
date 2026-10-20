@@ -134,8 +134,8 @@ export function RoomsPage() {
           <h2 id="community-auth-title">Entre para criar ou aceitar um convite</h2>
           <p>Usamos o identificador e o nome público do GitHub. Não pedimos e-mail, senha do jogo nem dados da Nintendo.</p>
           {error ? <ErrorNotice>{error}</ErrorNotice> : null}
-          {authStatus?.githubOAuthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : authStatus ? <p className="community-config-note">O login ainda não foi configurado neste ambiente. Quem mantém o projeto precisa informar as credenciais OAuth do GitHub no servidor.</p> : null}
-          {authStatus === null && error ? <p className="community-config-note">Não foi possível consultar a configuração do login. Tente verificar o serviço novamente.</p> : null}
+          {authStatus?.githubOAuthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : authStatus ? <p className="community-config-note">A entrada com GitHub não está disponível agora.</p> : null}
+          {authStatus === null && error ? <p className="community-config-note">Não foi possível verificar o acesso com GitHub. Tente novamente.</p> : null}
           <button className="text-button" type="button" onClick={refresh}>Verificar de novo</button>
         </section>
       ) : null}
@@ -235,7 +235,7 @@ export function RoomJoinPage() {
     return () => { active = false; };
   }, [navigate]);
 
-  return <section className="page-wrap narrow-page community-page"><p className="page-label">Convite privado</p><h1>Entrar na sala</h1>{state.status === "loading" ? <p role="status">Validando convite…</p> : null}{state.status === "signed-out" ? <><p className="community-muted">Entre com GitHub. O convite fica no armazenamento temporário desta aba e será validado depois do login.</p>{state.oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">O login do GitHub ainda não foi configurado neste ambiente.</p>}</> : null}{state.status === "error" ? <ErrorNotice>{state.error}</ErrorNotice> : null}<Link className="button button-outline" to="/rooms">Voltar às salas</Link></section>;
+  return <section className="page-wrap narrow-page community-page"><p className="page-label">Convite privado</p><h1>Entrar na sala</h1>{state.status === "loading" ? <p role="status">Validando convite…</p> : null}{state.status === "signed-out" ? <><p className="community-muted">Entre com GitHub para validar o convite e entrar na sala.</p>{state.oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">A entrada com GitHub não está disponível agora.</p>}</> : null}{state.status === "error" ? <ErrorNotice>{state.error}</ErrorNotice> : null}<Link className="button button-outline" to="/rooms">Voltar às salas</Link></section>;
 }
 
 export function RoomDetailPage() {
@@ -305,6 +305,26 @@ export function RoomDetailPage() {
   const canShareCode = !["completed", "cancelled"].includes(room.status);
   const awaitingOpponent = match?.status === "awaiting_confirmation" && match.report?.reporterId !== currentUser.id;
   const disputed = match?.status === "disputed";
+  const nextStep = disputed
+    ? "O resultado está em contestação; confira a decisão da moderação."
+    : awaitingOpponent
+      ? "Confira o placar informado e confirme ou conteste o resultado."
+      : match?.status === "scheduled"
+        ? "Depois da partida, registre o resultado."
+        : room.status === "open" && isHost
+          ? "Convide uma pessoa e aguarde o check-in para fechar a sala."
+          : room.status === "open"
+            ? "Confirme presença com check-in para a sala poder começar."
+            : room.status === "locked" && isHost
+              ? "Todos fizeram check-in. Inicie a sala quando estiverem prontos."
+              : room.status === "locked"
+                ? "Aguarde o host iniciar a sala."
+                : room.status === "completed"
+                  ? "Sala concluída. O resultado confirmado fica aqui para consulta."
+                  : room.status === "cancelled"
+                    ? "Esta sala foi cancelada."
+                    : "A partida está em andamento.";
+  const nextStepTarget = match ? "#match-title" : room.status === "open" && isHost ? "#room-invite" : "#participants-title";
 
   return (
     <section className="page-wrap community-page">
@@ -312,18 +332,19 @@ export function RoomDetailPage() {
         <div><p className="page-label">Sala {isHost ? "do host" : "por convite"}</p><h1>{room.name}</h1><p className="page-intro">{ROOM_STATES[room.status]} · {members.length} de {room.capacity} participantes</p></div>
         <Link className="button button-outline" to="/rooms">Minhas salas</Link>
       </div>
+      <div className="community-next-step" aria-label="Próxima ação">
+        <strong>{ROOM_STATES[room.status]}</strong><span>{nextStep}</span><a href={nextStepTarget}>Abrir etapa <span aria-hidden="true">↓</span></a>
+      </div>
       <ErrorNotice>{actionError}</ErrorNotice>
       {message ? <p className="community-success" role="status">{message}</p> : null}
 
-      {room.status === "open" && isHost ? <section className="community-room-panel panel-frame"><div className="section-heading"><h2>Convite</h2><span>Expira em 7 dias</span></div><p className="community-muted">Compartilhe o link apenas com quem vai participar. O token fica no fragmento e é removido ao entrar.</p>{inviteUrl ? <div className="invite-copy-row"><input className="text-input" aria-label="Link de convite" readOnly value={inviteUrl} onFocus={(event) => event.target.select()} /><button className="button button-primary button-small" type="button" onClick={copyInvite}>Copiar link</button></div> : <button className="button button-outline button-small" type="button" onClick={copyInvite}>Gerar convite</button>}</section> : null}
-
       <div className="community-room-grid">
         <section className="community-room-panel panel-frame" aria-labelledby="participants-title">
-          <div className="section-heading"><h2 id="participants-title">Participantes</h2><span>Jogo acontece no Pokémon Champions</span></div>
+          <div className="section-heading"><h2 id="participants-title">Participantes</h2><span>{members.length} de {room.capacity}</span></div>
           <ul className="participant-list">{members.map((member) => <li key={member.id}><div className="participant-card-main"><div><strong>{member.handle}{member.id === room.hostId ? " · host" : ""}</strong><span>{member.status === "checked_in" ? "Check-in feito" : "Inscrito"}</span>{member.friendCode ? <span className="friend-code-value">Código compartilhado: {member.friendCode}</span> : null}</div><SharedTeamPreview roster={member.sharedRoster} ownerName={member.handle} /></div>{member.id === currentUser.id && canShareCode && member.friendCode ? <button className="text-button" type="button" disabled={busy} onClick={() => act(`/rooms/${roomId}/friend-code`, { method: "DELETE" })}>Remover meu código</button> : null}</li>)}</ul>
           {canShareCode ? <EventTeamSharing eventId={roomId} eventType="room" sharedRoster={members.find((member) => member.id === currentUser.id)?.sharedRoster} onSaved={refresh} /> : null}
           {canShareCode && friendCodesAvailable ? <form className="friend-code-form" onSubmit={(event) => { event.preventDefault(); act(`/rooms/${roomId}/friend-code`, { method: "PUT", body: { code: friendCode } }).then((result) => { if (result) setFriendCode(""); }); }}><label className="community-field"><span>Seu código de amizade (opcional)</span><input className="text-input" maxLength={40} value={friendCode} onChange={(event) => setFriendCode(event.target.value)} autoComplete="off" /></label><button className="button button-outline button-small" type="submit" disabled={busy || !friendCode}>Compartilhar só nesta sala</button><small>Fica visível aos membros e é removido ao terminar a sala ou após 7 dias.</small></form> : null}
-          {canShareCode && !friendCodesAvailable ? <p className="community-empty">Compartilhamento de código temporariamente indisponível neste servidor.</p> : null}
+          {canShareCode && !friendCodesAvailable ? <p className="community-empty">O compartilhamento de códigos está indisponível neste momento.</p> : null}
           {currentUser.memberStatus === "registered" && room.status === "open" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/rooms/${roomId}/check-in`, { method: "POST", body: {} })}>Fazer check-in</button> : null}
           {isHost && room.status === "open" ? <button className="button button-outline" type="button" disabled={busy || members.length < 2 || members.some((member) => member.status !== "checked_in")} onClick={() => act(`/rooms/${roomId}/close`, { method: "POST", body: {} })}>Fechar inscrições</button> : null}
           {isHost && room.status === "locked" ? <button className="button button-primary" type="button" disabled={busy || members.some((member) => member.status !== "checked_in")} onClick={() => act(`/rooms/${roomId}/start`, { method: "POST", body: {} })}>Iniciar sala</button> : null}
@@ -341,6 +362,8 @@ export function RoomDetailPage() {
           </div> : null}
         </section>
       </div>
+      {room.status === "open" && isHost ? <section id="room-invite" className="community-room-panel community-invite-panel panel-frame"><div className="section-heading"><h2>Convite</h2><span>Expira em 7 dias</span></div><p className="community-muted">Compartilhe o link apenas com quem vai participar. O token fica no fragmento e é removido ao entrar.</p>{inviteUrl ? <div className="invite-copy-row"><input className="text-input" aria-label="Link de convite" readOnly value={inviteUrl} onFocus={(event) => event.target.select()} /><button className="button button-primary button-small" type="button" onClick={copyInvite}>Copiar link</button></div> : <button className="button button-outline button-small" type="button" onClick={copyInvite}>Gerar convite</button>}</section> : null}
+      <details className="community-game-context"><summary>Partida no Pokémon Champions</summary><p>O Spinda Stop organiza os participantes e o registro do resultado; a partida acontece no jogo.</p></details>
       <p className="community-privacy-note">O Spinda Stop organiza pessoas e relatos voluntários. Não valida nem recebe dados da partida dentro do jogo.</p>
     </section>
   );

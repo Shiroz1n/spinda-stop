@@ -2,13 +2,15 @@
 
 Uma oficina independente para explorar Pokémon, montar times e organizar encontros da comunidade de Pokémon Champions. Doubles é o primeiro formato. O projeto não tem vínculo com The Pokémon Company, Nintendo, Creatures ou GAME FREAK.
 
-A interface usa cores de arena, molduras em degraus e sprites reais de Pokémon carregados da revisão fixa de PokeAPI/sprites. O Spinda aparece no cabeçalho a partir do sprite Black/White `327.png`; o favicon é um desenho pixel local feito para continuar legível em 16×16. As imagens mantêm os créditos e os direitos dos titulares. O Spinda Stop é um projeto de fã independente.
+A interface usa cores de arena, molduras em degraus e sprites de Pokémon carregados da revisão fixa de PokeAPI/sprites. O Spinda Black/White `327.png` aparece no cabeçalho e no favicon pela mesma URL versionada. Os direitos das imagens pertencem a seus titulares; consulte [origens e créditos](docs/THIRD_PARTY_LICENSES.md). O Spinda Stop é um projeto de fã independente.
 
 ## O que já funciona
 
 - Buscar espécies e formas, filtrar por tipo ou geração e abrir uma ficha de dados gerais.
 - Montar seis posições com habilidade, item, nature, golpes e campos de Stat Points; abrir Usage por integrante sem alterar o set.
 - Simular dano em nível 50 para Singles ou Doubles, comparar cenários e ver rolls, modificadores e Stat Points usados pelo motor.
+- Comparar Speed calculada no catálogo ou os seis integrantes do builder contra um alvo, sem confundir tiers calculados com ranking de uso.
+- Comparar um atacante contra vários alvos com o mesmo set defensivo; cada dano aparece separadamente.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar salas de duas pessoas ou torneios privados de quatro, com convite, check-in e resultados confirmados manualmente.
 - Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
@@ -47,6 +49,9 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Direção visual](docs/DESIGN.md)
+- [Guia geral para evitar padrões visuais genéricos](docs/UI_HUMANIZER.md)
+- [Design system do Spinda Stop e referências](docs/SPINDA_STOP_DESIGN_SYSTEM.md)
+- [Speed Tiers e fórmulas](docs/SPEED_TIERS.md)
 - [Registro da revisão visual](docs/VISUAL_REVIEW.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
 - [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)

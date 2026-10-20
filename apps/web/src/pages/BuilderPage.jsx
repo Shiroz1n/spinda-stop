@@ -4,12 +4,14 @@ import { addPokemonToDraft, createEmptyTeam, parseTeam, serializeTeam, setTeamMe
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
-import natureData from "@spinda-stop/data/natures";
 import { SpeciesPicker } from "../components/SpeciesPicker.jsx";
+import { NaturePicker } from "../components/NaturePicker.jsx";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
-import { buildDamageCalculatorSearch } from "../data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
+import { getNature, getNatureSpeedClass } from "../data/natures.js";
+import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, compareSpeedOrder, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, resolveSpeedPreviewNature, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
 const STORAGE_KEY = "spinda-stop.team.v1";
@@ -70,8 +72,14 @@ export function BuilderPage() {
   const [team, setTeam] = useState(initialDraft.team);
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
   const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
+  const [speedTargetSlug, setSpeedTargetSlug] = useState("");
+  const [speedTargetSp, setSpeedTargetSp] = useState(0);
+  const [speedTargetNature, setSpeedTargetNature] = useState("Serious");
+  const [speedTrickRoom, setSpeedTrickRoom] = useState(false);
+  const [speedPreviews, setSpeedPreviews] = useState({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlot, setPickerSlot] = useState(0);
+  const [speedTargetPickerOpen, setSpeedTargetPickerOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
@@ -79,16 +87,53 @@ export function BuilderPage() {
     () => selectedMember ? pokemonWithDetails(selectedMember.pokemonId) : null,
     [selectedMember],
   );
+  const selectedComputedStats = useMemo(() => {
+    if (!selectedPokemon || !selectedMember) return null;
+    try {
+      return calculateChampionsStats({
+        species: getDamageSpeciesName(selectedPokemon.slug),
+        nature: selectedMember.nature || "Serious",
+        statPoints: selectedMember.statPoints,
+      });
+    } catch {
+      return null;
+    }
+  }, [selectedPokemon, selectedMember]);
   const moveListId = "move-options";
-  const natureListId = "nature-options";
   const damageOpponents = team.members
     .map((member, index) => ({ member, index, pokemon: member ? pokemonWithDetails(member.pokemonId) : null }))
     .filter(({ member, index, pokemon }) => member && pokemon && index !== selectedSlot);
   const selectedDamageOpponent = damageOpponents.find(({ index }) => index === damageOpponentSlot) || damageOpponents[0] || null;
+  const speedTargetPokemon = useMemo(() => speedTargetSlug ? pokemonWithDetails(speedTargetSlug) : null, [speedTargetSlug]);
+  const speedTargetValue = speedTargetPokemon
+    ? calculateChampionsSpeed(speedTargetPokemon.stats.spe, speedTargetSp, speedTargetNature)
+    : null;
+  const speedComparisonRows = team.members.map((member, index) => {
+    const pokemon = member ? pokemonWithDetails(member.pokemonId) : null;
+    if (!member || !pokemon || speedTargetValue === null) return { member, pokemon, index, preview: null, speed: null, relation: "unknown", requiredSp: null };
+    const savedPreview = speedPreviews[index];
+    const preview = {
+      ...savedPreview,
+      sp: Number(member.statPoints.spe) || 0,
+      natureTouched: Boolean(savedPreview?.natureTouched),
+      ...(savedPreview?.sp !== undefined ? { sp: savedPreview.sp } : {}),
+      nature: resolveSpeedPreviewNature(member.nature, savedPreview),
+    };
+    const availableSpeedSp = maximumLegalSpeedPoints(member.statPoints);
+    const previewSpeedPoints = Math.min(availableSpeedSp, CHAMPIONS_MAX_STAT_POINTS, Math.max(0, Number(preview.sp) || 0));
+    const appliedPreview = applySpeedPointsToStatSpread(member.statPoints, previewSpeedPoints);
+    const speed = appliedPreview.ok ? calculateChampionsSpeed(pokemon.stats.spe, previewSpeedPoints, preview.nature) : null;
+    const relation = appliedPreview.ok ? compareSpeed(speed, speedTargetValue) : "unknown";
+    const recommendation = appliedPreview.ok
+      ? getChampionsSpeedRecommendation({ baseSpeed: pokemon.stats.spe, targetSpeed: speedTargetValue, nature: preview.nature, availableSpeedSp })
+      : null;
+    const order = appliedPreview.ok ? compareSpeedOrder(speed, speedTargetValue, speedTrickRoom) : "unknown";
+    return { member, pokemon, index, preview: { ...preview, sp: previewSpeedPoints }, speed, relation, order, recommendation, availableSpeedSp };
+  });
 
   function toDamageSide(member, pokemon) {
     return {
-      species: pokemon.name,
+      species: getDamageSpeciesName(pokemon.slug),
       nature: member.nature || "Serious",
       ability: member.ability,
       item: member.item,
@@ -101,10 +146,10 @@ export function BuilderPage() {
     const selectedSide = toDamageSide(selectedMember, selectedPokemon);
     const otherSide = selectedDamageOpponent
       ? toDamageSide(selectedDamageOpponent.member, selectedDamageOpponent.pokemon)
-      : { species: "Garchomp", nature: "Serious", statPoints: Object.fromEntries(STAT_FIELDS.map(([key]) => [key, 0])) };
+      : null;
     const attacker = selectedRole === "attacker" ? selectedSide : otherSide;
     const defender = selectedRole === "defender" ? selectedSide : otherSide;
-    const move = attacker.moves?.find((entry) => entry.trim()) || "";
+    const move = attacker?.moves?.find((entry) => entry.trim()) || "";
     return `/calculator?${buildDamageCalculatorSearch(attacker, defender, move)}`;
   }
 
@@ -145,6 +190,11 @@ export function BuilderPage() {
     const selectedPokemon = pokemonWithDetails(pokemon.slug);
     const samePokemon = team.members[pickerSlot]?.pokemonId === selectedPokemon.slug;
     commitTeam(setTeamMember(team, pickerSlot, selectedPokemon));
+    setSpeedPreviews((current) => {
+      const next = { ...current };
+      delete next[pickerSlot];
+      return next;
+    });
     setSelectedSlot(pickerSlot);
     setPickerOpen(false);
     setMessage(samePokemon
@@ -210,6 +260,70 @@ export function BuilderPage() {
     updateMember({ moves });
   }
 
+  function updateSpeedPreview(index, key, value) {
+    const member = team.members[index];
+    if (!member) return;
+    setSpeedPreviews((current) => {
+      const preview = current[index] || {
+        sp: Number(member.statPoints.spe) || 0,
+        nature: speedNatureFromName(member.nature),
+        natureTouched: false,
+      };
+      const nextValue = key === "sp"
+        ? Math.min(maximumLegalSpeedPoints(member.statPoints), Math.max(0, Number(value) || 0))
+        : value;
+      return {
+        ...current,
+        [index]: {
+          ...preview,
+          [key]: nextValue,
+          ...(key === "nature" ? { natureTouched: true } : {}),
+        },
+      };
+    });
+  }
+
+  function applySpeedPreview(index) {
+    const member = team.members[index];
+    if (!member) return;
+    const savedPreview = speedPreviews[index];
+    const preview = {
+      ...savedPreview,
+      sp: Number(member.statPoints.spe) || 0,
+      natureTouched: Boolean(savedPreview?.natureTouched),
+      ...(savedPreview?.sp !== undefined ? { sp: savedPreview.sp } : {}),
+      nature: resolveSpeedPreviewNature(member.nature, savedPreview),
+    };
+    const speedPoints = Math.min(
+      maximumLegalSpeedPoints(member.statPoints),
+      CHAMPIONS_MAX_STAT_POINTS,
+      Math.max(0, Number(preview.sp) || 0),
+    );
+    const appliedSpread = applySpeedPointsToStatSpread(
+      member.statPoints,
+      speedPoints,
+    );
+    if (!appliedSpread.ok) {
+      setMessage(`Prévia não aplicada. ${appliedSpread.error}`);
+      return;
+    }
+    const members = [...team.members];
+    members[index] = {
+      ...member,
+      nature: preview.natureTouched ? (getNature(preview.nature)?.name || member.nature) : member.nature,
+      statPoints: appliedSpread.statPoints,
+    };
+    commitTeam({ ...team, members });
+    setMessage(`A prévia foi aplicada à posição ${index + 1}.`);
+  }
+
+  function selectSpeedTarget(pokemon) {
+    setSpeedTargetSlug(pokemon.slug);
+    setSpeedTargetSp(0);
+    setSpeedTargetNature("Serious");
+    setSpeedTargetPickerOpen(false);
+  }
+
   async function saveTeamToAccount(visibility) {
     await communityRequest("/teams", { method: "POST", body: { visibility, data: team } });
   }
@@ -229,25 +343,25 @@ export function BuilderPage() {
   const pointTotal = selectedMember
     ? Object.values(selectedMember.statPoints).reduce((sum, value) => sum + value, 0)
     : 0;
+  const pointRemaining = CHAMPIONS_MAX_TOTAL_POINTS - pointTotal;
+
+  function maximumForStatPointField(statKey) {
+    if (!selectedMember) return 0;
+    const otherPoints = Object.entries(selectedMember.statPoints)
+      .filter(([key]) => key !== statKey)
+      .reduce((sum, [, value]) => sum + value, 0);
+    return Math.max(0, Math.min(CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS - otherPoints));
+  }
 
   return (
     <div className="page-wrap builder-page">
       <div className="page-heading-row builder-heading">
         <div>
           <p className="page-label">Construtor local · Doubles</p>
-          <h1>Monte seu time</h1>
-          <p className="page-intro">Edite seis posições, salve o rascunho no navegador e exporte um arquivo para levar com você.</p>
+          <h1><span className="builder-heading-title-full">Monte seu time</span><span className="builder-heading-title-compact">Meu time</span></h1>
+          <p className="page-intro">Seis posições para o seu time de Doubles.</p>
         </div>
-        <div className="builder-actions">
-          <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
-          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
-          <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
-        </div>
-      </div>
-
-      <div className="rules-warning" role="note">
-        <span className="warning-mark">Regras</span>
-        <p><strong>Rascunho sem validação do jogo.</strong> Regras de Stat Points, golpes, habilidades e espécies ainda não foram confirmadas por regulamento.</p>
+        <a className="button button-outline button-small builder-speed-jump" href="#builder-speed-title">Comparar Speed</a>
       </div>
 
       <div className="builder-status-row">
@@ -260,8 +374,6 @@ export function BuilderPage() {
           <span className="save-status"><span className="status-dot" />{saveStatus}</span>
         </div>
       </div>
-
-      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
 
       <section className="builder-workspace">
         <div className="slot-column">
@@ -306,27 +418,25 @@ export function BuilderPage() {
                   <h2 id="active-member-title">{selectedPokemon.name}</h2>
                   {selectedPokemon.formName && <p className="form-note">{selectedPokemon.speciesName} · {selectedPokemon.formName}</p>}
                   <div className="type-list">{selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}</div>
-                  <p className="form-hint builder-usage-hint">Tendências abrem em outra tela. A calculadora começa no nível 50 e usa o primeiro golpe preenchido.</p>
                 </div>
                 <div className="set-heading-actions">
-                  <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>
-                    Ver tendências de Usage
-                  </Link>
-                  <label className="builder-damage-opponent">
-                    <span>Outro lado da simulação</span>
-                    <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
-                      {selectedDamageOpponent ? null : <option value="">Garchomp padrão</option>}
-                      {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
-                    </select>
-                  </label>
-                  <Link className="button button-outline button-small" to={calculatorUrl("attacker")} aria-label={`Usar ${selectedPokemon.name} como atacante na calculadora`}>
-                    Como atacante
-                  </Link>
-                  <Link className="button button-outline button-small" to={calculatorUrl("defender")} aria-label={`Usar ${selectedPokemon.name} como alvo na calculadora`}>
-                    Como alvo
-                  </Link>
-                  <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar</button>
-                  <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
+                  <button className="button button-outline button-small" type="button" onClick={() => chooseForSlot(selectedSlot)}>Trocar Pokémon</button>
+                  <details className="builder-secondary-actions">
+                    <summary>Usage e calculadora</summary>
+                    <div>
+                      <Link className="button button-outline button-small" to={`/usage?pokemon=${encodeURIComponent(selectedPokemon.name)}`} aria-label={`Ver tendências de Usage para ${selectedPokemon.name}`}>Ver tendências de Usage</Link>
+                      <label className="builder-damage-opponent">
+                        <span>Outro lado da simulação</span>
+                        <select className="text-input" aria-label="Outro Pokémon para a calculadora" value={selectedDamageOpponent ? String(selectedDamageOpponent.index) : ""} onChange={(event) => setDamageOpponentSlot(Number(event.target.value))}>
+                          {selectedDamageOpponent ? null : <option value="">Escolha outro Pokémon</option>}
+                          {damageOpponents.map(({ index, pokemon }) => <option value={index} key={index}>{`Posição ${index + 1} · ${pokemon.name}`}</option>)}
+                        </select>
+                      </label>
+                      <Link className="button button-outline button-small" to={calculatorUrl("attacker")} aria-label={`Usar ${selectedPokemon.name} como atacante na calculadora`}>Como atacante</Link>
+                      <Link className="button button-outline button-small" to={calculatorUrl("defender")} aria-label={`Usar ${selectedPokemon.name} como alvo na calculadora`}>Como alvo</Link>
+                      <button className="button button-quiet button-small" type="button" onClick={clearSlot}>Limpar posição</button>
+                    </div>
+                  </details>
                 </div>
               </div>
 
@@ -343,9 +453,10 @@ export function BuilderPage() {
                   <input id="member-item" className="text-input" value={selectedMember.item} maxLength={100} onChange={(event) => updateMember({ item: event.target.value })} placeholder="Digite um item" />
                 </div>
 
-                <label className="field-label" htmlFor="member-nature">Nature</label>
-                <input id="member-nature" className="text-input" list={natureListId} value={selectedMember.nature} maxLength={100} onChange={(event) => updateMember({ nature: event.target.value })} placeholder="Escolha ou digite" />
-                <datalist id={natureListId}>{natureData.natures.map((nature) => <option key={nature.slug} value={nature.name} />)}</datalist>
+                <NaturePicker id="member-nature" label="Nature do set" value={selectedMember.nature || "Serious"} onChange={(nature) => updateMember({ nature })} className="field-wide" />
+                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os Stat Points">
+                  {[["hp", "HP"], ["atk", "Atk"], ["def", "Def"], ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"]].map(([key, label]) => <div key={key} data-stat={key}><dt>{label}</dt><dd>{selectedComputedStats[key]}</dd></div>)}
+                </dl> : <p className="builder-nature-stats-note field-wide" role="status">Os stats deste set não podem ser calculados até a distribuição e a Nature serem válidas.</p>}
 
                 <label className="field-label" htmlFor="member-level">Nível</label>
                 <input id="member-level" className="text-input short-number-input" type="number" min="1" max="100" value={selectedMember.level} onChange={(event) => updateMember({ level: Math.min(100, Math.max(1, Number(event.target.value) || 1)) })} />
@@ -355,19 +466,19 @@ export function BuilderPage() {
                 {selectedMember.moves.map((move, index) => (
                   <label className="move-field" htmlFor={`move-${index}`} key={index}>
                     <span>{index + 1}</span>
-                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar ou digitar golpe" />
+                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
                   </label>
                 ))}
-                <p className="form-hint field-wide">A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p>
+                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p></details>
 
                 <details className="points-section field-wide">
-                  <summary>Stat Points <span>{pointTotal} distribuídos · limite ainda não aplicado</span></summary>
-                  <p className="form-hint">Os valores ficam no arquivo da equipe. O limite do jogo ainda precisa de confirmação.</p>
+                  <summary>Conferir Stat Points <span>{pointTotal} distribuídos</span></summary>
+                  <p className="form-hint">Limite usado pelo formato comunitário: 32 SP por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} SP.`}</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>
                         <span>{label}</span>
-                        <input id={`stat-${key}`} className="text-input" type="number" min="0" max="999" value={selectedMember.statPoints[key]} onChange={(event) => updateMember({ statPoints: { ...selectedMember.statPoints, [key]: Math.min(999, Math.max(0, Number(event.target.value) || 0)) } })} />
+                        <input id={`stat-${key}`} className="text-input" type="number" min="0" max={maximumForStatPointField(key)} value={selectedMember.statPoints[key]} onChange={(event) => updateMember({ statPoints: { ...selectedMember.statPoints, [key]: Math.min(maximumForStatPointField(key), Math.max(0, Number(event.target.value) || 0)) } })} />
                       </label>
                     ))}
                   </div>
@@ -378,8 +489,81 @@ export function BuilderPage() {
         </div>
       </section>
 
+      <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
+        <div className="builder-speed-heading">
+          <div><p className="page-label">Comparação temporária · Champions</p><h2 id="builder-speed-title">Speed do time</h2></div>
+          <label className="speed-trick-room-toggle"><input type="checkbox" checked={speedTrickRoom} onChange={(event) => setSpeedTrickRoom(event.target.checked)} /><span>Trick Room ativo</span><small>Ordem invertida; Speed bruta preservada.</small></label>
+          <Link className="button button-outline button-small" to={speedTargetPokemon ? `/speed-tiers?target=${encodeURIComponent(speedTargetPokemon.slug)}` : "/speed-tiers"}>Abrir Speed Tiers</Link>
+        </div>
+        <div className={speedTargetPokemon ? "builder-speed-target" : "builder-speed-target is-empty"}>
+          {speedTargetPokemon ? <>
+            <PokemonSprite pokemon={speedTargetPokemon} name={speedTargetPokemon.name} size={52} decorative />
+            <div className="builder-speed-target-name"><small>Adversário escolhido</small><strong>{speedTargetPokemon.name}</strong><span>{speedTargetValue} Speed · nível 50</span></div>
+            <label><span>SP do alvo</span><input className="text-input" type="number" min="0" max="32" value={speedTargetSp} onChange={(event) => setSpeedTargetSp(Math.min(32, Math.max(0, Number(event.target.value) || 0)))} /></label>
+            <NaturePicker id="builder-target-nature" label="Nature do alvo" value={speedTargetNature} onChange={setSpeedTargetNature} className="builder-target-nature" />
+            <button className="button button-quiet button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Trocar alvo</button>
+          </> : <>
+            <div className="builder-speed-target-placeholder"><strong>Escolha um adversário</strong><span>Compare os seis do time ao mesmo tempo.</span></div>
+            <button className="button button-primary button-small" type="button" onClick={() => setSpeedTargetPickerOpen(true)}>Selecionar Pokémon</button>
+          </>}
+        </div>
+        {speedTargetPokemon ? <div className="builder-speed-grid" aria-label="Comparação dos seis Pokémon do time">
+          {speedComparisonRows.map(({ member, pokemon, index, preview, speed, relation, order, recommendation, availableSpeedSp }) => {
+            if (!member || !pokemon) return <div className="builder-speed-empty" key={index}><span>{String(index + 1).padStart(2, "0")}</span>Posição vazia</div>;
+            const appliedSpread = applySpeedPointsToStatSpread(member.statPoints, preview.sp);
+            const remainingSp = CHAMPIONS_MAX_TOTAL_POINTS - Object.entries(member.statPoints).reduce((sum, [key, value]) => sum + (key === "spe" ? preview.sp : value), 0);
+            const recommendationText = !appliedSpread.ok
+              ? "Set inválido · revise os SP"
+              : relation === "faster"
+                ? "Já ultrapassa"
+                : recommendation.requiredSp === null
+                  ? "Não passa com até 32 SP"
+                  : recommendation.canOutspeed
+                    ? `${relation === "tie" ? "Empata · " : ""}${recommendation.requiredSp} SP passa`
+                    : `Não passa · precisa ${recommendation.requiredSp} SP; ${availableSpeedSp} disponíveis`;
+            const favorableNatureText = !appliedSpread.ok || relation === "faster" || recommendation.canOutspeed || getNatureSpeedClass(preview.nature) === "favorable"
+              ? ""
+              : recommendation.favorableRequiredSp === null
+                ? "Nem Timid (Velocidade ↑) + 32 SP ultrapassa"
+                : recommendation.favorableCanOutspeed
+                  ? `Timid (Velocidade ↑): ${recommendation.favorableRequiredSp} SP passa`
+                  : `Timid (Velocidade ↑): precisa ${recommendation.favorableRequiredSp} SP; ${availableSpeedSp} disponíveis`;
+            const remainingText = appliedSpread.ok
+              ? `${remainingSp} SP livres`
+              : "revise a distribuição";
+            return <article className={`builder-speed-row is-${relation}`} key={index} data-speed={speed} data-target-speed={speedTargetValue} data-relation={relation} data-order={order}>
+              <div className="builder-speed-identity"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>{speed ?? "—"} Speed · {relation === "faster" ? "ultrapassa" : relation === "tie" ? "empata" : relation === "slower" ? "abaixo" : "sem dado"}{order === "first" ? " · atua antes" : order === "second" ? " · atua depois" : ""}</small></div></div>
+              <label className="builder-speed-sp"><span>SP de Speed · temporário</span><div><input aria-label={`SP temporário de Speed de ${pokemon.name}`} type="range" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} /><input className="text-input" type="number" min="0" max={availableSpeedSp} value={preview.sp} onChange={(event) => updateSpeedPreview(index, "sp", Number(event.target.value))} aria-label={`Valor temporário de SP de Speed de ${pokemon.name}`} /></div><small>{availableSpeedSp} SP disponíveis em Speed · máximo de 32 por atributo</small></label>
+              <NaturePicker id={`builder-speed-nature-${index}`} label="Nature temporária" value={preview.nature} onChange={(nature) => updateSpeedPreview(index, "nature", nature)} className="builder-speed-nature" />
+              <div className="builder-speed-action"><span>{recommendationText} · {remainingText}</span>{favorableNatureText && <small className="builder-speed-favorable-note">{favorableNatureText}</small>}<button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
+            </article>;
+          })}
+        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>Esta prévia aceita até 32 SP em Speed e confere o orçamento de 66 SP do set antes de salvar. A referência é um formato comunitário e não confirma regras oficiais.</span></details></div>}
+        {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva · Trick Room muda ordem de atuação, não Speed bruta. <details><summary>Sobre o modelo</summary><span>Fórmula Champions no nível 50 conforme o modelo do @smogon/calc. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Aplicar uma natureza nova também pode alterar outros stats do set.</span></details></div>}
+      </section>
+
+      <details className="builder-tools-details">
+        <summary>Importar ou exportar equipe</summary>
+        <div className="builder-actions">
+          <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
+          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
+          <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
+        </div>
+      </details>
+
+      <details className="builder-rules-details">
+        <summary>Limites deste rascunho</summary>
+        <div className="rules-warning" role="note">
+          <span className="warning-mark">Regras</span>
+          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de Stat Points.</p>
+        </div>
+      </details>
+
+      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
+
       <p className="form-message" role="status" aria-live="polite">{message}</p>
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
+      <SpeciesPicker idPrefix="speed-target" open={speedTargetPickerOpen} pokemon={dexData.pokemon} onChoose={selectSpeedTarget} onClose={() => setSpeedTargetPickerOpen(false)} />
     </div>
   );
 }

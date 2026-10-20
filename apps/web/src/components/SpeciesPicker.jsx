@@ -3,7 +3,7 @@ import { searchPokemon } from "@spinda-stop/domain";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { TypeTag } from "./TypeTag.jsx";
 
-export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
+export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "species" }) {
   const dialogRef = useRef(null);
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
@@ -35,7 +35,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
     <dialog
       ref={dialogRef}
       className="species-dialog"
-      aria-labelledby="species-dialog-title"
+      aria-labelledby={`${idPrefix}-dialog-title`}
       onCancel={(event) => { event.preventDefault(); closePicker(); }}
       onClick={(event) => { if (event.target === dialogRef.current) closePicker(); }}
     >
@@ -43,16 +43,16 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose }) {
         <div className="dialog-heading">
           <div>
             <p className="page-label">Catálogo geral</p>
-            <h2 id="species-dialog-title">Escolha uma espécie</h2>
+            <h2 id={`${idPrefix}-dialog-title`}>Escolha uma espécie</h2>
           </div>
           <button className="icon-button" type="button" onClick={closePicker} aria-label="Fechar seletor">
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m5 5 10 10M15 5 5 15" /></svg>
           </button>
         </div>
-        <label className="field-label" htmlFor="species-search">Nome ou número</label>
+        <label className="field-label" htmlFor={`${idPrefix}-search`}>Nome ou número</label>
         <input
           ref={searchRef}
-          id="species-search"
+          id={`${idPrefix}-search`}
           className="text-input"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

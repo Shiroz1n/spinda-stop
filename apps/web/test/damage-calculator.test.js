@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateChampionsStats, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageItemSupport, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -10,6 +10,55 @@ const side = (species, options = {}) => ({
   status: "",
   statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, ...options.statPoints },
   boosts: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+});
+
+test("as Natures reais mudam stats e dano, sem aplicar modificador ao HP", () => {
+  const base = side("Garchomp", { statPoints: { atk: 32, spe: 32 } });
+  const statsFor = (nature) => calculateChampionsStats({ ...base, nature });
+  const serious = statsFor("Serious");
+  const adamant = statsFor("Adamant");
+  const jolly = statsFor("Jolly");
+  const timid = statsFor("Timid");
+  const brave = statsFor("Brave");
+  const modest = statsFor("Modest");
+
+  assert.equal(adamant.hp, serious.hp);
+  assert.equal(jolly.hp, serious.hp);
+  assert.equal(timid.hp, serious.hp);
+  assert.equal(brave.hp, serious.hp);
+  assert.equal(modest.hp, serious.hp);
+  assert.ok(adamant.atk > serious.atk);
+  assert.ok(adamant.spa < serious.spa);
+  assert.ok(jolly.spe > serious.spe);
+  assert.ok(jolly.spa < serious.spa);
+  assert.ok(timid.spe > serious.spe);
+  assert.ok(timid.atk < serious.atk);
+  assert.ok(brave.atk > serious.atk);
+  assert.ok(brave.spe < serious.spe);
+  assert.ok(modest.spa > serious.spa);
+  assert.ok(modest.atk < serious.atk);
+
+  const seriousDamage = calculateChampionsDamage({ attacker: base, defender: side("Garchomp"), move: "Earthquake" });
+  const adamantDamage = calculateChampionsDamage({ attacker: { ...base, nature: "Adamant" }, defender: side("Garchomp"), move: "Earthquake" });
+  assert.equal(seriousDamage.rolls.length, 16);
+  assert.equal(adamantDamage.rolls.length, 16);
+  assert.ok(adamantDamage.max > seriousDamage.max);
+});
+
+test("a prévia de stats ignora item e habilidade desconhecidos sem perder a Nature", () => {
+  const base = side("Garchomp", { nature: "Jolly", statPoints: { atk: 8, spe: 32 } });
+  const expected = calculateChampionsStats(base);
+  const freeTextBattleFields = calculateChampionsStats({
+    ...base,
+    ability: "Habilidade criada pelo usuário",
+    item: "Clear Amulet",
+  });
+  const adamant = calculateChampionsStats({ ...base, nature: "Adamant" });
+
+  assert.deepEqual(freeTextBattleFields, expected);
+  assert.equal(freeTextBattleFields.hp, expected.hp);
+  assert.ok(adamant.atk > expected.atk);
+  assert.ok(adamant.spe < expected.spe);
 });
 
 test("confere a faixa do caso público exibido no Pokémon Showdown", () => {
@@ -485,6 +534,7 @@ test("sugestões do catálogo são filtradas e limitadas para não renderizar a 
   assert.deepEqual(getDamageCatalogOptions("species", "garchomp"), ["Garchomp", "Garchomp-Mega", "Garchomp-Mega-Z"]);
   assert.deepEqual(getDamageCatalogOptions("species", ""), []);
   assert.equal(getDamageCatalogOptions("moves", "a").length, 50);
+  assert.ok(getDamageCatalogOptions("items", "Clear").includes("Clear Amulet"));
 });
 
 test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
@@ -537,6 +587,32 @@ test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
   });
 });
 
+test("link do builder sem adversário preserva o lado escolhido e não inventa um alvo", () => {
+  const params = new URLSearchParams(buildDamageCalculatorSearch(side(getDamageSpeciesName("lucario-mega-z")), null, "Shadow Claw"));
+  assert.equal(params.get("attacker"), "Lucario-Mega-Z");
+  assert.equal(params.get("defender"), null);
+  assert.equal(params.get("move"), "Shadow Claw");
+});
+
+test("IDs de forma do catálogo chegam ao motor de dano sem colapsar na espécie base", () => {
+  assert.equal(getDamageSpeciesName("garchomp-mega-z"), "Garchomp-Mega-Z");
+  assert.equal(getDamageSpeciesName("absol-mega-z"), "Absol-Mega-Z");
+  assert.equal(getDamageSpeciesName("raichu-mega-x"), "Raichu-Mega-X");
+  assert.notEqual(getDamageSpeciesName("garchomp-mega-z"), getDamageSpeciesName("garchomp"));
+});
+
+test("um atacante calcula alvos independentes no mesmo cenário, sem mutar o set compartilhado", () => {
+  const input = { attacker: side("Garchomp"), defender: side("Garchomp"), move: "Earthquake", gameType: "Doubles", targetsHit: 1 };
+  const before = structuredClone(input);
+  const targets = calculateDamageAgainstTargets(input, ["Garchomp", "Gardevoir-Mega", ""]);
+  assert.equal(targets.length, 2);
+  assert.deepEqual(targets.map(({ species, result }) => [species, result.min, result.max]), [
+    ["Garchomp", 75, 88],
+    ["Gardevoir-Mega", 100, 118],
+  ]);
+  assert.deepEqual(input, before);
+});
+
 test("copiar um cenário deixa os dois sets e condições independentes", () => {
   const original = {
     attacker: side("Garchomp", { statPoints: { atk: 32 } }),
@@ -569,4 +645,126 @@ test("golpes sem dano direto não são apresentados como uma faixa de dano", () 
 
   assert.equal(result.move.category, "Status");
   assert.deepEqual([result.min, result.max], [0, 0]);
+});
+
+test("time contra um alvo calcula golpes do builder e preserva os 16 rolls", () => {
+  const team = [
+    { species: "Garchomp", nature: "Jolly", ability: "Rough Skin", item: "", statPoints: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ["Earthquake", "Shadow Claw", "", ""] },
+  ];
+  const rows = calculateDamageFromTeamAgainstTarget(team, side("Gardevoir-Mega"), {
+    gameType: "Doubles",
+    weather: "Rain",
+    attackerSide: { isHelpingHand: true },
+    defenderSide: { isReflect: true },
+  });
+
+  assert.equal(rows.length, 6);
+  assert.equal(rows[0].status, "ready");
+  assert.deepEqual(rows[0].moves.map(({ move }) => move), ["Earthquake", "Shadow Claw"]);
+  assert.equal(rows[0].moves[0].result.rolls.length, 16);
+  assert.equal(rows[0].moves[0].result.gameType, "Doubles");
+  assert.equal(rows[0].moves[0].result.targetsHit, 1);
+  assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Helping Hand"));
+  assert.ok(rows[0].moves[0].result.activeModifiers.some(({ label }) => label === "Reflect"));
+  assert.equal(rows[1].status, "empty");
+});
+
+test("a Nature salva no set muda os golpes na comparação Time vs 1", () => {
+  const member = {
+    species: "Garchomp",
+    ability: "Rough Skin",
+    item: "",
+    statPoints: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: ["Earthquake", "", "", ""],
+  };
+  const target = side("Gardevoir-Mega");
+  const neutral = calculateDamageFromTeamAgainstTarget([{ ...member, nature: "Serious" }], target);
+  const adamant = calculateDamageFromTeamAgainstTarget([{ ...member, nature: "Adamant" }], target);
+  assert.equal(neutral[0].moves[0].result.rolls.length, 16);
+  assert.equal(adamant[0].moves[0].result.rolls.length, 16);
+  assert.ok(adamant[0].moves[0].result.max > neutral[0].moves[0].result.max);
+});
+
+test("compara os golpes preenchidos dos seis integrantes contra o mesmo alvo", () => {
+  const speciesAndMoves = [
+    ["Garchomp", "Earthquake"],
+    ["Lucario", "Aura Sphere"],
+    ["Gardevoir-Mega", "Moonblast"],
+    ["Charizard", "Heat Wave"],
+    ["Absol-Mega-Z", "Shadow Claw"],
+    ["Garchomp-Mega-Z", "Dragon Claw"],
+  ];
+  const members = speciesAndMoves.map(([species, move]) => ({
+    species,
+    nature: "Serious",
+    ability: "",
+    item: "",
+    statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    moves: [move, "", "", ""],
+  }));
+  const rows = calculateDamageFromTeamAgainstTarget(members, side("Gardevoir-Mega"));
+
+  assert.deepEqual(rows.map(({ status }) => status), Array(6).fill("ready"));
+  assert.deepEqual(rows.map(({ moves }) => moves[0].result.move.name), speciesAndMoves.map(([, move]) => move));
+  assert.ok(rows.every(({ moves }) => moves[0].result && moves[0].result.max >= moves[0].result.min));
+  assert.ok(rows.slice(0, 5).every(({ moves }) => moves[0].result.rolls?.length === 16));
+});
+
+test("time contra um alvo explicita sets sem golpes e não presume uma distribuição legal", () => {
+  const blank = { species: "Garchomp", nature: "Serious", ability: "Rough Skin", item: "", statPoints: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, moves: ["", " ", "", ""] };
+  const overStatLimit = { ...blank, statPoints: { ...blank.statPoints, atk: 33 }, moves: ["Earthquake", "", "", ""] };
+  const overBudget = { ...blank, statPoints: { hp: 12, atk: 12, def: 12, spa: 12, spd: 10, spe: 9 }, moves: ["Earthquake", "", "", ""] };
+  const unknownMove = { ...blank, moves: ["Earthquake", "Move Not In Catalogue", "", ""] };
+  const clearAmulet = { ...blank, item: "Clear Amulet", moves: ["Earthquake", "", "", ""] };
+  const unsupportedItem = { ...blank, item: "Choice Specs", moves: ["Earthquake", "", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove, clearAmulet, unsupportedItem], side("Garchomp"));
+
+  assert.equal(rows[0].status, "no-moves");
+  assert.match(rows[0].error, /Nenhum golpe/);
+  assert.equal(rows[1].status, "invalid");
+  assert.match(rows[1].error, /0 a 32 SP/);
+  assert.equal(rows[2].status, "invalid");
+  assert.match(rows[2].error, /66/);
+  assert.equal(rows[3].status, "ready");
+  assert.ok(rows[3].moves[0].result);
+  assert.equal(rows[3].moves[1].result, null);
+  assert.match(rows[3].moves[1].error, /fora do catálogo/);
+  assert.equal(rows[4].status, "ready");
+  assert.equal(rows[4].moves[0].result.rolls.length, 16);
+  assert.match(rows[4].moves[0].result.itemContextNotes[0], /Clear Amulet/);
+  assert.match(rows[4].moves[0].result.itemContextNotes[0], /não está verificada/);
+  assert.equal(rows[5].status, "unsupported-item");
+  assert.equal(rows[5].moves.length, 0);
+  assert.match(rows[5].error, /reconhecido no catálogo geral/);
+  assert.match(getDamageItemSupport("Mystery Item").status, /unknown/);
+  assert.match(getDamageItemSupport("Clear Amulet").status, /context-only/);
+});
+
+test("Clear Amulet conserva o contexto e não altera o dano pontual quando estágios são informados", () => {
+  const input = { attacker: side("Garchomp", { item: "Clear Amulet", nature: "Jolly", statPoints: { atk: 32 } }), defender: side("Gardevoir-Mega"), move: "Earthquake", gameType: "Singles" };
+  const withAmulet = calculateChampionsDamage(input);
+  const withoutAmulet = calculateChampionsDamage({ ...input, attacker: { ...input.attacker, item: "" } });
+
+  assert.equal(withAmulet.rolls.length, 16);
+  assert.deepEqual(withAmulet.rolls, withoutAmulet.rolls);
+  assert.equal(withAmulet.itemContextNotes.length, 1);
+  assert.match(withAmulet.itemContextNotes[0], /não simula quedas causadas pelo oponente/);
+  assert.match(withAmulet.itemContextNotes[0], /legalidade em Pokémon Champions não está verificada/);
+});
+
+test("um item desconhecido ou não suportado bloqueia só o integrante correspondente", () => {
+  const member = { species: "Garchomp", nature: "Jolly", ability: "Rough Skin", item: "", statPoints: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ["Earthquake", "", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([
+    { ...member, item: "Mystery Item" },
+    member,
+    { ...member, item: "Choice Specs" },
+    member,
+    member,
+    member,
+  ], { ...side("Garchomp"), item: "" });
+
+  assert.deepEqual(rows.map(({ status }) => status), ["unknown-item", "ready", "unsupported-item", "ready", "ready", "ready"]);
+  assert.match(rows[0].error, /não foi reconhecido/);
+  assert.match(rows[2].error, /pode alterar dano/);
+  assert.ok(rows.slice(1).filter((_, index) => index !== 1).every((row) => row.moves[0].result.rolls.length === 16));
 });

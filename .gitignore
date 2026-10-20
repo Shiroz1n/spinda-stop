@@ -7,4 +7,5 @@ coverage/
 artifacts/visual-review/
 .DS_Store
 packages/data/generated/*.json
+packages/data/generated/learnsets/
 *.log

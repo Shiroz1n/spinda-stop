@@ -1,11 +1,14 @@
 import { calculate, Field, Generations, Move, Pokemon, Side, toID } from "@smogon/calc";
 
 const generation = Generations.get(0);
+const generalGeneration = Generations.get(9);
+const STATIC_HIT_CONTEXT_ITEMS = new Set(["clearamulet"]);
 
 export const damageCalculatorCatalog = {
   species: [...generation.species].map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
   moves: [...generation.moves].map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
-  items: [...generation.items].map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
+  items: [...new Map([...generation.items, ...generalGeneration.items].map((item) => [item.id, item])).values()]
+    .map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
   abilities: [...generation.abilities].map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
   natures: [...generation.natures].map(({ name }) => name).sort((a, b) => a.localeCompare(b)),
   weather: ["Sun", "Rain", "Sand", "Hail", "Snow"],
@@ -104,6 +107,40 @@ export function getDamageMove(value) {
   return findEntry(generation.moves, value);
 }
 
+export function getDamageItemSupport(value) {
+  const label = String(value || "").trim();
+  if (!label) return { status: "none", name: "", note: "" };
+  const engineItem = findEntry(generation.items, label);
+  if (engineItem) return { status: "modeled", name: engineItem.name, note: "" };
+
+  const generalItem = findEntry(generalGeneration.items, label);
+  if (!generalItem) {
+    return {
+      status: "unknown",
+      name: label,
+      error: `O item “${label}” não foi reconhecido nos catálogos de cálculo consultados. O resultado deste integrante não foi calculado; o efeito e a disponibilidade em Champions continuam não verificados.`,
+    };
+  }
+
+  if (STATIC_HIT_CONTEXT_ITEMS.has(generalItem.id)) {
+    return {
+      status: "context-only",
+      name: generalItem.name,
+      note: `${generalItem.name} foi reconhecido no catálogo geral da geração 9, mas não é aplicado pelo catálogo Champions do motor. Este cálculo pontual usa os stats e estágios já informados e não simula quedas causadas pelo oponente; a disponibilidade/legalidade em Pokémon Champions não está verificada.`,
+    };
+  }
+
+  return {
+    status: "unsupported",
+    name: generalItem.name,
+    error: `O item “${generalItem.name}” foi reconhecido no catálogo geral da geração 9, mas não é suportado pelo catálogo Champions deste motor. Como pode alterar dano ou sequência, nenhum resultado foi calculado; disponibilidade/legalidade em Champions não verificada.`,
+  };
+}
+
+export function getDamageSpeciesName(value) {
+  return findEntry(generation.species, value)?.name || String(value || "");
+}
+
 export function isSpreadTargetMove(move) {
   return Boolean(move && spreadTargets.has(move.target));
 }
@@ -193,7 +230,8 @@ function makePokemon(input, label) {
   const species = resolveEntry(generation.species, input.species, `um Pokémon para ${label}`, true);
   const nature = resolveEntry(generation.natures, input.nature || "Serious", "uma nature");
   const ability = resolveEntry(generation.abilities, input.ability, "uma habilidade");
-  const item = resolveEntry(generation.items, input.item, "um item");
+  const itemSupport = getDamageItemSupport(input.item);
+  if (itemSupport.error) throw new Error(itemSupport.error);
   const status = input.status || "";
   const validStatuses = new Set(["", "brn", "par", "psn", "tox", "slp", "frz"]);
   if (!validStatuses.has(status)) throw new Error("Condição de status inválida.");
@@ -202,10 +240,21 @@ function makePokemon(input, label) {
     ability: ability?.name,
     boosts: normalizeBoosts(input.boosts),
     evs: normalizeStatPoints(input.statPoints),
-    item: item?.name,
+    item: itemSupport.status === "modeled" ? itemSupport.name : undefined,
     nature: nature?.name || "Serious",
     status,
   });
+}
+
+export function calculateChampionsStats(input) {
+  // Stat previews only depend on the species, Nature, and SP. Keep free-text
+  // battle fields out of this path so an unrecognized item or ability cannot
+  // hide otherwise valid stats in the editor.
+  return makePokemon({
+    species: input.species,
+    nature: input.nature,
+    statPoints: input.statPoints,
+  }, "stats do set").stats;
 }
 
 export function getHitOptions(move) {
@@ -217,10 +266,12 @@ export function getHitOptions(move) {
   return [1];
 }
 
-function getTypeEffectiveness(moveType, defenderTypes) {
+export function getTypeEffectiveness(moveType, defenderTypes) {
   const type = findEntry(generation.types, moveType);
   if (!type) return null;
-  return defenderTypes.reduce((effectiveness, defenderType) => {
+  const resolvedDefenderTypes = defenderTypes.map((defenderType) => findEntry(generation.types, defenderType)?.name);
+  if (resolvedDefenderTypes.some((defenderType) => !defenderType)) return null;
+  return resolvedDefenderTypes.reduce((effectiveness, defenderType) => {
     return effectiveness * (type.effectiveness[defenderType] ?? 1);
   }, 1);
 }
@@ -283,6 +334,13 @@ function getActiveModifiers(rawDesc, { gameType, moveData, isSpread, typeEffecti
 }
 
 export function calculateChampionsDamage(input) {
+  const itemContextNotes = [
+    ["Atacante", input.attacker?.item],
+    ["Alvo", input.defender?.item],
+  ].flatMap(([side, value]) => {
+    const item = getDamageItemSupport(value);
+    return item.status === "context-only" ? [`${side}: ${item.note}`] : [];
+  });
   const attacker = makePokemon(input.attacker, "ataque");
   const defender = makePokemon(input.defender, "defesa");
   const moveData = resolveEntry(generation.moves, input.move, "um golpe", true);
@@ -374,6 +432,7 @@ export function calculateChampionsDamage(input) {
     defender,
     gameType,
     hitRanges,
+    itemContextNotes,
     hits,
     hasParentalBondFollowUp,
     isSpread,
@@ -393,4 +452,102 @@ export function calculateChampionsDamage(input) {
     rolls,
     max,
   };
+}
+
+// Reuse the same engine and shared attacker/field inputs for a target list.
+// This is a comparison helper only; each target remains a separate result.
+export function calculateDamageAgainstTargets(input, targetSpecies) {
+  return (Array.isArray(targetSpecies) ? targetSpecies : [])
+    .map((species) => String(species || "").trim())
+    .filter(Boolean)
+    .map((species) => {
+      try {
+        return { species, result: calculateChampionsDamage({
+          ...input,
+          defender: { ...input.defender, species },
+        }), error: "" };
+      } catch (error) {
+        return { species, result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este alvo." };
+      }
+    });
+}
+
+const championsStatKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
+
+function validateTeamDamageMember(member) {
+  const statPoints = member?.statPoints;
+  if (!statPoints || typeof statPoints !== "object") return "Distribuição de Stat Points ausente.";
+
+  let total = 0;
+  for (const key of championsStatKeys) {
+    const value = statPoints[key];
+    if (!Number.isSafeInteger(value) || value < 0 || value > 32) {
+      return `${key.toUpperCase()} precisa ter de 0 a 32 SP.`;
+    }
+    total += value;
+  }
+  if (total > 66) return `O set usa ${total} SP; o limite deste modelo é 66.`;
+  if (!String(member?.species || "").trim()) return "Espécie ausente no rascunho salvo.";
+  if (!Array.isArray(member.moves)) return "Lista de golpes ausente neste set.";
+  return "";
+}
+
+// The inverse comparison consumes actual builder sets. Empty slots and partial
+// or invalid sets are represented explicitly; no default move or legal set is
+// inferred on behalf of the player.
+export function calculateDamageFromTeamAgainstTarget(teamMembers, defender, options = {}) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const member = Array.isArray(teamMembers) ? teamMembers[index] : null;
+    if (!member) return { slot: index + 1, status: "empty", moves: [], error: "Posição vazia." };
+
+    const memberError = validateTeamDamageMember(member);
+    if (memberError) return { slot: index + 1, status: "invalid", member, moves: [], error: memberError };
+
+    const selectedMoves = Array.isArray(member.moves)
+      ? member.moves.map((move) => String(move || "").trim()).filter(Boolean)
+      : [];
+    if (selectedMoves.length === 0) {
+      return { slot: index + 1, status: "no-moves", member, moves: [], error: "Nenhum golpe preenchido neste set." };
+    }
+
+    const itemSupport = getDamageItemSupport(member.item);
+    if (itemSupport.error) {
+      return {
+        slot: index + 1,
+        status: itemSupport.status === "unknown" ? "unknown-item" : "unsupported-item",
+        member,
+        moves: [],
+        error: itemSupport.error,
+      };
+    }
+
+    const moves = selectedMoves.map((move) => {
+      if (!getDamageMove(move)) return { move, result: null, error: "Golpe fora do catálogo de cálculo." };
+      try {
+        return {
+          move,
+          result: calculateChampionsDamage({
+            ...options,
+            attacker: {
+              species: member.species,
+              nature: member.nature || "Serious",
+              ability: member.ability || "",
+              item: member.item || "",
+              statPoints: member.statPoints,
+              boosts: member.boosts || {},
+              status: member.status || "",
+            },
+            defender,
+            gameType: options.gameType || "Doubles",
+            targetsHit: 1,
+            move,
+          }),
+          error: "",
+        };
+      } catch (error) {
+        return { move, result: null, error: error instanceof Error ? error.message : "Não foi possível calcular este golpe." };
+      }
+    });
+    return { slot: index + 1, status: moves.some(({ result }) => result) ? "ready" : "invalid", member, moves, error: "" };
+  });
 }

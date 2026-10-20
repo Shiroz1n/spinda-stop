@@ -4,6 +4,7 @@ import {
   createPokemonSpriteLookup,
   itemSpriteUrl,
   POKEAPI_SPRITES_BASE,
+  POKEAPI_HOME_FORM_SPRITES,
   resolvePokemonSpriteUrl,
   resolveCompetitivePokemonSprite,
   typeIconUrl,
@@ -34,6 +35,32 @@ test("an alternate form without its own sprite ID has no base-form fallback", ()
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "mega-x" }), null);
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, spriteId: 10034, formId: "mega-x" }), `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/10034.gif`);
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "default" }), `${POKEAPI_SPRITES_BASE}/pokemon/versions/generation-v/black-white/6.png`);
+});
+
+test("all 49 catalogued Legends: Z-A Megas map to exact pinned PokeAPI HOME assets", () => {
+  for (const [slug, file] of Object.entries(POKEAPI_HOME_FORM_SPRITES)) {
+    assert.equal(
+      resolvePokemonSpriteUrl({ slug, speciesId: 445, spriteId: Number.parseInt(file, 10), formId: "mega", isDefault: false }),
+      `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${file}`,
+    );
+  }
+  assert.equal(Object.keys(POKEAPI_HOME_FORM_SPRITES).length, 49);
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["garchomp-mega-z"], "10309.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["absol-mega-z"], "10307.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["lucario-mega-z"], "10310.png");
+});
+
+test("Mega Raichu X and Y use their exact pinned PokeAPI HOME sprites", () => {
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["raichu-mega-x"], "10304.png");
+  assert.equal(POKEAPI_HOME_FORM_SPRITES["raichu-mega-y"], "10305.png");
+  assert.equal(
+    resolvePokemonSpriteUrl({ slug: "raichu-mega-x", speciesId: 26, spriteId: 10304, formId: "mega-x", isDefault: false }),
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/home/10304.png`,
+  );
+  assert.equal(
+    resolvePokemonSpriteUrl({ slug: "raichu-mega-y", speciesId: 26, spriteId: 10305, formId: "mega-y", isDefault: false }),
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/home/10305.png`,
+  );
 });
 
 test("base forms after the Black and White roster use their own Showdown sprite IDs", () => {

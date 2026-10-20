@@ -217,7 +217,7 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
   return (
     <section className="metaroll-ladder-panel" aria-label="Ladder de jogadores de Doubles">
       <div className="metaroll-ladder-heading">
-        <div><p className="page-label">Classificação de jogadores · Doubles</p><h2>Ladder</h2><p>A resposta atual da fonte cobre os jogadores que ela publica, até o limite do próprio arquivo.</p></div>
+        <div><p className="page-label">MetaRoll · Doubles</p><h2>Ladder</h2><p>Ranking dos jogadores publicados para a temporada selecionada.</p></div>
         <label className="usage-filter-field">
           <span>Temporada</span>
           <select value={season} onChange={(event) => onSeasonChange(event.target.value)}>
@@ -237,7 +237,9 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
       ) : null}
       {currentLadderState.data ? (
         <>
-          <div className="metaroll-ladder-capture">
+          <details className="metaroll-ladder-about">
+            <summary>Sobre os dados e a captura</summary>
+            <div className="metaroll-ladder-capture">
             <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
             <div><span>Formato</span><strong>Doubles</strong></div>
             <div><span>Temporada consultada</span><strong>{currentLadderState.data.season || season || "não informada pela resposta"}</strong></div>
@@ -246,11 +248,9 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
             <div><span>Comparação de posição</span><strong>{formatCapture(currentLadderState.data.comparedTo)}</strong></div>
             <div><span>Entradas listadas</span><strong>{currentLadderState.data.count ?? "não informadas"}</strong></div>
             <p>O arquivo publicado contém até 1.000 jogadores. `rating` e a taxa de vitórias são os campos da fonte; isso não representa o ladder completo nem uma amostra do metagame.</p>
-          </div>
+            </div>
+          </details>
           <button className="button button-outline button-small metaroll-refresh" type="button" disabled={currentLadderState.status === "loading"} onClick={() => refreshLadder(true)}>{currentLadderState.status === "loading" ? "Atualizando…" : "Atualizar agora"}</button>
-          {currentLadderState.data.ratingHistory.length > 0 ? (
-            <RatingHistoryPanel key={season || "current"} history={currentLadderState.data.ratingHistory} season={currentLadderState.data.season} />
-          ) : <p className="metaroll-empty">A fonte não publicou histórico de rating nesta captura.</p>}
           <div className="metaroll-ladder-filters">
             <label className="usage-search-field"><span>Buscar jogador ou ID</span><input type="search" value={ladderQuery} onChange={(event) => { setLadderQuery(event.target.value); setLadderPage(1); }} placeholder="Nome ou ID publicado" autoComplete="off" /></label>
             <label className="usage-filter-field"><span>País</span><select value={countryFilter} onChange={(event) => { setCountryFilter(event.target.value); setLadderPage(1); }}><option value="all">Todos</option>{ladderCountries.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
@@ -276,6 +276,9 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
             </ol>
           ) : <div className="usage-no-results"><strong>Nenhum resultado</strong><p>Tente outro nome ou remova um filtro.</p></div>}
           <div className="metaroll-ladder-pagination"><button className="button button-outline button-small" type="button" disabled={currentLadderPage <= 1} onClick={() => setLadderPage((page) => Math.max(1, page - 1))}>Anterior</button><span>{currentLadderPage} / {ladderPageCount}</span><button className="button button-outline button-small" type="button" disabled={currentLadderPage >= ladderPageCount} onClick={() => setLadderPage((page) => Math.min(ladderPageCount, page + 1))}>Próxima</button></div>
+          {currentLadderState.data.ratingHistory.length > 0 ? (
+            <RatingHistoryPanel key={season || "current"} history={currentLadderState.data.ratingHistory} season={currentLadderState.data.season} />
+          ) : <p className="metaroll-empty">A fonte não publicou histórico de rating nesta captura.</p>}
         </>
       ) : null}
     </section>

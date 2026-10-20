@@ -102,10 +102,8 @@ function CategoryRow({ row, category }) {
           )}
         </div>
         <div className="usage-row-value">
-          <div className="usage-bar-track" aria-hidden="true">
-            {hasBar ? <span style={{ width: barWidth }} /> : null}
-          </div>
-          <b>{row.percentage || "Não informado"}</b>
+          {hasBar ? <div className="usage-bar-track" aria-hidden="true"><span style={{ width: barWidth }} /></div> : null}
+          <b>{hasBar ? row.percentage : "Percentual não informado"}</b>
         </div>
       </div>
     </li>
@@ -134,7 +132,7 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry }) {
+function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry, onCategoryChange }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
@@ -163,6 +161,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
           <div className="type-list usage-type-list">
             {selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}
           </div>
+          {Number.isFinite(selectedPokemon.position) ? <p className="usage-selected-rank"><span>Posição na fonte</span><strong>#{selectedPokemon.position}</strong></p> : null}
         </div>
         <span className="usage-format-stamp">Doubles</span>
       </div>
@@ -188,34 +187,16 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
 
       {usage ? (
         <>
-          <div className="usage-provenance" aria-label="Fonte e período dos dados">
-            <div className="usage-provenance-source">
-              <span>Fonte</span>
-              <a href={source.url} target="_blank" rel="noreferrer">
-                {source.attribution}
-              </a>
-            </div>
-            <div>
-              <span>Período devolvido pela fonte</span>
-              <strong>
-                Temporada {usage.season || "não informada"}
-                <span className="usage-provenance-separator"> · </span>
-                {formatSnapshotDate(usage.date)}
-              </strong>
-            </div>
-            <div>
-              <span>Última consulta do app</span>
-              <strong>{formatTimestamp(usage.appFetchedAt)}</strong>
-            </div>
-            {usage.sourceFile ? (
-              <div className="usage-provenance-file">
-                <span>Arquivo de origem na fonte</span>
-                <code>{usage.sourceFile}</code>
-              </div>
-            ) : null}
+          <div className="usage-provenance usage-provenance-inline" aria-label="Fonte e período dos dados">
+            <a className="usage-provenance-source" href={source.url} target="_blank" rel="noreferrer">
+              {source.attribution}
+            </a>
+            <span><strong>Temporada {usage.season || "não informada"}</strong> · {formatSnapshotDate(usage.date)}</span>
+            <span>Consultado {formatTimestamp(usage.appFetchedAt)}</span>
             <details className="usage-source-help">
-              <summary>Como ler esta captura</summary>
-              <p>Temporada é o rótulo devolvido pela fonte. Amostra e denominador não foram publicados; os percentuais não devem ser lidos como taxa de partidas.</p>
+              <summary>Sobre esta captura</summary>
+              {usage.sourceFile ? <p>Arquivo de origem: <code>{usage.sourceFile}</code></p> : null}
+              <p>Temporada é o rótulo devolvido pela fonte. A amostra e o denominador não foram publicados; percentuais de distribuição não são taxa de partidas.</p>
             </details>
           </div>
 
@@ -227,12 +208,11 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
                   <section className="usage-profile-section" key={item.id}>
                     <div className="usage-category-heading">
                       <div>
-                        <p className="page-label">Distribuição publicada</p>
                         <h3>{item.label}</h3>
                       </div>
-                      <span>{itemRows.length} linhas</span>
+                      <div className="usage-profile-actions"><span>{itemRows.length} linhas</span><button className="text-button" type="button" onClick={() => onCategoryChange(item.id)}>Ver tudo</button></div>
                     </div>
-                    <CategoryRows rows={itemRows} category={item} />
+                    <CategoryRows rows={itemRows.slice(0, 2)} category={item} />
                   </section>
                 );
               })}
@@ -270,7 +250,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [abilityFilter, setAbilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("position");
   const [selectedId, setSelectedId] = useState(null);
-  const [categoryId, setCategoryId] = useState("profile");
+  const [categoryId, setCategoryId] = useState("move");
   const [periodMode, setPeriodMode] = useState("current");
   const [historySeason, setHistorySeason] = useState("all");
   const [historyDays, setHistoryDays] = useState(7);
@@ -413,11 +393,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
         <div>
           <p className="page-label">Pesquisa de Doubles</p>
           <h1>Usage</h1>
-          <p className="page-intro">
-            Busque uma espécie, combine filtros sustentados pelo índice e abra a ficha de Doubles.
-          </p>
+          <p className="page-intro">Ranking, ficha e distribuições da fonte selecionada.</p>
         </div>
-        <span className="usage-edition-mark">ESTUDO · 01</span>
       </div>
 
       <div className="usage-source-banner">
@@ -426,22 +403,22 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           <a href={provider.source.url} target="_blank" rel="noreferrer">
             {provider.source.attribution}
           </a>
-          <p>
-            Fonte independente. A tela não combina números com MetaRoll nem fornece uma API própria.
-          </p>
+          <span>Doubles</span>
         </div>
-        <a className="usage-source-guide" href={provider.source.guideUrl} target="_blank" rel="noreferrer">
-          Guia da API <span aria-hidden="true">↗</span>
-        </a>
+        <details className="usage-source-details">
+          <summary>Sobre os dados</summary>
+          <p>Esta tela mostra apenas esta fonte. Não combina percentuais com MetaRoll nem expõe uma API própria.</p>
+          <a className="usage-source-guide" href={provider.source.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
+        </details>
       </div>
 
       {indexData ? (
         <div className="usage-index-note" aria-label="Atualização do índice">
-          <span>Captura da fonte: {formatTimestamp(indexData.generatedAt)} · Consulta do app: {formatTimestamp(indexData.appFetchedAt)}</span>
-          <span>{indexData.pokemon.length} Pokémon no índice</span>
+          <span className="usage-period-summary">Doubles · {indexData.pokemon.length} Pokémon no índice</span>
           <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>
             {indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
           </button>
+          <details className="usage-capture-details"><summary>Captura e consulta</summary><span>Captura {formatTimestamp(indexData.generatedAt)} · Consultado {formatTimestamp(indexData.appFetchedAt)}</span></details>
         </div>
       ) : null}
 
@@ -500,6 +477,9 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                 </select>
               </label>
 
+              <details className="usage-more-filters">
+                <summary>Mais filtros e período</summary>
+                <div className="usage-more-filter-grid">
               {categoryFilters.map(({ id, key, label }) => {
                 const value = id === "move" ? moveFilter : id === "held_item" ? itemFilter : abilityFilter;
                 const setValue = id === "move" ? setMoveFilter : id === "held_item" ? setItemFilter : setAbilityFilter;
@@ -596,6 +576,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                   Limpar filtros
                 </button>
               ) : null}
+                </div>
+              </details>
             </div>
 
             <p className="usage-filter-note">
@@ -695,6 +677,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               onRetry={() => {
                 refreshUsage(true);
               }}
+              onCategoryChange={setCategoryId}
             />
           </div>
         </div>
@@ -722,10 +705,6 @@ export function UsagePage() {
   return (
     <>
       <div className="page-wrap usage-page usage-source-switcher">
-        <div className="usage-source-switch-copy">
-          <p className="page-label">Fonte de dados</p>
-          <p>Veja uma fonte por vez. Períodos e percentuais não são combinados.</p>
-        </div>
         <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
           <button
             aria-pressed={sourceId === "pokemon-champions-battle-data"}

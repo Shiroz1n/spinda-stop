@@ -30,7 +30,7 @@ function TournamentSignIn({ oauthAvailable }) {
       <span className="community-card-label">Conta opcional</span>
       <h2 id="tournament-signin-title">Entre para organizar ou aceitar um convite</h2>
       <p>Usamos seu identificador e nome público do GitHub. O Spinda Stop organiza os participantes; as partidas acontecem no jogo.</p>
-      {oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">O login do GitHub ainda não foi configurado neste ambiente.</p>}
+      {oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">A entrada com GitHub não está disponível agora.</p>}
     </section>
   );
 }
@@ -242,6 +242,19 @@ export function TournamentDetailPage() {
   const terminal = ["completed", "cancelled"].includes(tournament.status);
   const allCheckedIn = members.length === 4 && members.every((member) => member.status === "checked_in");
   const ownFriendCode = members.find((member) => member.id === currentUser.id)?.friendCode;
+  const nextStep = terminal
+    ? tournament.status === "completed" ? "Chaveamento e resultados confirmados ficam disponíveis para consulta." : "Este torneio foi cancelado."
+    : tournament.status === "open" && isHost
+      ? allCheckedIn ? "Todos fizeram check-in. Feche as inscrições para preparar o chaveamento." : "Convide as outras pessoas e aguarde o check-in antes de fechar as inscrições."
+      : tournament.status === "open"
+        ? currentUser.memberStatus === "registered" ? "Confirme presença com check-in." : "Aguarde o host completar as inscrições."
+        : tournament.status === "locked" && isHost
+          ? "As inscrições estão fechadas. Sorteie e inicie o chaveamento quando estiverem prontos."
+          : tournament.status === "locked"
+            ? "Aguarde o host iniciar o chaveamento."
+            : matches.some((match) => match.status === "awaiting_confirmation")
+              ? "Há um resultado aguardando confirmação do adversário."
+              : "Consulte a chave e registre o resultado após cada partida.";
 
   return (
     <section className="page-wrap community-page">
@@ -249,14 +262,15 @@ export function TournamentDetailPage() {
         <div><p className="page-label">{isHost ? "Torneio do host" : "Torneio por convite"}</p><h1>{tournament.name}</h1><p className="page-intro">{TOURNAMENT_STATES[tournament.status]} · {participantCount}/4 participantes{tournament.championId ? ` · campeão: ${members.find((member) => member.id === tournament.championId)?.handle || "participante"}` : ""}</p></div>
         <Link className="button button-outline" to="/tournaments">Meus torneios</Link>
       </div>
+      <div className="community-next-step" aria-label="Próxima ação">
+        <strong>{TOURNAMENT_STATES[tournament.status]}</strong><span>{nextStep}</span><a href={tournament.status === "in_progress" ? "#bracket-title" : "#tournament-members-title"}>Abrir etapa <span aria-hidden="true">↓</span></a>
+      </div>
       <ErrorNotice>{actionError}</ErrorNotice>
       {message ? <p className="community-success" role="status">{message}</p> : null}
 
-      {tournament.status === "open" && isHost ? <section className="community-room-panel panel-frame tournament-invite-panel"><div className="section-heading"><h2>Convite</h2><span>Expira em 7 dias</span></div><p className="community-muted">Compartilhe o link com as outras três pessoas. O token fica no fragmento da URL e é removido ao entrar.</p>{inviteUrl ? <div className="invite-copy-row"><input className="text-input" aria-label="Link de convite" readOnly value={inviteUrl} onFocus={(event) => event.target.select()} /><button className="button button-primary button-small" type="button" onClick={copyInvite}>Copiar link</button></div> : <button className="button button-outline button-small" type="button" onClick={copyInvite}>Gerar convite</button>}</section> : null}
-
       <div className="community-room-grid tournament-detail-grid">
         <section className="community-room-panel panel-frame" aria-labelledby="tournament-members-title">
-          <div className="section-heading"><h2 id="tournament-members-title">Participantes</h2><span>As partidas acontecem no Pokémon Champions</span></div>
+          <div className="section-heading"><h2 id="tournament-members-title">Participantes</h2><span>{participantCount}/4</span></div>
           <ul className="participant-list">{members.map((member) => <li key={member.id}><div className="participant-card-main"><div><strong>{member.handle}{member.id === tournament.hostId ? " · host" : ""}{member.seed ? ` · seed ${member.seed}` : ""}</strong><span>{MEMBER_STATES[member.status] || member.status}{member.friendCode ? <span className="friend-code-value"> · Código: {member.friendCode}</span> : ""}</span></div><SharedTeamPreview roster={member.sharedRoster} ownerName={member.handle} /></div></li>)}</ul>
           {!terminal ? <EventTeamSharing eventId={tournamentId} eventType="tournament" sharedRoster={members.find((member) => member.id === currentUser.id)?.sharedRoster} onSaved={refresh} /> : null}
           {currentUser.memberStatus === "registered" && tournament.status === "open" ? <button className="button button-primary" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/check-in`, { method: "POST", body: {} })}>Fazer check-in</button> : null}
@@ -266,7 +280,7 @@ export function TournamentDetailPage() {
           {isHost && ["open", "locked"].includes(tournament.status) ? <button className="text-button community-cancel" type="button" disabled={busy} onClick={() => { if (window.confirm("Cancelar este torneio?")) act(`/tournaments/${tournamentId}/cancel`, { method: "POST", body: {} }); }}>Cancelar torneio</button> : null}
           {!terminal && friendCodesAvailable ? <form className="friend-code-form" onSubmit={(event) => { event.preventDefault(); act(`/tournaments/${tournamentId}/friend-code`, { method: "PUT", body: { code: friendCode } }).then((result) => { if (result) setFriendCode(""); }); }}><label className="community-field"><span>Seu código de amizade (opcional)</span><input className="text-input" maxLength={40} value={friendCode} onChange={(event) => setFriendCode(event.target.value)} autoComplete="off" /></label><button className="button button-outline button-small" type="submit" disabled={busy || !friendCode}>Compartilhar com participantes</button><small>Visível apenas ao grupo e removido ao terminar ou após sete dias.</small></form> : null}
           {!terminal && ownFriendCode ? <button className="button button-quiet button-small" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/friend-code`, { method: "DELETE" })}>Remover meu código</button> : null}
-          {!terminal && !friendCodesAvailable ? <p className="community-empty">Compartilhamento de código temporariamente indisponível neste servidor.</p> : null}
+          {!terminal && !friendCodesAvailable ? <p className="community-empty">O compartilhamento de códigos está indisponível neste momento.</p> : null}
         </section>
 
         <section className="community-room-panel panel-frame" aria-labelledby="bracket-title">
@@ -278,6 +292,8 @@ export function TournamentDetailPage() {
           })}</div>}
         </section>
       </div>
+      {tournament.status === "open" && isHost ? <section className="community-room-panel community-invite-panel panel-frame tournament-invite-panel"><div className="section-heading"><h2>Convite</h2><span>Expira em 7 dias</span></div><p className="community-muted">Compartilhe o link com as outras três pessoas. O token fica no fragmento da URL e é removido ao entrar.</p>{inviteUrl ? <div className="invite-copy-row"><input className="text-input" aria-label="Link de convite" readOnly value={inviteUrl} onFocus={(event) => event.target.select()} /><button className="button button-primary button-small" type="button" onClick={copyInvite}>Copiar link</button></div> : <button className="button button-outline button-small" type="button" onClick={copyInvite}>Gerar convite</button>}</section> : null}
+      <details className="community-game-context"><summary>Partidas no Pokémon Champions</summary><p>Participantes informam os resultados e o adversário confirma ou contesta cada relato.</p></details>
       <p className="community-privacy-note">A organização registra relatos voluntários; não verifica partidas dentro do jogo. Se a moderação anular uma partida em torneio, o evento é cancelado nesta primeira versão, sem replay automático.</p>
     </section>
   );

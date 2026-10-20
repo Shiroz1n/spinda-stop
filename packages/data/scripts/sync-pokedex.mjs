@@ -8,6 +8,8 @@ const GENERATED_FILE = resolve(PACKAGE_ROOT, "generated/pokedex.json");
 const DETAILS_FILE = resolve(PACKAGE_ROOT, "generated/details.json");
 const MOVES_FILE = resolve(PACKAGE_ROOT, "generated/moves.json");
 const NATURES_FILE = resolve(PACKAGE_ROOT, "generated/natures.json");
+const LEARNSETS_DIRECTORY = resolve(PACKAGE_ROOT, "generated/learnsets");
+export const LEARNSET_SHARD_COUNT = 32;
 const SOURCE_BASE = `https://raw.githubusercontent.com/PokeAPI/pokeapi/${POKEAPI_COMMIT}/data/v2/csv`;
 const FILES = [
   "pokemon.csv",
@@ -23,6 +25,9 @@ const FILES = [
   "stats.csv",
   "moves.csv",
   "move_names.csv",
+  "pokemon_moves.csv",
+  "version_groups.csv",
+  "pokemon_move_methods.csv",
   "natures.csv",
   "nature_names.csv",
 ];
@@ -127,6 +132,7 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
       slug: entry.identifier,
       speciesId: Number(entry.species_id),
       speciesSlug: speciesEntry?.identifier ?? entry.identifier,
+      evolvesFromSpeciesId: Number(speciesEntry?.evolves_from_species_id) || null,
       formId: form?.form_identifier || (entry.is_default === "1" ? "default" : entry.identifier),
       name,
       speciesName,
@@ -145,6 +151,7 @@ export function buildPokedex(csvByFilename, generatedAt = new Date().toISOString
   });
 
   const moves = read("moves.csv").map((entry) => ({
+    id: Number(entry.id),
     slug: entry.identifier,
     name: moveNames.get(entry.id)?.name ?? titleFromSlug(entry.identifier),
     type: typeNames.get(entry.type_id) ?? "unknown",
@@ -182,6 +189,7 @@ export function toDexIndex(pokemon) {
     spriteId: entry.pokemonId,
     speciesId: entry.speciesId,
     speciesSlug: entry.speciesSlug,
+    evolvesFromSpeciesId: entry.evolvesFromSpeciesId,
     formId: entry.formId,
     isDefault: entry.isDefault,
     name: entry.name,
@@ -191,6 +199,79 @@ export function toDexIndex(pokemon) {
     types: entry.types,
     stats: Object.fromEntries(["atk", "spa", "spe"].map((key) => [key, entry.stats[key]])),
   }));
+}
+
+export function buildPokemonMoveLearnsets(csvByFilename, generatedAt = new Date().toISOString()) {
+  const read = (name) => {
+    const text = csvByFilename[name];
+    if (typeof text !== "string") throw new Error(`CSV ausente: ${name}`);
+    return parseCsv(text);
+  };
+
+  const moves = new Map(read("moves.csv").map((row) => [row.id, Number(row.id)]));
+  const versions = read("version_groups.csv").map((row) => ({
+    id: Number(row.id),
+    name: row.identifier,
+    generation: Number(row.generation_id) || null,
+    order: Number(row.order) || Number(row.id),
+  }));
+  const versionIds = new Set(versions.map((row) => row.id));
+  const methods = read("pokemon_move_methods.csv").map((row) => ({ id: Number(row.id), name: row.identifier }));
+  const methodIds = new Set(methods.map((row) => row.id));
+  const pokemonMovesById = Object.create(null);
+
+  for (const row of read("pokemon_moves.csv")) {
+    const pokemonId = Number(row.pokemon_id);
+    const moveId = moves.get(row.move_id);
+    const versionGroupId = Number(row.version_group_id);
+    const methodId = Number(row.pokemon_move_method_id);
+    if (!Number.isInteger(pokemonId) || !moveId || !versionIds.has(versionGroupId) || !methodIds.has(methodId)) continue;
+
+    const tuple = [
+      moveId,
+      versionGroupId,
+      methodId,
+      Number(row.level) || 0,
+      Number(row.order) || 0,
+      row.mastery === "1" ? 1 : 0,
+    ];
+    (pokemonMovesById[pokemonId] ??= []).push(tuple);
+  }
+
+  for (const rows of Object.values(pokemonMovesById)) {
+    rows.sort((left, right) => left[1] - right[1] || left[2] - right[2] || left[3] - right[3] || left[0] - right[0]);
+  }
+
+  return {
+    metadata: {
+      source: "PokéAPI",
+      sourceCommit: POKEAPI_COMMIT,
+      sourceUrl: `https://github.com/PokeAPI/pokeapi/tree/${POKEAPI_COMMIT}/data/v2/csv`,
+      generatedAt,
+      recordCount: Object.values(pokemonMovesById).reduce((count, rows) => count + rows.length, 0),
+      pokemonCount: Object.keys(pokemonMovesById).length,
+      note: "Aprendibilidade geral por jogo, versão e método. Não confirma compatibilidade nem legalidade no Pokémon Champions.",
+    },
+    versionGroups: versions.sort((left, right) => left.order - right.order),
+    methods: methods.sort((left, right) => left.id - right.id),
+    pokemonMovesById,
+  };
+}
+
+export function shardPokemonMoveLearnsets(learnsets, shardCount = LEARNSET_SHARD_COUNT) {
+  const shards = Array.from({ length: shardCount }, (_, index) => ({
+    metadata: learnsets.metadata,
+    versionGroups: learnsets.versionGroups,
+    methods: learnsets.methods,
+    pokemonMovesById: Object.create(null),
+    shard: index,
+  }));
+
+  for (const [pokemonId, rows] of Object.entries(learnsets.pokemonMovesById)) {
+    const shardIndex = Number(pokemonId) % shardCount;
+    shards[shardIndex].pokemonMovesById[pokemonId] = rows;
+  }
+  return shards;
 }
 
 function englishNameMap(rows, idField, nameField, secondaryField) {
@@ -234,9 +315,13 @@ async function run() {
     try {
       const existing = await Promise.all([GENERATED_FILE, DETAILS_FILE, MOVES_FILE, NATURES_FILE]
         .map(async (file) => JSON.parse(await readFile(file, "utf8"))));
+      const learnsetShards = await Promise.all(Array.from({ length: LEARNSET_SHARD_COUNT }, (_, index) =>
+        readFile(resolve(LEARNSETS_DIRECTORY, `${String(index).padStart(2, "0")}.json`), "utf8")
+          .then((content) => JSON.parse(content))));
       const spriteIndexIsCurrent = Array.isArray(existing[0]?.pokemon)
         && existing[0].pokemon.every((entry) => Number.isInteger(entry.spriteId) && typeof entry.formId === "string");
-      if (spriteIndexIsCurrent && existing.every((data) => data.metadata?.sourceCommit === POKEAPI_COMMIT)) {
+      if (spriteIndexIsCurrent && existing.every((data) => data.metadata?.sourceCommit === POKEAPI_COMMIT)
+        && learnsetShards.every((shard) => shard.metadata?.sourceCommit === POKEAPI_COMMIT)) {
         console.log(`Catálogo local já está na revisão ${POKEAPI_COMMIT.slice(0, 7)}.`);
         return;
       }
@@ -250,8 +335,11 @@ async function run() {
     csvByFilename[fileName] = await loadCsv(fileName, sourceDirectory);
   }
   const result = buildPokedex(csvByFilename);
+  const learnsets = buildPokemonMoveLearnsets(csvByFilename);
+  const learnsetShards = shardPokemonMoveLearnsets(learnsets);
   const { pokemon: fullPokemon, moves, natures, ...pokedexData } = result;
   await mkdir(dirname(GENERATED_FILE), { recursive: true });
+  await mkdir(LEARNSETS_DIRECTORY, { recursive: true });
   const dexPokemon = toDexIndex(fullPokemon);
   const detailBySlug = Object.fromEntries(fullPokemon.map((entry) => [entry.slug, {
     stats: entry.stats,
@@ -264,8 +352,13 @@ async function run() {
     writeFile(DETAILS_FILE, `${JSON.stringify({ metadata: result.metadata, pokemonBySlug: detailBySlug })}\n`, "utf8"),
     writeFile(MOVES_FILE, `${JSON.stringify({ metadata: result.metadata, moves })}\n`, "utf8"),
     writeFile(NATURES_FILE, `${JSON.stringify({ metadata: result.metadata, natures })}\n`, "utf8"),
+    ...learnsetShards.map((shard, index) => writeFile(
+      resolve(LEARNSETS_DIRECTORY, `${String(index).padStart(2, "0")}.json`),
+      `${JSON.stringify(shard)}\n`,
+      "utf8",
+    )),
   ]);
-  console.log(`Catálogo atualizado: ${result.metadata.speciesCount} espécies, ${result.metadata.formCount} entradas e ${result.metadata.moveCount} golpes.`);
+  console.log(`Catálogo atualizado: ${result.metadata.speciesCount} espécies, ${result.metadata.formCount} entradas, ${result.metadata.moveCount} golpes e ${learnsets.metadata.recordCount} relações de aprendibilidade.`);
   console.log(`Fonte geral: PokéAPI ${POKEAPI_COMMIT.slice(0, 7)}. Compatibilidade com Pokémon Champions não verificada.`);
 }
 

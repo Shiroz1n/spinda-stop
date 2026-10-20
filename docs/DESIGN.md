@@ -1,53 +1,7 @@
-# Direção visual
+# Direção visual do Spinda Stop
 
-## Ideia
+Esta página resume o visual implementado no PR #28. A tabela completa de tokens, telas, componentes e limites de dados fica em [SPINDA_STOP_DESIGN_SYSTEM.md](SPINDA_STOP_DESIGN_SYSTEM.md); consulte [UI_HUMANIZER.md](UI_HUMANIZER.md) para a revisão geral e [AGENTS.md](../AGENTS.md) para o momento de usar esses guias.
 
-O Spinda Stop é uma bancada de preparação com ritmo de RPG portátil. A moldura e a paleta lembram jogos GBA; a hierarquia, os controles e a navegação são de uma aplicação atual. Sprites e filtros ajudam a escolher. A cor nunca é a única forma de identificar tipo, seleção ou estado.
+A identidade combina menus portáteis inspirados em FireRed/GBA com leitura rápida de uma ferramenta competitiva. O CSS usa papel verde-sálvia, painéis creme, navegação azul-petróleo, ação coral, seleção dourada e sprites GBA documentados. Isso mantém a referência FireRed/GBA sem imitar paleta, componentes ou artes exclusivas de concorrentes. Sprites exatos, fonte/período de métricas e o fluxo da tarefa vêm antes de decoração; origem e direitos ficam em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
-O campo principal usa azul-petróleo, menta e verde. Coral marca ações importantes; amarelo aparece em seleção e aviso. Cartões claros servem para leitura, com seções alternadas em azul ou verde para quebrar a página bege do visual anterior. Bordas em degraus aparecem na marca, nos painéis principais e no foco, sem sombra grande em todos os elementos.
-
-Dados, formulários e textos usam uma sans legível. Press Start 2P fica restrita ao nome da marca e a títulos muito curtos. As áreas de toque têm pelo menos 44 px, o foco é visível e a navegação mobile tem uma barra própria.
-
-## Regras de composição
-
-- Mostrar o Pokémon antes do detalhe secundário. Listas usam sprite, nome, número e tipo; não escondem a espécie em cartões de texto.
-- A ficha começa com forma, sprite e tipos; stats e dados competitivos vêm em seguida, cada um com sua fonte.
-- O builder mostra os seis integrantes com imagens persistentes. Em mobile, a pessoa escolhe um slot e edita esse set; as seis posições não viram uma coluna de seis formulários.
-- Usage começa com resultados sem filtro. A lista e a ficha ficam lado a lado no desktop; em telas estreitas, a busca, a lista e a ficha viram etapas de navegação com uma seleção clara.
-- A calculadora deixa atacante e alvo visíveis junto ao resultado. Comparar cenários mantém os dois independentes.
-- Salas e torneios priorizam participantes, equipe compartilhada e próxima ação. Equipe só aparece quando a pessoa escolheu compartilhá-la.
-- Estados de carregamento, erro, vazio e indisponibilidade têm linguagem curta e ação próxima. Dados ausentes não recebem barras ou valores inventados.
-
-## Identidade, sprites e formas
-
-O cabeçalho usa o sprite `327.png` de Spinda na coleção Black/White de PokeAPI/sprites, fixado na revisão `7a7d66b1620e646f69afd48dc1273da9033ede9c`. Essa imagem oficial da franquia é carregada diretamente do host PokeAPI e não é copiada ao repositório. O favicon e os ícones do app são uma ilustração original feita para o Spinda Stop: rosto claro, orelhas assimétricas e manchas em espiral, em pixel art de 32 × 32. O SVG preserva os pixels como quadrados; PNGs de 32, 180 e 512 px usam ampliação nearest-neighbor. A versão 16 × 16 simplifica o rosto para caber no espaço reduzido. A ilustração foi criada com ImageGen a partir da referência de Spinda e não é uma cópia do sprite oficial. As origens estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
-
-`PokemonSprite` usa um único mapeamento: ID da PokéAPI para forma base e ID próprio do Pokémon/forma para formas alternativas. Formas Mega, regionais e especiais não herdam a imagem base se a imagem correta não estiver disponível. O fallback mostra uma inicial identificável e informa que o sprite está indisponível. Listas usam carregamento sob demanda e mantêm espaço reservado.
-
-Tipos usam o símbolo de Pokémon Champions hospedado em PokeAPI/sprites, com o nome sempre visível. Itens usam o slug da PokéAPI quando há sprite; nomes continuam disponíveis sem a imagem. A origem e os limites de uso estão em [Licenças de dependências](THIRD_PARTY_LICENSES.md).
-
-## Paleta
-
-| Token | Valor | Papel |
-|---|---|---|
-| `--paper` | `#dcebe3` | Fundo da página |
-| `--surface` | `#fffef7` | Superfície de leitura |
-| `--surface-alt` | `#edf5ec` | Painéis secundários |
-| `--ink` | `#173745` | Texto principal |
-| `--muted` | `#49636b` | Texto de apoio |
-| `--blue-dark` | `#164c61` | Navegação e links |
-| `--blue` | `#2c7894` | Controles informativos |
-| `--coral` | `#b84134` | Ação principal com contraste AA sobre superfícies claras |
-| `--coral-dark` | `#a93e33` | Hover de ação |
-| `--green` | `#287453` | Seleção e confirmação |
-| `--gold` | `#72520b` | Avisos |
-| `--focus` | `#a5352b` | Contorno de teclado |
-
-## Skills aplicadas
-
-- `frontend-design`: a identidade usa uma direção única (arena portátil), tokens compartilhados, tipografia separada por função e composição assimétrica na home e no Usage.
-- `React`: estado permanece junto ao fluxo que o usa; sprites e tipos são componentes específicos do produto; não há memoização sem necessidade medida.
-- `performance-optimizer`: imagens têm dimensão reservada e `loading="lazy"` nas listas; a revisão mede bundle e requisições, sem incluir uma coleção inteira de artes.
-- Rotom Labs: foram consultados `docs/SKILL_ROUTER.md`, `docs/PATTERNS_ANTIPATTERNS.md` e `docs/ROADMAP.md`. As regras aplicadas incluem separar IDs de espécie e forma, não usar sprite base para forma sem imagem exata, conservar a proveniência de cada fonte e tratar estados vazios sem dados de exemplo. `PLANO_MESTRE.md` não está presente neste checkout.
-
-O catálogo desta sessão não disponibilizou uma skill ou executável chamado Impeccable. Não declaro sua execução. A captura anterior foi usada como anti-referência, e a composição foi refeita para priorizar Pokémon e ações, com inspeção visual em vez de aprovação por lint ou axe. A skill externa de responsividade citada em `docs/SKILL_ROUTER.md` também não estava disponível no leitor; os requisitos de 320 px, toque de 44 px, zoom e teclado foram aplicados como critérios do projeto.
+O primeiro viewport apresenta a tarefa em cada tela: catálogo e filtros na Pokédex; Pokémon/forma na ficha; ranking e fonte no Usage; seis posições no builder; confronto e resultados na calculadora; alvo e ordem na Speed; estado e próxima ação nas salas e torneios. A revisão visual registra capturas com conteúdo em 1440, 390 e 320 px. Um viewport de 720 CSS px foi usado para inspecionar reflow e não representa zoom real. Capturas e limites da última revisão estão em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md).

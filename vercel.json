@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "feat/visual-pass-two": false
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]
