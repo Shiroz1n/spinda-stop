@@ -1077,6 +1077,7 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-matchups-history", { fullPage: false });
     await page.getByRole("button", { name: "Ladder de jogadores" }).click();
     await waitForEither(page, ".metaroll-ladder-about > summary, .usage-error", 35_000);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
     await page.getByRole("button", { name: "Espécies" }).click();
     await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");

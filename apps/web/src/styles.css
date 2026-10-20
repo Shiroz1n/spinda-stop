@@ -2646,7 +2646,7 @@ a:hover { color: var(--coral-dark); }
 .damage-quickbar-side small { color: var(--muted); font-size: 0.68rem; }
 .damage-versus { color: var(--coral-dark); font-size: 0.74rem; font-weight: 900; }
 .damage-quickbar-move { max-width: 165px; padding: 4px 7px; border-left: 3px solid var(--gold); background: var(--surface-alt); color: var(--ink); font-size: 0.72rem; }
-.damage-quickbar-actions { gap: 6px; }
+.damage-quickbar-actions { display: flex; align-items: center; gap: 6px; }
 .damage-result { margin-top: 7px; padding: 12px; }
 .damage-result-heading { gap: 5px; }
 .damage-result-range { border-color: var(--ink); background: var(--selection); box-shadow: none; }
@@ -2981,6 +2981,8 @@ a:hover { color: var(--coral-dark); }
 @media (max-width: 420px) {
   .builder-speed-grid { grid-template-columns: minmax(0, 1fr); }
   .builder-speed-action .button { min-height: 44px; }
+  .damage-quickbar-actions { justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+  .damage-quickbar .damage-toggle { width: auto; max-width: 100%; }
   .damage-comparison-results { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .damage-comparison-results .damage-result { padding: 8px; }
   .damage-comparison-results .damage-result-heading { gap: 4px; }
