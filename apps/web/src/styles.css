@@ -2989,6 +2989,13 @@ a:hover { color: var(--coral-dark); }
   .damage-comparison-results .damage-result-range { min-width: 0; padding: 6px; }
 }
 
+@media (max-width: 760px) {
+  .damage-quickbar-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .damage-quickbar .damage-toggle { width: auto; }
+  .usage-source-switcher { margin-bottom: 0; padding-bottom: 0; }
+  .metaroll-page { padding-top: 10px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
