@@ -17,11 +17,21 @@ const accessibilityIssues = [];
 const representativeCaptures = new Set([
   "home",
   "pokedex-loaded-more",
+  "pokedex-empty",
   "pokemon-sheet",
   "pokemon-evolution",
   "pokemon-learnset-filtered",
   "usage-battle-data",
+  "usage-index-loading",
+  "usage-empty",
+  "usage-battle-data-error",
+  "usage-metaroll-empty",
+  "usage-metaroll-error",
+  "usage-metaroll-mega-error",
   "usage-ladder",
+  "builder-empty",
+  "builder-empty-speed-target",
+  "builder-account-save-error",
   "builder-six-members-first-fold",
   "builder-nature-before",
   "builder-nature-picker-open",
@@ -32,10 +42,16 @@ const representativeCaptures = new Set([
   "calculator-comparison-rolls",
   "calculator-one-v-many",
   "calculator-team-vs-one",
+  "calculator-empty-choice",
   "speed-tiers-mega-garchomp-z",
   "speed-tiers-mega-garchomp-z-results",
   "room-state-flow",
+  "rooms-signed-out",
+  "rooms-api-error",
+  "rooms-empty",
   "tournament-state-flow",
+  "tournaments-empty",
+  "tournaments-api-error",
 ]);
 
 await mkdir(outputDir, { recursive: true });
@@ -957,6 +973,41 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: Usage não selecionou o líder atual da fonte sem inserir uma espécie fixa na URL.`);
   }
   await dynamicLeaderPage.close();
+
+  const loadingUsagePage = await context.newPage();
+  let releaseUsageIndex;
+  const usageIndexGate = new Promise((resolveGate) => { releaseUsageIndex = resolveGate; });
+  await loadingUsagePage.route("https://championsbattledata.com/api", async (route) => {
+    await usageIndexGate;
+    await fulfillJson(route, {
+      defaultSeason: "M8",
+      pokemon: [{
+        name: "Garchomp",
+        showdownId: "garchomp",
+        summary: { types: ["Dragon", "Ground"], battleSummary: { M8: { Doubles: { position: 2 } } } },
+      }],
+    });
+  });
+  await loadingUsagePage.route("https://championsbattledata.com/api/battle/Doubles/**", (route) => fulfillJson(route, {
+    pokemon: "Garchomp",
+    showdownId: "garchomp",
+    format: "Doubles",
+    season: "M8",
+    date: "2026-10-18",
+    source: "visual-fixture.csv",
+    rows: [],
+    daily: [],
+  }));
+  await loadingUsagePage.goto(`${baseUrl}/usage`, { waitUntil: "domcontentloaded" });
+  const loadingUsageState = loadingUsagePage.locator(".usage-index-state");
+  await loadingUsageState.waitFor({ state: "visible", timeout: 10_000 });
+  const loadingUsageCopy = await loadingUsageState.innerText();
+  assert.equal(loadingUsageCopy, "Carregando o índice público de Doubles…", "o carregamento de Usage deve informar a fonte enquanto o índice está pendente");
+  observations.push({ viewport: viewportName, name: "usage-index-loading-copy", text: loadingUsageCopy });
+  await safeCapture(loadingUsagePage, viewportName, "usage-index-loading", { audit: true, fullPage: false });
+  releaseUsageIndex();
+  await loadingUsagePage.locator(".usage-provenance").waitFor({ state: "visible", timeout: 10_000 });
+  await loadingUsagePage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   await waitForUsage(page);

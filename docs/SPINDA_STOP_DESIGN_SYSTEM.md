@@ -1,6 +1,6 @@
 # Spinda Stop — design system e fluxos
 
-Estado: direção para a próxima revisão do PR #28. Este documento especifica a experiência desejada e parte dos tokens que o código já utiliza. Não afirma que todos os padrões abaixo estejam implementados. Consulte [UI Humanizer](UI_HUMANIZER.md) para a revisão geral e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: direção implementada e revisada no PR #28. Este documento registra os tokens e componentes atuais, a inspeção visual final e os limites de fonte que ainda não podem ser preenchidos. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
@@ -23,24 +23,28 @@ Na primeira dobra: Dex mostra catálogo e busca; ficha mostra Pokémon e navega�
 
 As imagens enviadas pelo usuário servem como referência para revisão. Não incorpore screenshots de terceiros como assets do produto. Antes de implementar detalhe interativo, abra o site respectivo, clique, registre URL/ação/resultado; se indisponível, marque como inferência a partir da captura.
 
-## Fundamentos existentes e evolução
+## Tokens vigentes e evolução
 
-`apps/web/src/styles.css` contém os tokens atuais. O documento antigo `docs/DESIGN.md` descrevia valores de uma fase anterior e não deve ser usado como tabela de cores vigente. Inventário atual, a ser validado nas capturas e ajustado por token, nunca por substituição casual:
+`apps/web/src/styles.css` é a fonte dos tokens. A paleta abaixo é a que aparece nas telas e capturas desta rodada; `docs/DESIGN.md` resume sua intenção e aponta para esta tabela, sem manter uma cópia independente dos valores.
 
-| Papel | Token atual | Valor atual | Diretriz |
-| --- | --- | --- | --- |
-| Campo de fundo | `--paper` | `#f3e7c4` | Base quente; evitar textura uniforme que prejudique tabelas. |
-| Painel de leitura | `--surface` | `#fff8e9` | Separar da página sem empilhar caixas. |
-| Faixa secundária | `--surface-alt` | `#eee0b7` | Agrupar controles reais. |
-| Texto | `--ink` | `#20283a` | Legibilidade de dados e formulários. |
-| Cabeçalho e links | `--blue-dark` | `#24466f` | Contexto de navegação, não competir com resultado. |
-| Ação principal | `--coral` | `#c44033` | Uma ação de maior peso por contexto. |
-| Confirmação | `--green` | `#2c704a` | Estado com rótulo, nunca só cor. |
-| Seleção | `--gold` | `#785300` | Usar em conjunto com borda/forma. |
-| Foco | `--focus` | `#8f3028` | Anel visível em superfícies claras e escuras. |
-| Geometria | `--radius`, `--pixel-edge` | `4px`, sombra deslocada de `4px` | Moldura pixelada em foco e painéis principais, sem repeti-la em toda célula. |
+| Papel | Token | Valor atual |
+| --- | --- | --- |
+| Página | `--paper` | `#dce8dc` |
+| Sombra de superfície | `--paper-shadow` | `#b7cbbd` |
+| Painel | `--surface` | `#fffbe7` |
+| Agrupamento secundário | `--surface-alt` | `#e8efd7` |
+| Campo de formulário | `--field` | `#f4f2dd` |
+| Sprite: céu / chão | `--sky` / `--grass` | `#c9e2dd` / `#98b77a` |
+| Seleção | `--selection` | `#f2dda0` |
+| Texto / texto secundário | `--ink` / `--muted` | `#173746` / `#465d5e` |
+| Divisória | `--line` | `#84988c` |
+| Acento azul / navegação | `--blue` / `--blue-dark` | `#2e7896` / `#234f63` |
+| Ação / ação em texto | `--coral` / `--coral-dark` | `#b84538` / `#8d342d` |
+| Confirmação / seleção em texto | `--green` / `--gold` | `#326b45` / `#8e6817` |
+| Foco | `--focus` | `#005c9a` |
+| Geometria / sombra curta | `--radius` / `--pixel-edge` | `3px` / `2px 2px 0 var(--paper-shadow)` |
 
-Esses valores documentam o ponto de partida, **não uma aprovação final da paleta**. A rodada visual deve gerar uma prancha de tokens com estados normal/hover/foco/desabilitado, testar contraste e decidir o que permanece. Evite introduzir cores diretas em dezenas de seletores; consolide apenas as que correspondem a papéis novos.
+O CSS também mantém `--fire-ink: #8d342d` para texto de ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores novos. Os estados normais, selecionados, desabilitados, erro e foco pertencem ao componente e usam rótulo ou forma além da cor. A revisão verifica foco por teclado e axe; o cálculo de contraste do runner observa navegação e atribuição no rodapé, não todas as combinações. Não há alegação de uma matriz completa de contraste.
 
 ### Tipografia, molduras, imagens e movimento
 
@@ -51,11 +55,20 @@ Esses valores documentam o ponto de partida, **não uma aprovação final da pal
 - Tipos com nome e símbolo; cores distinguíveis sem depender exclusivamente da cor. Itens e golpes não precisam de emoji. Imagens externas têm origem, atribuição, estado de falha e política de carregamento definidos.
 - Transições curtas apenas quando esclarecem seleção, expansão ou carregamento. Nada de pulsar para simular “ao vivo”. Respeite `prefers-reduced-motion`.
 
-### Componentes e estados
+### Componentes e estados implementados
 
-Componentes candidatos: `PokemonIdentity` (sprite, nome, forma, tipos), linha de catálogo, seletor de seis posições, `StatRow`, `TypeRelation`, controle de Nature, campo de filtro com resumo ativo, linha de distribuição, resultado de dano e cartão de participante. Só extraia componente compartilhado quando conteúdo, comportamento e estados coincidirem. Documente variantes e exemplos reais de uso; evite abstrações para decorar um único caso.
+| Componente ou tela | Responsabilidade confirmada |
+| --- | --- |
+| `PokemonSprite` | Sprite da forma disponível, reserva de espaço e fallback com nome quando a imagem falha; evita substituir uma forma sem sprite próprio pela arte base. |
+| `PokemonCard` + `DexPage` | Linha/cartão compacto com número, nome, forma e tipos; busca e filtros percorrem o catálogo inteiro. |
+| `DexDetailPage` | Identidade em primeiro plano, navegação por seção, formas, evolução direta, multiplicadores gerais e aprendibilidade filtrada com fonte. |
+| `TypeTag` | Nome/símbolo e cor contextual para reconhecer tipo sem depender só da cor. |
+| `NaturePicker` + `BuilderPage` | Seleção de Nature com efeitos ↑/↓, seis sets, campos editáveis, importação/exportação e stats recalculados. |
+| `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1, resumo do confronto, resultados e rolls por golpe. |
+| `UsagePage` e vistas MetaRoll | Fonte, formato e período junto da seleção, ranking e filtros publicados por cada fonte. |
+| `RoomsPage` e `TournamentsPage` | Participantes, estado e próxima ação; vazio, erro, convite e resultado em contexto. |
 
-Cada controle inclui estado normal, hover onde houver ponteiro, foco, selecionado, desabilitado e erro. Busca/filtro preservam contexto ao abrir e voltar. Carregamento, vazio e falha mostram a próxima ação sem páginas de avisos. Fonte, formato, período e captura permanecem visíveis onde qualificam números; detalhes de API ficam em “Sobre os dados”.
+Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicáveis. Busca e filtro preservam contexto ao abrir e voltar. Carregamento, vazio e falha mostram a próxima ação sem páginas de avisos. Fonte, formato, período e captura permanecem visíveis onde qualificam números; detalhes de API ficam em “Sobre os dados”. A [última revisão do PR #28](PR28_FOLLOWUP.md) registra telas e estados exercitados, correções encontradas nas capturas e limites do ambiente.
 
 ## Padrões por tela
 
@@ -82,8 +95,8 @@ Cada controle inclui estado normal, hover onde houver ponteiro, foco, selecionad
 
 O estado desta rodada e o trabalho futuro por fonte estão registrados em [PRODUCT_OPPORTUNITY_INVENTORY.md](PRODUCT_OPPORTUNITY_INVENTORY.md).
 
-Abra itens de produto em issues ou plano separado com fonte, aceitação e prioridade. Não misture entrega de design com alegação de completude de Pokédex competitiva.
+Mantenha oportunidades futuras no inventário com fonte, aceitação e prioridade. Não misture entrega de design com alegação de completude de Pokédex competitiva.
 
 ## Protocolo de revisão
 
-Para cada rota, capture a primeira dobra e pelo menos um estado com conteúdo real em 1440, 390 e 320 px. Faça inspeção humana das imagens; teste fluxo inteiro no navegador, foco, teclado, toque simulado, zoom real quando disponível e movimento reduzido. Compare com o estado anterior do PR #28. Registre **referência → intenção → alteração própria → captura → limite de dados**. Inclua estados de falha e sets válidos, não só fixtures visualmente convenientes. Considere a rodada concluída quando o design melhorar a tarefa e os problemas funcionais demonstrados forem corrigidos, além de lint/test/build/integração aplicáveis.
+Para cada rota, capture a primeira dobra e estados com conteúdo real em 1440, 390 e 320 px; inclua erro, vazio e carregamento quando aplicáveis. Inspecione as imagens manualmente, percorra fluxos reais com teclado e compare com o estado anterior do PR #28. Registre **referência → intenção → alteração própria → captura → limite de dados**. O viewport CI de 720 CSS px ajuda a inspecionar reflow, mas não é zoom real do navegador. O Chrome isolado desta sessão não alcançou a porta local do app; a revisão pós-correção usa o runner Playwright do Actions, que executa o app e os fluxos no ambiente de teste. Consulte [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md) para a última execução, seus estados cobertos e o limite de avaliação manual.
