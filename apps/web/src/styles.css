@@ -1318,6 +1318,11 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
   .damage-multi-rolls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
+@media (max-width: 420px) {
+  .builder-speed-target.is-empty { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .builder-speed-target.is-empty > .button { grid-column: 1; justify-self: start; }
+}
+
 @media (max-width: 360px) {
   .page-wrap { width: min(100% - 20px, 1320px); padding-block: 20px 32px; }
   .speed-heading .button { min-height: 36px; padding-inline: 7px; font-size: 0.68rem; }
@@ -1333,6 +1338,7 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
   .builder-speed-heading .button { min-height: 34px; padding: 4px 5px; font-size: 0.62rem; }
   .builder-speed-grid { grid-template-columns: 1fr; }
   .builder-speed-target { grid-template-columns: 38px minmax(0, 1fr) 62px; gap: 5px; margin-inline: 6px; padding: 5px; }
+  .builder-speed-target.is-empty { grid-template-columns: minmax(0, 1fr); gap: 7px; }
   .builder-speed-target > .pokemon-art { --sprite-size: 36px !important; width: 36px; height: 36px; min-width: 36px; }
   .builder-speed-target > label { font-size: 0.58rem; }
   .builder-speed-target .builder-target-nature { grid-column: 2 / -1; }

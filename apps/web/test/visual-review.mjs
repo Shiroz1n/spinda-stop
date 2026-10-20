@@ -629,17 +629,22 @@ async function runViewport(viewportName, viewport) {
     const container = element.getBoundingClientRect();
     return {
       placeholderRight: placeholder.right,
+      placeholderBottom: placeholder.bottom,
       actionLeft: action.left,
       actionRight: action.right,
+      actionTop: action.top,
       containerLeft: container.left,
       containerRight: container.right,
     };
   });
   observations.push({ viewport: viewportName, name: "builder-empty-speed-target-layout", ...emptySpeedTargetLayout });
-  if (emptySpeedTargetLayout.placeholderRight > emptySpeedTargetLayout.actionLeft + 1
+  const emptySpeedTargetCollides = viewport.width <= 420
+    ? emptySpeedTargetLayout.actionTop < emptySpeedTargetLayout.placeholderBottom + 3
+    : emptySpeedTargetLayout.placeholderRight > emptySpeedTargetLayout.actionLeft + 1;
+  if (emptySpeedTargetCollides
     || emptySpeedTargetLayout.actionLeft < emptySpeedTargetLayout.containerLeft - 1
     || emptySpeedTargetLayout.actionRight > emptySpeedTargetLayout.containerRight + 1) {
-    failures.push(`${viewportName}: o seletor do alvo de Speed colide com a instrução ou sai do painel.`);
+    failures.push(`${viewportName}: o seletor do alvo de Speed colide com a instrução em largura estreita ou sai do painel.`);
   }
   await safeCapture(page, viewportName, "builder-empty-speed-target", { audit: true, fullPage: false });
   await page.getByRole("button", { name: "Escolher espécie" }).first().click();
