@@ -83,7 +83,7 @@ h3 { font-size: 1rem; line-height: 1.25; }
 .home-search .button { min-height: 48px; }
 .hero-actions { align-items: center; gap: 14px; }
 .home-note { margin: 0; color: var(--muted); font-size: 0.82rem; }
-.home-signature { grid-template-columns: 1fr; justify-items: center; gap: 3px; margin: 0; padding: 0; border: 0; text-align: center; text-decoration: none; }
+.home-signature { position: relative; grid-template-columns: 1fr; justify-items: center; gap: 3px; margin: 0; padding: 0; border: 0; text-align: center; text-decoration: none; }
 .home-signature-art { width: 206px; height: 206px; min-height: 0; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(180deg, var(--sky) 0 66%, var(--grass) 66% 100%); }
 .home-signature-art .pokemon-art { --sprite-size: 176px !important; }
 .home-signature strong { color: var(--ink); font-size: 1.1rem; }
@@ -420,7 +420,7 @@ h3 { font-size: 1rem; line-height: 1.25; }
   .hero-actions .button { min-height: 37px; }
   .home-signature-art { width: 91px; height: 91px; }
   .home-signature-art .pokemon-art { --sprite-size: 80px !important; }
-  .home-signature > span:last-child { display: none; }
+  .home-signature > span:last-child { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .home-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 10px; }
   .home-action, .home-action:nth-child(n) { min-height: 54px; grid-column: auto; border-left: 0; border-bottom: 1px solid var(--line); padding: 6px 4px; }
   .home-action:nth-child(odd) { border-right: 1px solid var(--line); }
