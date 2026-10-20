@@ -384,7 +384,7 @@ function TeamAgainstTargetResults({ teamState, calculations, target, onRefresh }
     <section className="damage-team-results" aria-label={`Time contra ${target.species}`}>
       <header className="damage-team-results-heading">
         <div className="damage-team-target-portrait"><PokemonSprite pokemon={targetPokemon} name={target.species} size={82} priority decorative /></div>
-        <div><p className="page-label">{teamState.team.name} · Doubles</p><h2>Time ataca {target.species}</h2><p>{populated} golpes calculados · mesmos parâmetros de campo · um alvo válido</p></div>
+        <div className="damage-team-target-copy"><p className="page-label">{teamState.team.name} · Doubles</p><h2>Time ataca {target.species}</h2><p>{populated} golpes calculados · mesmos parâmetros de campo · um alvo válido</p></div>
         <button className="button button-outline button-small" type="button" onClick={onRefresh}>Atualizar time</button>
       </header>
       <div className="damage-team-member-grid">

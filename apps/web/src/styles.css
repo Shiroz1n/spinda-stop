@@ -2661,14 +2661,35 @@ a:hover { color: var(--coral-dark); }
 .damage-side, .damage-move-panel, .damage-field-advanced, .damage-comparison-controls { border-color: var(--line); background: var(--surface); box-shadow: none; }
 .damage-side-heading .damage-side-art { border: 0; background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%); }
 .damage-calculated-stats { margin-top: 7px; }
-.damage-team-results-heading { border: 2px solid var(--blue-dark); background: var(--surface); box-shadow: none; }
-.damage-team-member { border: 1px solid var(--line); background: var(--surface); box-shadow: none; }
-.damage-team-member-heading .pokemon-art { border: 0; background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%); }
-.damage-team-member-note { border-left-color: var(--gold); background: var(--selection); }
-.damage-team-move { border-color: var(--line); background: var(--surface-alt); }
-.damage-team-move-range { border-color: var(--ink); background: var(--selection); color: var(--ink); }
-.damage-team-percent-track { border-color: var(--line); background: var(--surface); }
-.damage-team-percent-track > span { background: var(--blue); }
+.damage-quickbar-team-art { width: 44px; height: 44px; min-width: 44px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); align-items: center; justify-items: center; background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%); }
+.damage-quickbar-team-art .pokemon-art { width: 14px; height: 14px; min-width: 14px; --sprite-size: 14px !important; }
+.damage-team-results-heading { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-bottom: 9px; padding: 10px; border: 2px solid var(--blue-dark); background: var(--surface); box-shadow: none; }
+.damage-team-target-portrait { width: 82px; height: 82px; display: grid; place-items: center; background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%); }
+.damage-team-target-portrait .pokemon-art { --sprite-size: 78px !important; }
+.damage-team-target-copy { min-width: 0; }
+.damage-team-target-copy h2 { margin: 2px 0 3px; font-size: 1.15rem; overflow-wrap: anywhere; }
+.damage-team-target-copy > p:last-child { margin: 0; color: var(--muted); font-size: 0.78rem; }
+.damage-team-member-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.damage-team-member { min-width: 0; padding: 9px; border: 1px solid var(--line); background: var(--surface); box-shadow: none; }
+.damage-team-member-heading { min-width: 0; display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 6px; }
+.damage-team-member-heading .pokemon-art { width: 58px; height: 58px; min-width: 58px; --sprite-size: 56px !important; border: 0; background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%); }
+.damage-team-member-heading h3 { overflow-wrap: anywhere; font-size: 0.94rem; }
+.damage-team-slot { color: var(--muted); font-size: 0.66rem; font-weight: 800; }
+.damage-team-set-meta { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 0 0 7px; color: var(--muted); font-size: 0.71rem; }
+.damage-team-set-meta > span { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.damage-team-moves { display: grid; gap: 5px; }
+.damage-team-member-note { margin: 4px 0; padding: 7px 9px; border-left: 4px solid var(--gold); background: var(--selection); font-size: 0.76rem; }
+.damage-team-move { min-width: 0; padding: 6px 8px; border-color: var(--line); background: var(--surface-alt); }
+.damage-team-move-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.damage-team-move-heading > div { min-width: 0; display: grid; gap: 1px; }
+.damage-team-move-heading > div > strong { overflow-wrap: anywhere; font-size: 0.81rem; }
+.damage-team-move-heading > div > span { color: var(--muted); font-size: 0.68rem; }
+.damage-team-move-range { flex: 0 0 auto; padding: 3px 6px; border-color: var(--ink); background: var(--selection); color: var(--ink); font-variant-numeric: tabular-nums; }
+.damage-team-move-status { color: var(--muted); font-size: 0.72rem; }
+.damage-team-percent-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 2px; color: var(--muted); font-size: 0.67rem; font-variant-numeric: tabular-nums; }
+.damage-team-percent-track { height: 5px; overflow: hidden; border-color: var(--line); background: var(--surface); }
+.damage-team-percent-track > span { display: block; height: 100%; background: var(--blue); }
+.damage-team-move-details > summary { min-height: 30px; display: flex; align-items: center; width: fit-content; color: var(--blue-dark); font-size: 0.7rem; font-weight: 750; cursor: pointer; }
 .damage-multi-results { border: 2px solid var(--blue-dark); background: var(--surface); box-shadow: none; }
 .damage-comparison-results { gap: 9px; }
 .damage-comparison-empty { min-height: 160px; }
@@ -2916,8 +2937,11 @@ a:hover { color: var(--coral-dark); }
   .damage-input-grid { grid-template-columns: minmax(0, 1fr); }
   .damage-team-results-heading { grid-template-columns: 58px minmax(0, 1fr); gap: 7px; padding: 8px; }
   .damage-team-target-portrait { width: 56px; height: 56px; }
+  .damage-team-target-portrait .pokemon-art { --sprite-size: 54px !important; }
   .damage-team-results-heading > .button { grid-column: 1 / -1; justify-self: start; }
   .damage-team-member-grid { grid-template-columns: minmax(0, 1fr); }
+  .damage-quickbar-team-art { width: 36px; height: 36px; min-width: 36px; }
+  .damage-quickbar-team-art .pokemon-art { width: 11px; height: 11px; min-width: 11px; --sprite-size: 11px !important; }
   .speed-heading { flex-direction: row; align-items: center; }
   .speed-heading h1 { font-size: 1.55rem; }
   .speed-heading > .button { min-height: 34px; padding: 5px 7px; font-size: 0.7rem; }
@@ -3018,6 +3042,8 @@ a:hover { color: var(--coral-dark); }
   .damage-quickbar-side > .pokemon-art { width: 30px; height: 30px; min-width: 30px; }
   .damage-quickbar-side small { font-size: 0.54rem; }
   .damage-quickbar-side strong { font-size: 0.61rem; }
+  .damage-quickbar-team-art { width: 30px; height: 30px; min-width: 30px; }
+  .damage-quickbar-team-art .pokemon-art { width: 9px; height: 9px; min-width: 9px; --sprite-size: 9px !important; }
   .damage-quickbar-actions .button { padding-inline: 5px; font-size: 0.6rem; }
   .damage-quickbar-actions .damage-toggle { font-size: 0.6rem; }
   .damage-result { padding: 6px; }

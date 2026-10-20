@@ -1316,6 +1316,20 @@ async function runViewport(viewportName, viewport) {
   await markProgress(viewportName, "calculator-team-vs-one", "team-vs-one-selected");
   await page.locator(".damage-team-member-grid").waitFor({ state: "visible", timeout: 10_000 });
   await markProgress(viewportName, "calculator-team-vs-one", "team-vs-one-results-rendered");
+  const teamResultLayout = await page.locator(".damage-team-member-grid").evaluate((grid) => ({
+    display: getComputedStyle(grid).display,
+    columns: getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length,
+    overviewColumns: getComputedStyle(document.querySelector(".damage-quickbar-team-art")).gridTemplateColumns.split(" ").filter(Boolean).length,
+    overviewMembers: document.querySelectorAll(".damage-quickbar-team-art .pokemon-art").length,
+  }));
+  observations.push({ viewport: viewportName, name: "calculator-team-vs-one-layout", ...teamResultLayout });
+  const expectedResultColumns = viewport.width > 760 ? 2 : 1;
+  if (teamResultLayout.display !== "grid" || teamResultLayout.columns !== expectedResultColumns) {
+    failures.push(`${viewportName}: Time vs 1 deve usar ${expectedResultColumns} coluna(s) de resultados em ${viewport.width}px.`);
+  }
+  if (teamResultLayout.overviewColumns !== 3 || teamResultLayout.overviewMembers !== 6) {
+    failures.push(`${viewportName}: o resumo de Time vs 1 deve identificar os seis integrantes em duas fileiras compactas.`);
+  }
   const inverseRows = await page.locator(".damage-team-member").evaluateAll((rows) => rows.map((row) => ({
     status: [...row.classList].find((name) => name.startsWith("is-")),
     text: row.innerText,

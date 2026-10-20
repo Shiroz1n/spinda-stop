@@ -30,7 +30,7 @@ function TournamentSignIn({ oauthAvailable }) {
       <span className="community-card-label">Conta opcional</span>
       <h2 id="tournament-signin-title">Entre para organizar ou aceitar um convite</h2>
       <p>Usamos seu identificador e nome público do GitHub. O Spinda Stop organiza os participantes; as partidas acontecem no jogo.</p>
-      {oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">O login do GitHub ainda não foi configurado neste ambiente.</p>}
+      {oauthAvailable ? <a className="button button-primary" href="/api/auth/github">Entrar com GitHub</a> : <p className="community-config-note">A entrada com GitHub não está disponível agora.</p>}
     </section>
   );
 }
@@ -280,7 +280,7 @@ export function TournamentDetailPage() {
           {isHost && ["open", "locked"].includes(tournament.status) ? <button className="text-button community-cancel" type="button" disabled={busy} onClick={() => { if (window.confirm("Cancelar este torneio?")) act(`/tournaments/${tournamentId}/cancel`, { method: "POST", body: {} }); }}>Cancelar torneio</button> : null}
           {!terminal && friendCodesAvailable ? <form className="friend-code-form" onSubmit={(event) => { event.preventDefault(); act(`/tournaments/${tournamentId}/friend-code`, { method: "PUT", body: { code: friendCode } }).then((result) => { if (result) setFriendCode(""); }); }}><label className="community-field"><span>Seu código de amizade (opcional)</span><input className="text-input" maxLength={40} value={friendCode} onChange={(event) => setFriendCode(event.target.value)} autoComplete="off" /></label><button className="button button-outline button-small" type="submit" disabled={busy || !friendCode}>Compartilhar com participantes</button><small>Visível apenas ao grupo e removido ao terminar ou após sete dias.</small></form> : null}
           {!terminal && ownFriendCode ? <button className="button button-quiet button-small" type="button" disabled={busy} onClick={() => act(`/tournaments/${tournamentId}/friend-code`, { method: "DELETE" })}>Remover meu código</button> : null}
-          {!terminal && !friendCodesAvailable ? <p className="community-empty">Compartilhamento de código temporariamente indisponível neste servidor.</p> : null}
+          {!terminal && !friendCodesAvailable ? <p className="community-empty">O compartilhamento de códigos está indisponível neste momento.</p> : null}
         </section>
 
         <section className="community-room-panel panel-frame" aria-labelledby="bracket-title">
