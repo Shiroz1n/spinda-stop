@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateChampionsStats, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
+import { buildDamageCalculatorSearch, calculateChampionsDamage, calculateChampionsStats, calculateDamageAgainstTargets, calculateDamageFromTeamAgainstTarget, cloneDamageScenario, getDamageCatalogOptions, getDamageItemSupport, getDamageMove, getDamageSpeciesName, getHitOptions } from "../src/data/damageCalculator.js";
 
 const side = (species, options = {}) => ({
   species,
@@ -534,6 +534,7 @@ test("sugestões do catálogo são filtradas e limitadas para não renderizar a 
   assert.deepEqual(getDamageCatalogOptions("species", "garchomp"), ["Garchomp", "Garchomp-Mega", "Garchomp-Mega-Z"]);
   assert.deepEqual(getDamageCatalogOptions("species", ""), []);
   assert.equal(getDamageCatalogOptions("moves", "a").length, 50);
+  assert.ok(getDamageCatalogOptions("items", "Clear").includes("Clear Amulet"));
 });
 
 test("o link do construtor preserva os dois sets e o golpe escolhido", () => {
@@ -714,8 +715,9 @@ test("time contra um alvo explicita sets sem golpes e não presume uma distribui
   const overStatLimit = { ...blank, statPoints: { ...blank.statPoints, atk: 33 }, moves: ["Earthquake", "", "", ""] };
   const overBudget = { ...blank, statPoints: { hp: 12, atk: 12, def: 12, spa: 12, spd: 10, spe: 9 }, moves: ["Earthquake", "", "", ""] };
   const unknownMove = { ...blank, moves: ["Earthquake", "Move Not In Catalogue", "", ""] };
-  const unsupportedItem = { ...blank, item: "Clear Amulet", moves: ["Earthquake", "", "", ""] };
-  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove, unsupportedItem], side("Garchomp"));
+  const clearAmulet = { ...blank, item: "Clear Amulet", moves: ["Earthquake", "", "", ""] };
+  const unsupportedItem = { ...blank, item: "Choice Specs", moves: ["Earthquake", "", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([blank, overStatLimit, overBudget, unknownMove, clearAmulet, unsupportedItem], side("Garchomp"));
 
   assert.equal(rows[0].status, "no-moves");
   assert.match(rows[0].error, /Nenhum golpe/);
@@ -727,7 +729,42 @@ test("time contra um alvo explicita sets sem golpes e não presume uma distribui
   assert.ok(rows[3].moves[0].result);
   assert.equal(rows[3].moves[1].result, null);
   assert.match(rows[3].moves[1].error, /fora do catálogo/);
-  assert.equal(rows[4].status, "invalid");
-  assert.equal(rows[4].moves[0].result, null);
-  assert.match(rows[4].moves[0].error, /item disponível no catálogo/);
+  assert.equal(rows[4].status, "ready");
+  assert.equal(rows[4].moves[0].result.rolls.length, 16);
+  assert.match(rows[4].moves[0].result.itemContextNotes[0], /Clear Amulet/);
+  assert.match(rows[4].moves[0].result.itemContextNotes[0], /não está verificada/);
+  assert.equal(rows[5].status, "unsupported-item");
+  assert.equal(rows[5].moves.length, 0);
+  assert.match(rows[5].error, /reconhecido no catálogo geral/);
+  assert.match(getDamageItemSupport("Mystery Item").status, /unknown/);
+  assert.match(getDamageItemSupport("Clear Amulet").status, /context-only/);
+});
+
+test("Clear Amulet conserva o contexto e não altera o dano pontual quando estágios são informados", () => {
+  const input = { attacker: side("Garchomp", { item: "Clear Amulet", nature: "Jolly", statPoints: { atk: 32 } }), defender: side("Gardevoir-Mega"), move: "Earthquake", gameType: "Singles" };
+  const withAmulet = calculateChampionsDamage(input);
+  const withoutAmulet = calculateChampionsDamage({ ...input, attacker: { ...input.attacker, item: "" } });
+
+  assert.equal(withAmulet.rolls.length, 16);
+  assert.deepEqual(withAmulet.rolls, withoutAmulet.rolls);
+  assert.equal(withAmulet.itemContextNotes.length, 1);
+  assert.match(withAmulet.itemContextNotes[0], /não simula quedas causadas pelo oponente/);
+  assert.match(withAmulet.itemContextNotes[0], /legalidade em Pokémon Champions não está verificada/);
+});
+
+test("um item desconhecido ou não suportado bloqueia só o integrante correspondente", () => {
+  const member = { species: "Garchomp", nature: "Jolly", ability: "Rough Skin", item: "", statPoints: { hp: 0, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ["Earthquake", "", "", ""] };
+  const rows = calculateDamageFromTeamAgainstTarget([
+    { ...member, item: "Mystery Item" },
+    member,
+    { ...member, item: "Choice Specs" },
+    member,
+    member,
+    member,
+  ], { ...side("Garchomp"), item: "" });
+
+  assert.deepEqual(rows.map(({ status }) => status), ["unknown-item", "ready", "unsupported-item", "ready", "ready", "ready"]);
+  assert.match(rows[0].error, /não foi reconhecido/);
+  assert.match(rows[2].error, /pode alterar dano/);
+  assert.ok(rows.slice(1).filter((_, index) => index !== 1).every((row) => row.moves[0].result.rolls.length === 16));
 });

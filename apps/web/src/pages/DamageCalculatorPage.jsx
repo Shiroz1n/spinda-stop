@@ -259,6 +259,7 @@ function DamageResultPanel({ calculation, form, label, compactMatchup = false })
       ) : (
         <>
           <p className="damage-percent">{formatPercent(result.minPercent)}–{formatPercent(result.maxPercent)} da vida máxima calculada do alvo ({result.defender.stats.hp} HP)</p>
+          {result.itemContextNotes.length ? <p className="damage-item-context" role="note">{result.itemContextNotes.join(" ")}</p> : null}
           <details className="damage-result-more">
             <summary>16 rolls, condições e detalhes</summary>
           {result.isSpreadTarget && result.gameType === "Doubles" && (
@@ -355,6 +356,7 @@ function TeamMoveResult({ entry }) {
         {result.rollGroups.length > 1 ? <p>Faixas por acerto: {result.rollGroups.map((group, index) => `${result.rollGroupLabels[index]} ${group[0]}–${group.at(-1)}`).join(" · ")}</p> : null}
         {!result.rolls && !result.rollGroups.some((group) => group.length === 16) ? <p className="form-hint">O motor não retornou uma sequência de 16 rolls para este cenário; a faixa exibida vem diretamente do resultado dele.</p> : null}
         <ul className="damage-team-modifiers">{result.activeModifiers.map((modifier, index) => <li key={`${modifier.label}-${index}`}><strong>{modifier.label}:</strong> {modifier.factor}</li>)}</ul>
+        {result.itemContextNotes.length ? <p className="damage-item-context" role="note">{result.itemContextNotes.join(" ")}</p> : null}
         <p className="form-hint">Alvo em {result.defender.stats.hp} HP · faixa por alvo em Doubles. Acerto e crítico aleatório não estão incluídos.</p>
       </details>
     </article>
@@ -398,7 +400,7 @@ function TeamAgainstTargetResults({ teamState, calculations, target, onRefresh }
               </div>
               {member ? <div className="damage-team-set-meta"><span>Nature <b>{member.nature || "Serious"}</b></span><span>Habilidade <b>{member.ability || "—"}</b></span><span>Item <b>{member.item || "—"}</b></span><span>SP <b>{usedPoints}/66</b></span></div> : null}
               {row.status === "empty" ? <p className="damage-team-member-note">Sem integrante salvo nesta posição.</p> : null}
-              {row.status === "no-moves" || row.status === "invalid" ? <p className="damage-team-member-note" role={row.status === "invalid" ? "alert" : undefined}>{row.error}</p> : null}
+              {row.status === "no-moves" || row.status === "invalid" || row.status === "unknown-item" || row.status === "unsupported-item" ? <p className="damage-team-member-note" role={row.status === "invalid" ? "alert" : "status"}>{row.error}</p> : null}
               {row.moves.length > 0 ? <div className="damage-team-moves">{row.moves.map((entry, index) => <TeamMoveResult entry={entry} key={`${row.slot}-${entry.move}-${index}`} />)}</div> : null}
             </article>
           );

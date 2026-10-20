@@ -1,9 +1,13 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
+import moveData from "@spinda-stop/data/moves";
 import { PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag, typeLabel } from "../components/TypeTag.jsx";
+import { loadPokemonLearnsets } from "../data/loadPokemonLearnsets.js";
+import { filterPokemonLearnsets, formatMoveLearnMethod, formatVersionGroup, getEvolutionNeighbors } from "../data/pokemonLearnsets.js";
 import { getDefensiveTypeEffectiveness, typeEffectivenessChart } from "../data/typeChart.js";
 
 const STAT_LABELS = [
@@ -24,10 +28,107 @@ function formLabel(pokemon) {
   return pokemon.formName || pokemon.formId.replaceAll("-", " ");
 }
 
+function EvolutionSection({ pokemon }) {
+  const chain = getEvolutionNeighbors(dexData.pokemon, pokemon.speciesId);
+  if (!chain.previous && chain.next.length === 0) return null;
+
+  const entries = [
+    ...(chain.previous ? [{ pokemon: chain.previous, label: "Pré-evolução" }] : []),
+    ...(chain.current ? [{ pokemon: chain.current, label: "Espécie atual" }] : []),
+    ...chain.next.map((entry) => ({ pokemon: entry, label: "Evolução" })),
+  ];
+  return (
+    <section className="detail-evolutions" id="detail-evolution" aria-labelledby="evolution-heading">
+      <div className="section-heading"><h2 id="evolution-heading">Linha evolutiva</h2><span>PokéAPI · relação por espécie</span></div>
+      <ol className="evolution-list">
+        {entries.map(({ pokemon: entry, label }) => (
+          <li className={entry.speciesId === pokemon.speciesId ? "is-current" : ""} key={entry.speciesId}>
+            <span>{label}</span>
+            <Link to={`/dex/${entry.slug}`} aria-current={entry.speciesId === pokemon.speciesId ? "page" : undefined}>
+              <PokemonSprite pokemon={entry} name={entry.name} size={54} decorative />
+              <strong>{entry.name}</strong>
+              <small>{entry.types.map(typeLabel).join(" / ")}</small>
+            </Link>
+          </li>
+        ))}
+      </ol>
+      <p className="form-hint">A relação descreve evolução entre espécies; não confirma presença, forma permitida ou legalidade em Pokémon Champions.</p>
+    </section>
+  );
+}
+
+function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
+  const [filters, setFilters] = useState({ query: "", type: "", category: "", methodId: "", versionGroupId: "" });
+  const learnsets = learnsetState.data;
+  const rows = useMemo(
+    () => filterPokemonLearnsets(learnsets?.rows, moveData.moves, filters),
+    [filters, learnsets],
+  );
+
+  function updateFilter(key, value) {
+    setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  const methods = learnsets?.methods || [];
+  const versions = learnsets?.versionGroups || [];
+  return (
+    <section className="detail-learnsets" id="detail-moves" aria-labelledby="learnsets-heading">
+      <div className="section-heading detail-learnsets-heading">
+        <div><p className="page-label">Por jogo e forma</p><h2 id="learnsets-heading">Golpes aprendidos</h2></div>
+        <span>{learnsetState.status === "ready" ? `${rows.length} registros` : "PokéAPI"}</span>
+      </div>
+      <p className="detail-learnset-scope">Aprendibilidade geral na versão selecionada. Não confirma compatibilidade do set nem legalidade em Pokémon Champions.</p>
+      {learnsetState.status === "loading" ? <p className="form-hint" role="status">Carregando os dados da forma…</p> : null}
+      {learnsetState.status === "error" ? <div className="detail-learnset-error" role="alert"><p>{learnsetState.error}</p><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar novamente</button></div> : null}
+      {learnsets ? <>
+        <div className="detail-learnset-filters" aria-label="Filtros de golpes">
+          <label><span>Golpe</span><input type="search" value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar golpe" /></label>
+          <label><span>Versão</span><select value={filters.versionGroupId} onChange={(event) => updateFilter("versionGroupId", event.target.value)}><option value="">Todos os jogos</option>{versions.map((version) => <option value={version.id} key={version.id}>{formatVersionGroup(version.name)}</option>)}</select></label>
+          <label><span>Método</span><select value={filters.methodId} onChange={(event) => updateFilter("methodId", event.target.value)}><option value="">Todos</option>{methods.map((method) => <option value={method.id} key={method.id}>{formatMoveLearnMethod(method.name)}</option>)}</select></label>
+          <label><span>Tipo do golpe</span><select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}><option value="">Todos</option>{dexData.types.map((type) => <option value={type} key={type}>{typeLabel(type)}</option>)}</select></label>
+          <label><span>Categoria</span><select value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">Todas</option><option value="physical">Físico</option><option value="special">Especial</option><option value="status">Status</option></select></label>
+        </div>
+        {rows.length ? <ul className="detail-move-list">{rows.map((row) => {
+          const search = new URLSearchParams({ attacker: pokemon.name, move: row.move.name });
+          const methodLabel = formatMoveLearnMethod(methods.find((method) => method.id === row.methodId)?.name);
+          const versionName = versions.find((version) => version.id === row.versionGroupId)?.name;
+          return (
+            <li key={`${row.move.id}-${row.versionGroupId}-${row.methodId}-${row.level}-${row.order}`}>
+              <div className="detail-move-copy"><strong>{row.move.name}</strong><span><TypeTag type={row.move.type} /> <span>{row.move.category === "physical" ? "Físico" : row.move.category === "special" ? "Especial" : row.move.category === "status" ? "Status" : "Categoria não definida"}</span></span></div>
+              <div className="detail-move-learning"><span>{formatVersionGroup(versionName)}</span><span>{methodLabel}{row.level > 0 ? ` · nível ${row.level}` : ""}{row.mastery ? " · maestria" : ""}</span></div>
+              <Link className="text-button detail-move-calc" to={`/calculator?${search}`} aria-label={`Preparar ${row.move.name} com ${pokemon.name} na calculadora`}>Preparar cálculo</Link>
+            </li>
+          );
+        })}</ul> : <p className="detail-learnset-empty" role="status">A fonte não lista golpes para esta combinação de filtros e forma. Isso não determina compatibilidade ou legalidade em Pokémon Champions.</p>}
+        <a className="source-link" href={learnsets.metadata.sourceUrl} target="_blank" rel="noreferrer">Fonte: PokéAPI {learnsets.metadata.sourceCommit.slice(0, 7)} ↗</a>
+      </> : null}
+    </section>
+  );
+}
+
 export function DexDetailPage() {
   const { slug = "" } = useParams();
   const summary = dexData.pokemon.find((entry) => entry.slug === slug);
   const pokemon = summary ? { ...summary, ...detailData.pokemonBySlug[slug] } : null;
+  const [learnsetState, setLearnsetState] = useState({ requestKey: "", status: "idle", data: null, error: "" });
+  const [learnsetRetry, setLearnsetRetry] = useState(0);
+
+  useEffect(() => {
+    if (!summary?.spriteId) return undefined;
+    let active = true;
+    const requestKey = `${summary.spriteId}:${learnsetRetry}`;
+    loadPokemonLearnsets(summary.spriteId).then((data) => {
+      if (active) setLearnsetState({ requestKey, status: "ready", data, error: "" });
+    }).catch((error) => {
+      if (active) setLearnsetState({ requestKey, status: "error", data: null, error: error instanceof Error ? error.message : "Não foi possível carregar os dados de aprendibilidade." });
+    });
+    return () => { active = false; };
+  }, [summary?.spriteId, learnsetRetry]);
+
+  const currentLearnsetRequestKey = summary?.spriteId ? `${summary.spriteId}:${learnsetRetry}` : "";
+  const currentLearnsetState = learnsetState.requestKey === currentLearnsetRequestKey
+    ? learnsetState
+    : { status: summary?.spriteId ? "loading" : "idle", data: null, error: "" };
 
   if (!pokemon) {
     return (
@@ -73,11 +174,15 @@ export function DexDetailPage() {
       </section>
 
       <nav className="detail-section-nav" aria-label="Seções da ficha">
+        {getEvolutionNeighbors(dexData.pokemon, pokemon.speciesId).previous || getEvolutionNeighbors(dexData.pokemon, pokemon.speciesId).next.length ? <a href="#detail-evolution">Evolução</a> : null}
         {forms.length > 1 ? <a href="#detail-forms">Formas</a> : null}
         <a href="#detail-stats">Stats base</a>
         <a href="#detail-types">Relações de tipo</a>
+        <a href="#detail-moves">Golpes aprendidos</a>
         <a href="#detail-profile">Dados da espécie</a>
       </nav>
+
+      <EvolutionSection pokemon={pokemon} />
 
       {forms.length > 1 ? (
         <section className="detail-forms" id="detail-forms" aria-labelledby="forms-heading">
@@ -146,6 +251,12 @@ export function DexDetailPage() {
           </>
         )}
       </section>
+
+      <MoveLearnsetSection
+        pokemon={pokemon}
+        learnsetState={currentLearnsetState}
+        onRetry={() => setLearnsetRetry((current) => current + 1)}
+      />
     </div>
   );
 }

@@ -12,7 +12,7 @@ Oito cenários também foram conferidos roll a roll contra o simulador independe
 | Nature | Nature do catálogo aplicada à fórmula de stats | Modest e Jolly conferem nos casos Earthquake abaixo | Conferência externa de casos, não da tabela inteira |
 | Forma | O catálogo inclui formas base e Mega aceitas pelo motor | Garchomp-Mega Modest resulta em 185 / 199 / 135 / 154 / 115 / 144 e Earthquake com Reflect causa 49–58 | Conferido externamente; disponibilidade atual por regulamento não é conhecida |
 | Habilidade | O motor aplica habilidades do catálogo e marca algumas em `rawDesc` | Rough Skin foi preenchida nos casos de referência; o caso Mega usa Sand Force | A seleção e as regras vêm do pacote; cada habilidade não foi testada. Multiplicador numérico pode não ser exposto |
-| Item | O motor aplica itens do catálogo e marca alguns em `rawDesc` | Life Orb + Reflect: Earthquake 53–62 no cenário Modest/Jolly descrito nos testes | Caso conferido externamente; restante do catálogo não foi validado |
+| Item | O motor aplica itens do subconjunto Champions e marca alguns em `rawDesc`. A entrada reconhece também itens do catálogo geral da geração 9 e bloqueia nomes fora do motor quando podem afetar dano | Life Orb + Reflect: Earthquake 53–62 no cenário Modest/Jolly descrito nos testes. Clear Amulet é reconhecido no catálogo geral, mas não aparece no subconjunto Champions; o cálculo pontual recebe stats/estágios explícitos e avisa que não simula quedas de stats causadas pelo oponente | Life Orb conferido externamente; Clear Amulet tem regressão local com os mesmos 16 rolls do cenário sem item. Isso não confirma disponibilidade/legalidade em Champions |
 | Golpes e tabela de tipos | O pacote fornece catálogo, categoria, poder, alvo e eficácia | Earthquake, Shadow Claw e Dragon Claw comparados; imunidade e demais golpes seguem sem caso externo | Catálogo do pacote não comprova compatibilidade legal de set |
 | Golpe de área vs. alvo único | Em Doubles, informe 1, 2 ou 3 alvos válidos conforme o tipo de golpe. Só 2+ alvos usam o redutor 0,75×; a faixa é por alvo | Earthquake: 90–106 com 1 alvo, 67–79 com 2 ou 3. Shadow Claw não muda entre Singles e Doubles | Os rolls coincidem com o simulador independente. Pokémon Showdown marca o golpe como spread quando há mais de um alvo; a implementação Champions aplica 0,75× nesse caso |
 | Reflect / telas | Reflect, Light Screen e Aurora Veil; efeito muda conforme formato e crítico | Earthquake 53–62 com Reflect em Singles e 49–58 com Reflect na forma Mega | Casos de Reflect conferidos externamente; Light Screen, Veil e fator 2732/4096 não foram isolados fora do motor |
@@ -27,7 +27,7 @@ Oito cenários também foram conferidos roll a roll contra o simulador independe
 
 ## Casos reproduzíveis
 
-D-01–D-15 estão automatizados em `apps/web/test/damage-calculator.test.js`; D-16–D-22 são reproduzíveis com o script oracle opcional em `scripts/validate-damage-oracle.mjs`.
+D-01–D-15 e D-23 estão automatizados em `apps/web/test/damage-calculator.test.js`; D-16–D-22 são reproduzíveis com o script oracle opcional em `scripts/validate-damage-oracle.mjs`.
 
 | ID | Cenário | Resultado local | Referência externa / observação |
 |---|---|---:|---|
@@ -53,6 +53,7 @@ D-01–D-15 estão automatizados em `apps/web/test/damage-calculator.test.js`; D
 | D-20 | Garchomp Modest usa Dragon Claw crítico em Garchomp Modest | Rolls 192, 194, 198, 198, 200, 204, 206, 206, 210, 212, 216, 216, 218, 222, 224, 228 | Todos coincidem com o simulador independente |
 | D-21 | Earthquake em Doubles com Helping Hand e Reflect | Rolls 67, 67, 68, 69, 70, 71, 71, 72, 73, 74, 75, 75, 76, 77, 78, 79 | Todos coincidem com o simulador independente; Helping Hand 1,5× e Reflect 2732/4096 (~0,667×) aparecem no painel |
 | D-22 | Rillaboom Hardy usa Bullet Seed com 5 acertos em Garchomp | Cada acerto: 22, 22, 22, 22, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 27; cinco acertos causam 110–135 | Cinco grupos idênticos coincidem com o simulador independente. O adaptador não combina as sequências em 16 totais artificiais |
+| D-23 | Time vs 1 com seis formas base, quatro golpes por set e import/export; Clear Amulet no Garchomp | Seis integrantes calculam independentemente; cada golpe de dano mantém 16 rolls. Mudanças de golpe, Nature, item, habilidade, SP e campo alteram o cenário. Clear Amulet exibe nota e preserva os rolls; Choice Specs fora do subconjunto e item desconhecido bloqueiam só seu slot | Os 24 golpes têm registros individuais para Scarlet/Violet em `apps/web/test/fixtures/verified-sv-learnset.json`, revisão PokéAPI `6fd69df`. Isso não prova coexistência dos quatro golpes, obtenção do set ou legalidade em Champions. `@smogon/calc` não foi alterado |
 
 ## Referências consultadas
 

@@ -71,13 +71,16 @@ Cada controle inclui estado normal, hover onde houver ponteiro, foco, selecionad
 | Salas/torneios | Participantes, estado e próxima ação antes de formulários. | Convite, permissão, check-in, contestação e conclusão em mobile. | Identidade, privacidade e resultados manuais conforme modelo comunitário. |
 | Matchups, ladder, rentals | Identidade e dados escaneáveis; contexto de fonte e período. | Filtros e navegação para ficha/equipe quando a fonte permite. | Rentals exigem fonte legal e funcional antes de virar tela populada. |
 
-## Oportunidades de produto, fora do escopo automático da rodada visual
+## Oportunidades de produto
 
-1. **Ficha enciclopédica ampliada:** evolução, variantes, galeria normal/brilhante, relações de tipo, grupos de ovos e localização. Inventarie os dados por jogo e fonte; não exiba localização de Legends Z-A como disponibilidade no Champions.
-2. **Golpes aprendíveis com método e versão:** filtro por tipo/categoria/método e colunas de poder, precisão, PP. Requer fonte e mapeamento da forma, jogo e versão; só mostrar Champions quando confirmado.
-3. **Análise de tipo explicável:** fraqueza/resistência/imunidade com multiplicador da combinação de tipos; habilidades, itens, clima e golpes condicionais são outra camada.
-4. **Cálculo competitivo avançado:** modos complementares do VGC Multi Calc, como múltiplos atacantes vs time ou probabilidade, somente após contrato de entrada e validação do motor. Não anunciar uma probabilidade se só os 16 rolls estão disponíveis.
-5. **Rentals e equipes de torneio:** catálogo, filtro, link e importação só depois de confirmar origem, licença/condições e semântica de live/arquivo. O link de rental fornecido é referência de fluxo, não API.
+1. **Ficha enciclopédica ampliada:** evolução direta por espécie, variantes e relações de tipo já têm fonte e aparecem na ficha. A lista de golpes usa a forma exata, jogo, método, tipo e categoria da revisão fixada da PokéAPI. Grupos de ovos, condições de evolução detalhadas e localização ainda precisam de um contrato de dados por jogo. Localização em Legends Z-A não prova disponibilidade em Pokémon Champions.
+2. **Galeria normal/brilhante da forma exata:** depende de confirmar direitos e cobertura consistente de sprites shiny por forma, com atribuição, fallback e teste dos assets. Não renderizar uma galeria vazia enquanto a fonte não estiver confirmada.
+3. **Golpes permitidos em Pokémon Champions:** aprendibilidade geral já pode ser consultada por jogo e versão. Filtrar ou rotular compatibilidade/legalidade no Champions ainda depende de fonte de regulamento autorizada, formato, temporada e data; uma linha de Legends Z-A ou de Scarlet/Violet não responde isso.
+4. **Análise de tipo explicável:** fraqueza/resistência/imunidade com multiplicador da combinação de tipos já aparece. Habilidades, itens, clima e golpes condicionais são outra camada e só entram quando o motor identifica e modela seu efeito.
+5. **Cálculo competitivo avançado:** modos complementares do VGC Multi Calc, como múltiplos atacantes contra um time ou probabilidades, dependem de contrato de entrada e validação do motor. Não anunciar probabilidade de partida quando só há 16 rolls de dano.
+6. **Rentals e equipes de torneio:** catálogo, filtro, link e importação dependem de confirmar origem, licença/condições e semântica de equipe ao vivo/arquivada. O link de rental de referência não é uma API autorizada.
+
+O estado desta rodada e o trabalho futuro por fonte estão registrados em [PRODUCT_OPPORTUNITY_INVENTORY.md](PRODUCT_OPPORTUNITY_INVENTORY.md).
 
 Abra itens de produto em issues ou plano separado com fonte, aceitação e prioridade. Não misture entrega de design com alegação de completude de Pokédex competitiva.
 
