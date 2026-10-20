@@ -50,6 +50,10 @@ export function formatMoveLearnMethod(name) {
   return METHOD_LABELS[name] || titleFromSlug(name);
 }
 
+export function getDefaultLearnsetVersionGroupId(versionGroups) {
+  return versionGroups?.find((version) => version.name === "scarlet-violet")?.id ?? null;
+}
+
 export function filterPokemonLearnsets(rows, moves, filters = {}) {
   const moveById = new Map(moves.map((move) => [move.id, move]));
   const versionGroupId = filters.versionGroupId === "" || filters.versionGroupId == null

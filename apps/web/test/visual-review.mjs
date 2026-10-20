@@ -18,6 +18,8 @@ const representativeCaptures = new Set([
   "home",
   "pokedex-loaded-more",
   "pokemon-sheet",
+  "pokemon-evolution",
+  "pokemon-learnset-filtered",
   "usage-battle-data",
   "usage-ladder",
   "builder-six-members-first-fold",
@@ -467,6 +469,44 @@ async function runViewport(viewportName, viewport) {
   await page.locator(".pokemon-card-title").first().click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
+  const evolutionSection = page.locator(".detail-evolutions");
+  await evolutionSection.waitFor({ state: "visible", timeout: 10_000 });
+  const evolutionNames = await evolutionSection.locator(".evolution-list strong").allTextContents();
+  if (!evolutionNames.includes("Gabite") || !evolutionNames.includes("Garchomp")) {
+    failures.push(`${viewportName}: a ficha de Garchomp não mostrou sua relação evolutiva direta.`);
+  }
+  await evolutionSection.scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "pokemon-evolution", { audit: true, fullPage: false });
+
+  const learnsetSection = page.locator(".detail-learnsets");
+  await learnsetSection.waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".detail-move-list").waitFor({ state: "visible", timeout: 15_000 });
+  const learnsetSearch = page.getByLabel("Golpe");
+  const versionFilter = page.getByLabel("Versão");
+  const methodFilter = page.getByLabel("Método");
+  const typeFilter = page.getByLabel("Tipo do golpe");
+  const categoryFilter = page.getByLabel("Categoria");
+  await learnsetSearch.focus();
+  await page.keyboard.press("Tab");
+  if (!(await versionFilter.evaluate((element) => element === document.activeElement))) {
+    failures.push(`${viewportName}: os filtros de aprendibilidade não seguem a ordem de teclado apresentada.`);
+  }
+  await versionFilter.selectOption({ label: "Scarlet / Violet" });
+  await methodFilter.selectOption({ label: "Máquina" });
+  await typeFilter.selectOption("ground");
+  await categoryFilter.selectOption("physical");
+  await learnsetSearch.fill("Earthquake");
+  const selectedLearnsetRow = page.locator(".detail-move-list > li").filter({ hasText: "Earthquake" }).first();
+  await selectedLearnsetRow.waitFor({ state: "visible", timeout: 10_000 });
+  if (!(await selectedLearnsetRow.innerText()).includes("Máquina")) {
+    failures.push(`${viewportName}: os filtros de jogo, método, tipo e categoria não localizaram Earthquake na forma selecionada.`);
+  }
+  const calculatorHref = await selectedLearnsetRow.locator(".detail-move-calc").getAttribute("href");
+  if (calculatorHref !== "/calculator?attacker=Garchomp&move=Earthquake") {
+    failures.push(`${viewportName}: a ação contextual do golpe não preservou espécie e golpe para a calculadora.`);
+  }
+  await learnsetSection.scrollIntoViewIfNeeded();
+  await safeCapture(page, viewportName, "pokemon-learnset-filtered", { audit: true, fullPage: false });
   await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   const returnedDexState = await page.evaluate(() => ({

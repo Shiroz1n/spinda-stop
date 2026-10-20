@@ -7,7 +7,7 @@ import moveData from "@spinda-stop/data/moves";
 import { PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag, typeLabel } from "../components/TypeTag.jsx";
 import { loadPokemonLearnsets } from "../data/loadPokemonLearnsets.js";
-import { filterPokemonLearnsets, formatMoveLearnMethod, formatVersionGroup, getEvolutionNeighbors } from "../data/pokemonLearnsets.js";
+import { filterPokemonLearnsets, formatMoveLearnMethod, formatVersionGroup, getDefaultLearnsetVersionGroupId, getEvolutionNeighbors } from "../data/pokemonLearnsets.js";
 import { getDefensiveTypeEffectiveness, typeEffectivenessChart } from "../data/typeChart.js";
 
 const STAT_LABELS = [
@@ -58,11 +58,15 @@ function EvolutionSection({ pokemon }) {
 }
 
 function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
-  const [filters, setFilters] = useState({ query: "", type: "", category: "", methodId: "", versionGroupId: "" });
+  const [filters, setFilters] = useState({ query: "", type: "", category: "", methodId: "", versionGroupId: null });
   const learnsets = learnsetState.data;
+  const defaultVersionGroupId = getDefaultLearnsetVersionGroupId(learnsets?.versionGroups);
+  const selectedVersionGroupId = filters.versionGroupId === null
+    ? String(defaultVersionGroupId ?? "")
+    : filters.versionGroupId;
   const rows = useMemo(
-    () => filterPokemonLearnsets(learnsets?.rows, moveData.moves, filters),
-    [filters, learnsets],
+    () => filterPokemonLearnsets(learnsets?.rows, moveData.moves, { ...filters, versionGroupId: selectedVersionGroupId }),
+    [filters, learnsets, selectedVersionGroupId],
   );
 
   function updateFilter(key, value) {
@@ -77,13 +81,13 @@ function MoveLearnsetSection({ pokemon, learnsetState, onRetry }) {
         <div><p className="page-label">Por jogo e forma</p><h2 id="learnsets-heading">Golpes aprendidos</h2></div>
         <span>{learnsetState.status === "ready" ? `${rows.length} registros` : "PokéAPI"}</span>
       </div>
-      <p className="detail-learnset-scope">Aprendibilidade geral na versão selecionada. Não confirma compatibilidade do set nem legalidade em Pokémon Champions.</p>
+      <p className="detail-learnset-scope">Aprendibilidade geral. Scarlet / Violet começa selecionado para reduzir a lista; “Todos os jogos” consulta outras versões. Isso não confirma compatibilidade do set nem legalidade em Pokémon Champions.</p>
       {learnsetState.status === "loading" ? <p className="form-hint" role="status">Carregando os dados da forma…</p> : null}
       {learnsetState.status === "error" ? <div className="detail-learnset-error" role="alert"><p>{learnsetState.error}</p><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar novamente</button></div> : null}
       {learnsets ? <>
         <div className="detail-learnset-filters" aria-label="Filtros de golpes">
           <label><span>Golpe</span><input type="search" value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar golpe" /></label>
-          <label><span>Versão</span><select value={filters.versionGroupId} onChange={(event) => updateFilter("versionGroupId", event.target.value)}><option value="">Todos os jogos</option>{versions.map((version) => <option value={version.id} key={version.id}>{formatVersionGroup(version.name)}</option>)}</select></label>
+          <label><span>Versão</span><select value={selectedVersionGroupId} onChange={(event) => updateFilter("versionGroupId", event.target.value)}><option value="">Todos os jogos</option>{versions.map((version) => <option value={version.id} key={version.id}>{formatVersionGroup(version.name)}</option>)}</select></label>
           <label><span>Método</span><select value={filters.methodId} onChange={(event) => updateFilter("methodId", event.target.value)}><option value="">Todos</option>{methods.map((method) => <option value={method.id} key={method.id}>{formatMoveLearnMethod(method.name)}</option>)}</select></label>
           <label><span>Tipo do golpe</span><select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}><option value="">Todos</option>{dexData.types.map((type) => <option value={type} key={type}>{typeLabel(type)}</option>)}</select></label>
           <label><span>Categoria</span><select value={filters.category} onChange={(event) => updateFilter("category", event.target.value)}><option value="">Todas</option><option value="physical">Físico</option><option value="special">Especial</option><option value="status">Status</option></select></label>

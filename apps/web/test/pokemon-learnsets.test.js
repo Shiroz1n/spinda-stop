@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterPokemonLearnsets, formatMoveLearnMethod, formatVersionGroup, getEvolutionNeighbors } from "../src/data/pokemonLearnsets.js";
+import { filterPokemonLearnsets, formatMoveLearnMethod, formatVersionGroup, getDefaultLearnsetVersionGroupId, getEvolutionNeighbors } from "../src/data/pokemonLearnsets.js";
 
 const moves = [
   { id: 1, name: "Thunderbolt", type: "electric", category: "special" },
@@ -25,6 +25,12 @@ test("uses readable game and method labels while keeping unknown source terms in
   assert.equal(formatVersionGroup("legends-za"), "Legends: Z-A");
   assert.equal(formatVersionGroup("new-version-group"), "New Version Group");
   assert.equal(formatMoveLearnMethod("level-up"), "Nível");
+});
+
+test("prefers Scarlet/Violet as a compact default while keeping all versions selectable", () => {
+  const versions = [{ id: 1, name: "red-blue" }, { id: 25, name: "scarlet-violet" }, { id: 32, name: "legends-za" }];
+  assert.equal(getDefaultLearnsetVersionGroupId(versions), 25);
+  assert.equal(getDefaultLearnsetVersionGroupId([{ id: 1, name: "red-blue" }]), null);
 });
 
 test("resolves direct evolutionary neighbors by species rather than duplicating forms", () => {

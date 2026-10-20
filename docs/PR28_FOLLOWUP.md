@@ -8,7 +8,7 @@ Revisão em 20/10/2026, branch `feat/visual-pass-two`, sobre o HEAD remoto confe
 - **Evolução direta (b):** a ficha agora liga pré-evolução, espécie selecionada e evoluções por ID de espécie. Usa `evolves_from_species_id` da revisão fixa da PokéAPI; não apresenta condições de evolução.
 - **Galeria normal/brilhante da forma exata (c):** continua como trabalho futuro até confirmar direito de redistribuição, cobertura shiny por forma, atribuição e fallback. A ficha não mostra um espaço vazio.
 - **Relações de tipo (a):** multiplicadores gerais de tipo permanecem na ficha. Não representam efeitos situacionais de habilidade, item, clima ou golpe.
-- **Aprendibilidade de golpes (b):** ficha exata da forma com filtros por nome, jogo/versão, método, tipo e categoria; cada linha pode preparar espécie e golpe na calculadora. Os 32 blocos são carregados sob demanda por ID da forma; o maior no build desta revisão tem 379,69 KB sem compressão.
+- **Aprendibilidade de golpes (b):** ficha exata da forma com filtros por nome, jogo/versão, método, tipo e categoria; Scarlet/Violet começa selecionado para evitar centenas de registros misturados, e “Todos os jogos” continua disponível. Cada linha pode preparar forma e golpe na calculadora. Os 32 blocos são carregados sob demanda por ID da forma; o maior no build desta revisão tem 379,69 KB sem compressão.
 - **Legalidade/compatibilidade em Champions (c):** exige fonte autorizada por formato, regulamento, temporada e data. Os registros gerais da PokéAPI, inclusive Legends: Z-A, não respondem isso.
 - **Dex → Usage/builder/calculadora (a, melhorada):** ações existentes foram mantidas e uma linha de golpe agora prepara forma e golpe na calculadora. O alvo continua em branco para a pessoa escolher.
 - **Usage, ladder, salas, torneios e matchups (a):** os fluxos existentes foram preservados. Nenhuma margem de uso virou um set, rental ou equipe inferidos.
@@ -54,9 +54,11 @@ A fonte comprova que cada golpe listado aparece individualmente na aprendibilida
 
 ### Integrações PostgreSQL
 
-Os cinco casos de integração em `apps/api/test/community-api.integration.test.js` não foram aprovados nem contados como verificados. Quatro fluxos funcionais (contas/salas, torneios, origem CORS e OAuth) e o teste placeholder aparecem como ignorados no `npm test`, sem `DATABASE_URL`.
+No `npm test` local, sem `DATABASE_URL`, os quatro fluxos funcionais são pulados. O quinto item ignorado é só o teste sentinela que explica a falta de `DATABASE_URL`; não representa uma quinta integração.
 
-Foi tentado configurar PostgreSQL 16 conforme `DEVELOPMENT.md`, sem ler `.env` ou credenciais externas. O pacote do servidor foi baixado, mas a configuração do sistema falhou com `Cannot open audit interface` ao executar `groupadd`; a tentativa de trocar de usuário falhou com `setgroups: Operation not permitted` e `setresuid: Invalid argument`. PostgreSQL recusa iniciar como root, e não foi possível iniciar um daemon isolado nem rodar as migrações. Contas, salas e torneios permanecem sem validação de integração nesta rodada.
+O container local não permite preparar PostgreSQL 16 conforme `DEVELOPMENT.md`: a configuração falhou com `Cannot open audit interface` ao executar `groupadd`; trocar de usuário falhou com `setgroups: Operation not permitted` e `setresuid: Invalid argument`; `pg_isready -h 127.0.0.1 -p 5432` retornou `no response`. Nenhum `.env`, banco ou credencial de produção foi lido ou usado.
+
+A CI #170 rodou no PostgreSQL 16 descartável declarado em `.github/workflows/ci.yml`. `npm run api:migrate` passou e os quatro casos funcionais passaram: equipe autenticada/sala com duas pessoas, torneio privado com quatro pessoas, rejeição de escrita de outra origem e estado OAuth de uso único com sessão. `npm test` terminou com 118 testes aprovados, zero falhas e zero skips. Contas, salas, torneios, CORS e OAuth ficam verificados pela integração da CI; o ambiente local continua sem servidor de banco.
 
 ### Revisão visual local
 
