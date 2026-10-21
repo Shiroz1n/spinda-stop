@@ -1344,7 +1344,9 @@ async function runViewport(viewportName, viewport) {
   await attackerMoveSearch.fill("Earthquake");
   await page.locator(".damage-workbench-side").first().locator(".damage-move-options button").filter({ hasText: "Earthquake" }).first().click();
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("button", { name: "Mais ajustes" }).click();
   const damageEditor = page.locator(".damage-editor-disclosure");
+  await damageEditor.waitFor({ state: "visible", timeout: 10_000 });
   if (!(await damageEditor.evaluate((details) => details.open))) await damageEditor.locator(":scope > summary").click();
   await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
   const unsupportedQuery = new URLSearchParams({ attacker: "Garchomp", defender: "Gardevoir-Mega", move: "Earthquake", ability: "Habilidade criada pelo usuário", item: "Item desconhecido importado" });

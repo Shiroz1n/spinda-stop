@@ -14,6 +14,7 @@ Cada execução salva inspection.json com o modo, escopo e duração da inspeç�
 |---|---|---:|---|
 | Rápido, nove rotas | 1440 e 390 px; capturas, foco/teclado, overflow e erros. | 18,446 s na inspeção; 21,8 s ponta a ponta com build. | Ciclo de iteração; não contém axe, cenários completos, 320/720 nem PostgreSQL. |
 | Rápido, só calculadora | 1440 e 390 px; quatro golpes e teclado. | 7,489 s na inspeção; 11,3 s ponta a ponta com build. | Evidência específica da seleção guiada; não representa o custo do gate. |
+| Rápido, três rotas selecionadas (rodada atual) | Usage, calculadora e builder em 1440 e 390 px; quatro golpes, foco/teclado, overflow e erros. | 10,149 s na inspeção; 12,8 s ponta a ponta incluindo o build; 36 observações, 0 falhas. | Iteração final das telas afetadas; sem axe, rotas completas, 320/720 ou PostgreSQL. |
 | Completo local | Cenários do roteiro em quatro larguras, axe e tentativas de carregar sprites. | 78,812 s na inspeção; 83,1 s ponta a ponta com build. | `needs-review`: o ambiente local não decodificou o favicon remoto e bloqueou sprites; uma correção de contraste posterior foi validada separadamente com axe. Não é aprovação do gate completo. |
 
 O gate completo no GitHub, incluindo PostgreSQL, será medido depois da execução final no HEAD da PR; o modo rápido nunca substitui essa execução. Uma auditoria axe pontual de salas em 1440 e 390 px após a correção encontrou zero violações; ela não substitui a auditoria completa.

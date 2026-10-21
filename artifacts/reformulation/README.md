@@ -1,21 +1,25 @@
 # Evidência da reformulação — PR #30
 
-Este pacote organiza imagens reais usadas para comparar o Spinda Stop antes/depois. Capturas de referência são documentação de pesquisa, não assets carregados pela aplicação.
+Este pacote organiza capturas de pesquisa, comparações visuais do Spinda Stop e estados da calculadora. As capturas de terceiros são documentação de pesquisa, não assets do produto.
 
 ## Inventário
 
-- `references/lived-sites/`: 17 screenshots individuais de Pikalytics (7), Champions Lab (2) e Silph Scope (8), em desktop. URLs, viewports conhecidos, ações/estados e decisões estão em [docs/SECOND_VISUAL_RESEARCH.md](../../docs/SECOND_VISUAL_RESEARCH.md).
-- `references/datadex/`: 15 imagens DataDex fornecidas pelo usuário e um contato visual. Cada captura tem 945×2048 px; URL/build e ações originais não foram fornecidos. Não presumimos direitos além de uso como referência nesta conversa.
-- `before/desktop/`, `before/mobile-390/`, `before/mobile-320/`: nove rotas capturadas na composição anterior do Spinda Stop.
-- `after/desktop/`, `after/mobile-390/`, `after/mobile-320/`, `after/reflow-720/`: primeiras dobras das mesmas nove rotas depois da reformulação. Desktop/390 vêm do modo rápido; 320/720 são capturas complementares feitas no Preview local para comparar reflow. O gate completo do CI mantém seus próprios cenários, axe e fluxos PostgreSQL.
-- `calculator-selection/`: quatro estados de golpe e seleção por teclado/toque do Spinda Stop.
+- `references/lived-sites/`: 69 capturas reais em cinco grupos. O [manifesto](references/lived-sites/README.md) lista cada arquivo e registra URL, viewport, ação, estado observado e o que foi aplicado no Spinda Stop. As ferramentas de terceiros foram interagidas em desktop; a sessão não ofereceu viewport mobile.
+- `references/datadex/`: 15 imagens do DataDex fornecidas pelo usuário, cada uma 945×2048 px, em mobile. URL, versão/build e ações originais não foram fornecidos. `contact-sheet.jpg` é apenas uma montagem de inspeção, não uma décima sexta tela.
+- `before/desktop/`, `before/mobile-390/` e `before/mobile-320/`: nove rotas na composição anterior.
+- `after/desktop/`, `after/mobile-390/`, `after/mobile-320/` e `after/reflow-720/`: capturas correspondentes após a reformulação. O gate completo mantém seu próprio conjunto de estados, auditorias axe e fluxos comunitários com PostgreSQL.
+- `calculator-selection/`: estados de quatro golpes selecionados, ativação por teclado/toque e saída visual em sequência.
 
-O total de capturas de referência de terceiros arquivadas é 17 + 15 imagens DataDex. Algumas sessões de VGC Multi Calc, Pokémon Showdown, rental e outros estados foram exploradas interativamente, mas o navegador Work só exibiu screenshots no fluxo da sessão e não permitiu gravá-los no workspace. Por isso este pacote fica abaixo das 60–70 screenshots pedidas; não foram criadas imagens repetidas nem capturas sintéticas para atingir uma contagem.
+O total de pesquisa visual é **69 capturas de terceiros + 15 telas DataDex**. As imagens foram arquivadas por estado distintivo, sem repetições sintéticas. São usadas para revisão interna do redesign; não concedem direitos de redistribuição, uso comercial ou incorporação de texto, arte, ícones ou dados alheios.
 
 ## Sequência do cálculo
 
-A amostra automatizada usa Rillaboom contra Incineroar. Os quatro golpes selecionados por clique ou toque e seus resultados são Wood Hammer (45–53), Grassy Glide (21–24), U-turn (35–42) e Knock Off (16–19). `four-moves-sequence.jpg` junta os quatro estados em ordem; os PNGs individuais preservam cada captura. `desktop-calculator-keyboard-active-move.png` mostra ativação via teclado; `mobile-calculator-four-moves-selected.png` mostra os quatro slots em viewport de 390 px.
+A amostra automatizada usa Rillaboom contra Incineroar. Os quatro golpes selecionados por clique/toque atualizam o cálculo: Wood Hammer (45–53), Grassy Glide (21–24), U-turn (35–42) e Knock Off (16–19). `calculator-selection/four-moves-sequence.jpg` junta a sequência; PNGs individuais mostram os estados de cada golpe. `desktop-calculator-keyboard-active-move.png` registra teclado e `mobile-calculator-four-moves-selected.png` mostra os quatro slots em 390 px. Esses números são da fixture de teste do Spinda Stop, não das referências externas.
 
-## Limites
+## Revisão e serviços
 
-As capturas atuais de código local podem mostrar o fallback nomeado do sprite: a origem de imagens remota não decodificou neste ambiente. O componente continua usando o ID exato da forma e não troca silenciosamente para a imagem base. O Preview Vercel da PR ainda precisa ser localizado e inspecionado no HEAD final. Desktop e mobile das referências terceiras não foram ambos verificados; o Work Browser não disponibilizou viewport mobile.
+O modo rápido foi medido em 10,149 s de inspeção (12,8 s ponta a ponta incluindo build) para Usage, Calculadora e Builder, em 1440 e 390 px; registrou 36 observações e 0 falhas. Inclui capturas, foco/teclado, overflow e erros; não equivale ao gate completo. Tempos históricos e a medição final do gate ficam em [docs/VISUAL_REVIEW.md](../../docs/VISUAL_REVIEW.md).
+
+O deployment Vercel `Ready` existente é `https://spinda-stop-visual-staging-b72suj63g-alaninhuma-s-projects.vercel.app`, ID `dpl_FS7PQGBhEbKYsGUnj3rp4muoHXjJ`. O ambiente reportado é `production`, branch `main`, SHA `d5ef83f15487111e1a18cdef73f31b19eb62e14c`; ele não corresponde ao HEAD desta PR. Não foi encontrado deployment Vercel vinculado ao HEAD da PR, portanto essa URL não foi usada para aprovar o redesign.
+
+Os sprites próprios continuam apontando para IDs/URLs de forma exata, com fallback nomeado e direitos registrados em `docs/THIRD_PARTY_LICENSES.md`. Nenhuma forma é substituída silenciosamente por sua forma base. O pacote `@smogon/calc` e as listas gerais de aprendibilidade são fontes distintas; não provam disponibilidade/legalidade Champions. A PR segue aberta; nenhum merge ou deploy de produção foi feito.

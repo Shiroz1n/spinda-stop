@@ -200,7 +200,7 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
           const isActive = activeSide === sideName && activeMoveSlot === index;
           return (
             <div className={`damage-move-slot${isActive ? " is-active" : ""}${name ? " has-move" : " is-empty"}`} key={`${sideName}-move-slot-${index}`}>
-              <button className="damage-move-slot-select" type="button" aria-pressed={isActive} aria-label={`Golpe ${index + 1}: ${name || "vazio"}${isActive ? ", ativo no cálculo" : ", selecionar para calcular"}`} onClick={() => onActivateMove(sideName, index)}>
+              <button className="damage-move-slot-select" type="button" aria-pressed={isActive} aria-label={`Golpe ${index + 1}: ${name || "Escolher golpe"}${isActive ? ", ativo no cálculo" : ", selecionar para calcular"}`} onClick={() => onActivateMove(sideName, index)}>
                 <span>{index + 1}</span><strong>{name || "Escolher golpe"}</strong>
                 {name ? <small>{getDamageMove(name)?.type || [...moveById.values()].find((entry) => toCatalogId(entry.name) === toCatalogId(name))?.type || "Dado geral"}</small> : null}
               </button>

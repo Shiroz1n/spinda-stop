@@ -91,7 +91,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Home | Hero assimétrico com busca real e cinco destinos existentes em lista compacta. | Remove catálogo simulado, contadores sem fonte e cartões repetidos; a busca define a tarefa. |
 | Pokédex | Quatro colunas com arte dominante no desktop; filtros menores. | Cada entrada é uma entidade comparável; removidos stats e CTA repetidos de cada cartão. |
 | Ficha | Identidade da forma em destaque; evolução, formas, stats, relações e perfil em seções contínuas. | O objeto selecionado ocupa o começo; seções usam navegação e divisórias. |
-| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. | Fonte/período têm rótulo funcional; badges sem ação e metadados repetidos ficam fora do primeiro plano. |
+| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. | Fonte/período têm rótulo funcional; “Limpar filtros” fica logo abaixo de “Mais filtros e período”, fora da grade expansível, só quando necessário; metadados repetidos ficam fora do primeiro plano. |
 | Builder | Seis posições selecionáveis e um editor para o set ativo. | Seis sets são comparáveis; formulários não são duplicados nem aninhados em cartões decorativos. |
 | Calculadora | Bancada atacante → golpe ativo → resultado/campo → alvo, com quatro slots por lado. | A seleção atualiza o valor; borda e `aria-pressed` indicam o golpe; listas, Nature, habilidade e item são assistidos. |
 | Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |

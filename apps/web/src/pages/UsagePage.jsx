@@ -561,6 +561,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                 </select>
               </label>
 
+                </div>
+              </details>
               {hasActiveFilters ? (
                 <button
                   className="button button-outline button-small usage-clear-filters"
@@ -576,8 +578,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                   Limpar filtros
                 </button>
               ) : null}
-                </div>
-              </details>
             </div>
 
             <p className="usage-filter-note">
