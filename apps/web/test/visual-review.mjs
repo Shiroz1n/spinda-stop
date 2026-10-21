@@ -1337,8 +1337,8 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: a calculadora direta deve mostrar os oito slots vazios sem injetar espécie ou golpe padrão.`);
   }
   await safeCapture(page, viewportName, "calculator-empty-choice", { audit: true, fullPage: false });
-  await page.locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
-  await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
+  await page.locator(".damage-workbench-side").first().locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
+  await page.locator(".damage-workbench-side").nth(1).locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
   await page.getByRole("button", { name: "Catálogo do motor" }).first().click();
   const attackerMoveSearch = page.getByRole("searchbox", { name: "Buscar golpes de Garchomp" });
   await attackerMoveSearch.fill("Earthquake");
@@ -1462,8 +1462,8 @@ async function runViewport(viewportName, viewport) {
     const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
     if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
     if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
-    await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
-    await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
+    await page.locator(".damage-workbench-side").first().locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
+    await page.locator(".damage-workbench-side").nth(1).locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
     const multiMovePicker = page.locator(".damage-move-picker").first();
     await multiMovePicker.getByRole("button", { name: "Catálogo do motor" }).click();
     await multiMovePicker.getByRole("searchbox", { name: "Buscar golpes de Lucario-Mega-Z" }).fill("Shadow Claw");

@@ -200,8 +200,8 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
           const isActive = activeSide === sideName && activeMoveSlot === index;
           return (
             <div className={`damage-move-slot${isActive ? " is-active" : ""}${name ? " has-move" : " is-empty"}`} key={`${sideName}-move-slot-${index}`}>
-              <button className="damage-move-slot-select" type="button" aria-pressed={isActive} aria-labelledby={`${sideName}-move-slot-${index}-number ${sideName}-move-slot-${index}-name`} onClick={() => onActivateMove(sideName, index)}>
-                <span id={`${sideName}-move-slot-${index}-number`}>{index + 1}</span><strong id={`${sideName}-move-slot-${index}-name`}>{name || "Escolher golpe"}</strong>
+              <button className="damage-move-slot-select" type="button" aria-pressed={isActive} onClick={() => onActivateMove(sideName, index)}>
+                <span>{index + 1}</span><strong>{name || "Escolher golpe"}</strong>
                 {name ? <small>{getDamageMove(name)?.type || [...moveById.values()].find((entry) => toCatalogId(entry.name) === toCatalogId(name))?.type || "Dado geral"}</small> : null}
               </button>
               {name ? <button className="damage-move-slot-clear" type="button" aria-label={`Limpar golpe ${index + 1}`} onClick={() => onSelectMove(sideName, index, "")}>×</button> : null}
@@ -769,7 +769,7 @@ export function DamageCalculatorPage() {
         </div>
       </section>
 
-      {targetMode !== "one" ? <div className={comparison.enabled ? "damage-quickbar damage-quickbar-comparison" : "damage-quickbar"}>
+      {targetMode !== "one" || comparison.enabled ? <div className={comparison.enabled ? "damage-quickbar damage-quickbar-comparison" : "damage-quickbar"}>
         <div className="damage-quickbar-matchup" role="group" aria-label={`${targetMode === "team" ? "Time do construtor" : `Atacante ${form.attacker.species || "não escolhido"}`}; alvo ${form.defender.species || "não escolhido"}`}>
           <div className="damage-quickbar-side">
             {targetMode === "team" ? <div className="damage-quickbar-team-art" aria-hidden="true">{builderTeamState.team?.members.map((member, index) => member ? <PokemonSprite key={`${member.pokemonId}-${index}`} pokemon={findPokemonSprite(member.pokemonId)} name="" size={34} decorative /> : null)}</div> : <PokemonSprite pokemon={findPokemonSprite(form.attacker.species)} name={form.attacker.species || "Atacante não escolhido"} size={52} priority decorative />}
@@ -782,10 +782,9 @@ export function DamageCalculatorPage() {
           </div>
           <strong className="damage-quickbar-move">{targetMode === "team" ? "Golpes dos sets" : form.move || "Escolha um golpe"}</strong>
         </div>
-        <div className="damage-quickbar-actions">
-          {targetMode === "one" ? <FieldToggle label="Comparar cenários" checked={comparison.enabled} disabled={!calculationReady && !comparison.enabled} onChange={(enabled) => setComparison(enabled ? { enabled: true, overrides: {} } : { enabled: false, overrides: comparison.overrides })} /> : null}
+        {targetMode !== "one" ? <div className="damage-quickbar-actions">
           <button className="button button-primary button-small" type="button" onClick={openEditor}>Editar confronto</button>
-        </div>
+        </div> : null}
       </div> : null}
 
       {targetMode === "one" ? (

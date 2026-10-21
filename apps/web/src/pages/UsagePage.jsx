@@ -454,7 +454,24 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                 <p className="page-label">Índice da fonte</p>
                 <h2>Espécies</h2>
               </div>
-              <span className="usage-result-count">{filteredPokemon.length}</span>
+              <div className="usage-browser-actions">
+                {hasActiveFilters ? (
+                  <button
+                    className="button button-outline button-small usage-clear-filters"
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setTypeFilter("all");
+                      setMoveFilter("all");
+                      setItemFilter("all");
+                      setAbilityFilter("all");
+                    }}
+                  >
+                    Limpar filtros
+                  </button>
+                ) : null}
+                <span className="usage-result-count" aria-label={`${filteredPokemon.length} espécies`}>{filteredPokemon.length}</span>
+              </div>
             </div>
 
             <div className="usage-filters">
@@ -563,21 +580,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
 
                 </div>
               </details>
-              {hasActiveFilters ? (
-                <button
-                  className="button button-outline button-small usage-clear-filters"
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setTypeFilter("all");
-                    setMoveFilter("all");
-                    setItemFilter("all");
-                    setAbilityFilter("all");
-                  }}
-                >
-                  Limpar filtros
-                </button>
-              ) : null}
             </div>
 
             <p className="usage-filter-note">

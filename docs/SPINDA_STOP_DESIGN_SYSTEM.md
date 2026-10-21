@@ -29,22 +29,22 @@ As imagens enviadas pelo usuário servem como referência para revisão. Não in
 
 | Papel | Token | Valor atual |
 | --- | --- | --- |
-| Página | `--paper` | `#f1f2e8` |
-| Sombra de superfície | `--paper-shadow` | `#d6ded2` |
-| Painel | `--surface` | `#fffdf7` |
-| Agrupamento secundário | `--surface-alt` | `#e5eddf` |
-| Campo de formulário | `--field` | `#fcfbf5` |
-| Sprite: céu / chão | `--sky` / `--grass` | `#d8e9e3` / `#9dbf82` |
-| Seleção | `--selection` | `#f2e2b0` |
-| Texto / texto secundário | `--ink` / `--muted` | `#18382f` / `#52675e` |
-| Divisória | `--line` | `#bdc9bf` |
-| Acento azul / navegação | `--blue` / `--blue-dark` | `#267186` / `#1f4d5b` |
-| Ação / ação em texto | `--coral` / `--coral-dark` | `#bc5546` / `#82382f` |
-| Confirmação / seleção em texto | `--green` / `--gold` | `#39764b` / `#8a6516` |
-| Foco | `--focus` | `#005c9a` |
-| Geometria / sombra de elevação | `--radius` / `--pixel-edge` | `9px` / `0 2px 8px rgb(24 56 47 / 7%)` |
+| Página | `--paper` | `#f5f1e3` |
+| Sombra de superfície | `--paper-shadow` | `#d7d1bc` |
+| Painel | `--surface` | `#fffdf4` |
+| Agrupamento secundário | `--surface-alt` | `#e4ebd9` |
+| Campo de formulário | `--field` | `#fffef8` |
+| Sprite: céu / chão | `--sky` / `--grass` | `#c8e0d9` / `#a7c88a` |
+| Seleção | `--selection` | `#f0d77f` |
+| Texto / texto secundário | `--ink` / `--muted` | `#173e35` / `#465b4d` |
+| Divisória | `--line` | `#bdc8b6` |
+| Acento azul / navegação | `--blue` / `--blue-dark` | `#2c6b70` / `#174b4e` |
+| Ação / ação em texto | `--coral` / `--coral-dark` | `#c24f3c` / `#82382f` |
+| Confirmação / seleção em texto | `--green` / `--gold` | `#39764b` / `#9a6a12` |
+| Foco | `--focus` | `#005d9b` |
+| Geometria / sombra de elevação | `--radius` / `--pixel-edge` | `4px` / `2px 3px 0 #cbd2bf` |
 
-O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores pelo CSS. A linguagem atual reserva borda/fundo destacado para seleção, resultado e estado; demais agrupamentos usam alinhamento e divisórias. Estados selecionados, desabilitados, erro e foco têm rótulo ou forma além da cor. Não há alegação de uma matriz completa de contraste.
+O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores pelo CSS. A linguagem reserva borda e fundo destacado para seleção, resultado e estado; os demais agrupamentos usam alinhamento e divisórias. Estados selecionados, desabilitados, erro e foco têm rótulo ou forma além da cor. O token de texto secundário foi escurecido para preservar contraste legível sobre a seleção amarela; a aprovação visual continua dependendo da revisão humana, mesmo quando axe não aponta violações.
 
 ### Tipografia, molduras, imagens e movimento
 
