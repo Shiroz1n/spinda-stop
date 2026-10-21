@@ -521,3 +521,12 @@
   .usage-species-button .usage-species-name .type-tag { min-height: 14px; font-size: 0.43rem; }
   .usage-species-button .usage-position { font-size: 0.58rem; }
 }
+
+@media (max-width: 360px) {
+  /* In team mode the selected tab and fixed Team navigation already provide context. Keep the first matchup result above that navigation. */
+  .damage-page.is-mode-team .damage-heading { margin-bottom: 4px; padding-bottom: 0; border-bottom: 0; }
+  .damage-page.is-mode-team .damage-heading > div > .page-label,
+  .damage-page.is-mode-team .damage-heading .page-intro,
+  .damage-page.is-mode-team .damage-heading > .button { display: none; }
+  .damage-page.is-mode-team .damage-heading h1 { margin-bottom: 0; font-size: 1.28rem; line-height: 1.1; }
+}

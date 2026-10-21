@@ -23,7 +23,7 @@ Comparação feita em 20/10/2026 entre as capturas selecionadas do Visual review
 | Ficha | Identidade/forma/sprite exato em uma faixa única; seletor de forma visível; abas que indicam continuação; seções com evolução e condições, stats gerais, multiplicadores defensivos e aprendibilidade por forma/jogo/método. A ficha não afirma legalidade Champions. |
 | Usage e ladder | Recorte ativo e fonte/período antes da espécie e ranking; tabelas de comparação com números alinhados; limites e contrato da integração em detalhes. Não combinar marginais entre fontes. |
 | Builder | Seis membros em seletor compacto permanente com foco ativo por borda e texto; o set escolhido vem a seguir e traz identidade, Nature com efeitos, habilidade, item, quatro golpes e SP. Importação/exportação sem mudanças na estrutura ou proveniência. |
-| Calculadora | Três modos em navegação curta; cenário editável e primeiro resultado na mesma região visual; editor extenso em disclosure acessível. Time vs 1 exibe primeira linha calculada na primeira dobra de 320/390 px e mantém 16 rolls por membro/golpe. |
+| Calculadora | Três modos em navegação curta; cenário editável e primeiro resultado na mesma região visual; editor extenso em disclosure acessível. Time vs 1 exibe primeira linha calculada na primeira dobra de 320/390 px e mantém 16 rolls por membro/golpe. Até 360 px, remove o kicker, a explicação e o atalho redundantes do cabeçalho; o modo ativo e a navegação fixa mantêm a orientação. |
 | Speed Tiers | Alvo e modelo em primeiro plano; comparação calculada antes dos controles menos usados; Trick Room e limites de SP continuam explicitados. |
 | Salas | Estado e pessoas envolvidas formam a área inicial; a próxima ação tem hierarquia clara; convite e configuração permanecem acessíveis depois do estado real. |
 | Torneios | Estado, chave e participantes precedem ações administrativas; nomes longos quebram linha e mensagens de falha mantêm recuperação próxima. |
@@ -49,6 +49,12 @@ O Visual review #139, no HEAD `d103aa17b88ed1ad6d63b0d94f1d8d14edaf7b54`, passou
 As imagens do artefato foram inspecionadas manualmente. Não encontrei clipping ou conteúdo encoberto nos estados selecionados: `desktop-home.png`, `mobile-320-pokedex-loaded-more.png`, `desktop-pokemon-sheet.png`, `mobile-320-pokemon-sprite-unavailable.png`, `mobile-320-usage-battle-data.png`, `mobile-320-builder-six-members-first-fold.png`, `mobile-320-calculator-team-vs-one-first-fold.png`, `mobile-speed-tiers-target-nature-open.png`, `mobile-320-speed-tiers-mega-garchomp-z-results.png`, `mobile-320-room-state-flow.png` e `mobile-320-tournament-state-flow.png`. O ZIP completo e as observações ficam no [artefato Visual review #139](https://github.com/Shiroz1n/spinda-stop/actions/runs/39507147769/artifacts/12303719480).
 
 O Chromium do workflow executa interações reais em viewport CSS; este ambiente local não tem o binário de navegador e não permite declarar zoom real de navegador testado. As limitações de fonte, direitos e legalidade continuam as descritas acima. Os estados interativos e as imagens não autorizam dados ou assets dos concorrentes no produto.
+
+### Ajuste posterior do primeiro resultado em 320 px
+
+O Visual review #150, no HEAD `e2a1e7063d1a56c22a363d0ef3d7c5fae575a81a`, percorreu 460 observações e quatro larguras, com zero grupos axe, mas encontrou um corte real em Time vs 1 a 320 px: a faixa `109–129` começava em y=704, atrás da navegação fixa em y=696. A duração foi 793,7 s no roteiro e 863 s no workflow. A captura e o relatório estão no [artefato #150](https://github.com/Shiroz1n/spinda-stop/actions/runs/39576944818/artifacts/12335985449).
+
+A composição em até 360 px agora remove o kicker, o texto explicativo e o atalho de volta redundantes, preservando a orientação pelo título, modo selecionado e navegação fixa. O gate seguinte precisa confirmar que o primeiro dano está inteiro acima da navegação e que os fluxos restantes continuam intactos.
 
 ## PR #30 — execução da reformulação
 
