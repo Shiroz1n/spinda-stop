@@ -1136,6 +1136,26 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
+  const usageComposition = await page.evaluate(() => {
+    const heading = document.querySelector(".usage-heading");
+    const title = heading?.querySelector("h1");
+    const switcher = heading?.querySelector(".usage-source-switch");
+    const species = document.querySelector(".usage-detail-heading");
+    const categoriesNav = document.querySelector(".usage-detail-panel > .usage-category-tabs");
+    return {
+      headingTop: heading ? Math.round(heading.getBoundingClientRect().top) : null,
+      sourceSwitcherInHeading: Boolean(heading && switcher && switcher.parentElement === heading),
+      headingBeforeControls: Boolean(title && switcher && (title.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      speciesBeforeCategories: Boolean(species && categoriesNav && (species.compareDocumentPosition(categoriesNav) & Node.DOCUMENT_POSITION_FOLLOWING)),
+    };
+  });
+  observations.push({ viewport: viewportName, name: "usage-heading-and-ranking-hierarchy", ...usageComposition });
+  if (!usageComposition.sourceSwitcherInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
+    failures.push(`${viewportName}: a fonte deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles de categorias.`);
+  }
+  if (viewport.width <= 760 && usageComposition.headingTop > 160) {
+    failures.push(`${viewportName}: o título de Usage deve aparecer sem um vão alto abaixo da navegação.`);
+  }
   if (viewport.width <= 760) {
     const mobileUsageOrder = await page.evaluate(() => ({
       selected: document.querySelector(".usage-results-column")?.getBoundingClientRect().top,
@@ -1382,6 +1402,7 @@ async function runViewport(viewportName, viewport) {
   await page.evaluate(() => window.scrollTo(0, 0));
   const comparisonFirstFold = await page.evaluate(() => {
     const cards = [...document.querySelectorAll(".damage-comparison-results .damage-result")];
+    const results = document.querySelector(".damage-comparison-results");
     const bottomNav = document.querySelector(".mobile-primary-nav");
     const visibleBottom = bottomNav?.getBoundingClientRect().top ?? window.innerHeight;
     const ranges = cards.map((card) => {
@@ -1393,11 +1414,20 @@ async function runViewport(viewportName, viewport) {
         bottom: rect ? Math.round(rect.bottom) : null,
       };
     });
-    return { count: cards.length, ranges, visibleBottom, cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)) };
+    return {
+      count: cards.length,
+      columns: results ? getComputedStyle(results).gridTemplateColumns.split(" ").filter(Boolean).length : 0,
+      ranges,
+      visibleBottom,
+      cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)),
+    };
   });
   observations.push({ viewport: viewportName, name: "calculator-comparison-first-fold", ...comparisonFirstFold });
-  if (viewport.width <= 760 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
-    failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
+  if (comparisonFirstFold.columns !== 1 || comparisonFirstFold.count !== 2) {
+    failures.push(`${viewportName}: os cenários comparados devem usar uma coluna legível sem comprimir os nomes dos golpes.`);
+  }
+  if (viewport.width <= 760 && !comparisonFirstFold.ranges[0]?.visible) {
+    failures.push(`${viewportName}: o dano do cenário ativo deve aparecer acima da navegação mobile.`);
   }
   if (viewport.width <= 420) {
     const matchupIdentity = await page.locator(".damage-quickbar-side strong").evaluateAll((elements) => elements.map((element) => {

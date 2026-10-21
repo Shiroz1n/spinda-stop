@@ -112,7 +112,10 @@
 /* Usage: the list reads like a ranking, and the selected species owns the detail. */
 .usage-page { max-width: 1500px; }
 .usage-heading { margin-bottom: 19px; padding-bottom: 14px; border-bottom: 2px solid #173e35; }
+.usage-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .usage-heading h1 { font-size: clamp(2.6rem, 5vw, 4rem); }
+.usage-source-switch { flex: 0 0 auto; align-self: flex-start; }
+.usage-detail-panel > .usage-category-tabs { margin: 4px 0 12px; }
 .usage-source-banner { padding: 8px 0; border-bottom: 1px solid #bdc8b6; }
 .usage-layout { grid-template-columns: minmax(310px, 0.75fr) minmax(0, 1.65fr); gap: 30px; align-items: start; }
 .usage-browser-panel { position: sticky; top: 84px; max-height: calc(100vh - 104px); overflow: auto; padding: 0 15px 14px; border: 0; border-left: 3px solid #173e35; border-radius: 0; background: transparent; }
@@ -283,9 +286,9 @@
 .damage-library-empty { margin: 8px 0 2px; color: #8b342c; font-size: 0.72rem; }
 .damage-many-workbench { display: grid; grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.3fr); gap: 16px; align-items: start; }
 .damage-many-workbench > .damage-move-picker { position: sticky; top: 82px; }
-.damage-comparison-results { display: grid; gap: 8px; }
+.damage-comparison-results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .damage-comparison-results .damage-result { border-block: 1px solid #bdc8b6; }
-.damage-comparison-empty { padding: 16px 4px; border-bottom: 2px solid #bdc8b6; }
+.damage-comparison-empty { min-height: 0; padding: 9px 4px; border-bottom: 1px solid #bdc8b6; }
 .damage-quickbar { border-block: 2px solid #173e35; border-radius: 0; background: #e8ecd9; }
 .damage-editor-disclosure { margin-top: 18px; border-top: 2px solid #173e35; }
 .damage-editor-disclosure > summary { min-height: 45px; }
@@ -326,6 +329,7 @@
 }
 
 @media (max-width: 760px) {
+  .usage-heading { align-items: flex-start; flex-direction: column; gap: 9px; }
   .page-wrap { width: min(100% - 28px, 1450px); padding-block: 22px max(104px, calc(78px + env(safe-area-inset-bottom))); }
   .home-page { padding-top: 14px; }
   .home-hero { min-height: 0; grid-template-columns: minmax(0, 1fr) 98px; gap: 8px; padding: 20px 14px 17px; }
@@ -416,6 +420,7 @@
   .damage-workbench-toolbar > div { gap: 4px; }
   .damage-workbench-toolbar .button { min-height: 29px; padding: 3px 6px; font-size: 0.62rem; }
   .damage-workbench-toolbar .damage-toggle { min-height: 29px; font-size: 0.62rem; }
+  .damage-comparison-results { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .damage-result { padding-block: 8px; }
   .damage-result-heading { grid-template-columns: minmax(0, 1fr) auto; }
   .damage-result-copy h2 { font-size: 1.02rem; }

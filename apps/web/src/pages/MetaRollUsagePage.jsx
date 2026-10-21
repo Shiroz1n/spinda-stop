@@ -200,7 +200,7 @@ function MatchupMoveCard({ title, rows, outcomeLabel }) {
   );
 }
 
-export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) {
+export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect, sourceSwitcher }) {
   const [indexData, setIndexData] = useState(null);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [season, setSeason] = useState("");
@@ -397,6 +397,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
           <h1>Usage · MetaRoll</h1>
           <p className="page-intro">Ranking e distribuições da captura selecionada.</p>
         </div>
+        {sourceSwitcher}
       </div>
 
       <div className="usage-source-banner metaroll-source-banner">

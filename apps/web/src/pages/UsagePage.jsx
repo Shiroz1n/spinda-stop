@@ -166,6 +166,20 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
         <span className="usage-format-stamp">Doubles</span>
       </div>
 
+      <nav className="usage-category-tabs" aria-label="Seções da ficha competitiva">
+        {categories.map((item) => (
+          <button
+            key={item.id}
+            className={"usage-category-tab" + (item.id === category.id ? " is-active" : "")}
+            type="button"
+            aria-pressed={item.id === category.id}
+            onClick={() => onCategoryChange(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
       {status === "loading" || status === "idle" ? (
         <div className="usage-loading" role="status">
           <span className="usage-spinner" aria-hidden="true" />
@@ -235,7 +249,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   );
 }
 
-function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, sourceSwitcher }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
@@ -395,6 +409,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           <h1>Usage</h1>
           <p className="page-intro">Ranking, ficha e distribuições da fonte selecionada.</p>
         </div>
+        {sourceSwitcher}
       </div>
 
       <div className="usage-source-banner">
@@ -636,19 +651,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           </aside>
 
           <div className="usage-results-column">
-            <nav className="usage-category-tabs" aria-label="Seções da ficha competitiva">
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  className={"usage-category-tab" + (category.id === categoryId ? " is-active" : "")}
-                  type="button"
-                  aria-pressed={category.id === categoryId}
-                  onClick={() => setCategoryId(category.id)}
-                >
-                  {category.label}
-                </button>
-              ))}
-            </nav>
             {periodMode === "history" && usageStatus === "success" && usage?.daily.length > 0 ? (
               <label className="usage-snapshot-picker">
                 <span>Snapshot consultado</span>
@@ -704,31 +706,28 @@ export function UsagePage() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  return (
-    <>
-      <div className="page-wrap usage-page usage-source-switcher">
-        <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
-          <button
-            aria-pressed={sourceId === "pokemon-champions-battle-data"}
-            className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
-            type="button"
-            onClick={() => selectSource("pokemon-champions-battle-data")}
-          >
-            Battle Data
-          </button>
-          <button
-            aria-pressed={sourceId === "metaroll"}
-            className={sourceId === "metaroll" ? "is-active" : ""}
-            type="button"
-            onClick={() => selectSource("metaroll")}
-          >
-            MetaRoll
-          </button>
-        </div>
-      </div>
-      {sourceId === "metaroll"
-        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
-        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
-    </>
+  const sourceSwitcher = (
+    <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
+      <button
+        aria-pressed={sourceId === "pokemon-champions-battle-data"}
+        className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
+        type="button"
+        onClick={() => selectSource("pokemon-champions-battle-data")}
+      >
+        Battle Data
+      </button>
+      <button
+        aria-pressed={sourceId === "metaroll"}
+        className={sourceId === "metaroll" ? "is-active" : ""}
+        type="button"
+        onClick={() => selectSource("metaroll")}
+      >
+        MetaRoll
+      </button>
+    </div>
   );
+
+  return sourceId === "metaroll"
+    ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} sourceSwitcher={sourceSwitcher} />
+    : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} sourceSwitcher={sourceSwitcher} />;
 }
