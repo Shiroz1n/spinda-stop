@@ -1,5 +1,5 @@
-import { createServer } from "node:http";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { Elysia } from "elysia";
 import { createPool } from "./db.js";
 import {
   canCheckIn,
@@ -227,9 +227,13 @@ async function githubIdentity({ code, config, fetchImpl }) {
 }
 
 function appConfig(env) {
-  const origin = new URL(env.APP_ORIGIN || "http://127.0.0.1:5173");
+  const deploymentHost = env.VERCEL_ENV === "production" || env.APP_ENV === "production"
+    ? env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL
+    : env.VERCEL_BRANCH_URL || env.VERCEL_URL;
+  const deploymentOrigin = deploymentHost ? `https://${deploymentHost}` : "";
+  const origin = new URL(env.APP_ORIGIN || deploymentOrigin || "http://127.0.0.1:5173");
   if (origin.pathname !== "/" || origin.search || origin.hash) throw new Error("APP_ORIGIN deve conter somente a origem do aplicativo.");
-  const secureCookies = env.COOKIE_SECURE === "true" || env.APP_ENV === "production";
+  const secureCookies = env.COOKIE_SECURE === "true" || env.APP_ENV === "production" || Boolean(env.VERCEL_URL);
   if (env.APP_ENV === "test" && env.API_HOST && !["127.0.0.1", "::1", "localhost"].includes(env.API_HOST)) {
     throw new Error("O servidor de teste só pode ouvir em loopback.");
   }
@@ -246,7 +250,72 @@ function appConfig(env) {
   };
 }
 
-export function createApiServer({ pool, env = process.env, fetchImpl = fetch } = {}) {
+function requestFromWebRequest(request, remoteAddress) {
+  const url = new URL(request.url);
+  const headers = Object.create(null);
+  for (const [name, value] of request.headers) headers[name.toLowerCase()] = value;
+
+  const adapted = {
+    method: request.method,
+    url: `${url.pathname}${url.search}`,
+    headers,
+    socket: { remoteAddress: remoteAddress || "unknown" },
+  };
+
+  if (request.body) {
+    adapted[Symbol.asyncIterator] = async function* readBody() {
+      const reader = request.body.getReader();
+      let completed = false;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            completed = true;
+            return;
+          }
+          yield Buffer.from(value);
+        }
+      } finally {
+        if (!completed) await reader.cancel().catch(() => {});
+        reader.releaseLock();
+      }
+    };
+  }
+
+  return adapted;
+}
+
+function responseRecorder() {
+  let status = 200;
+  let body = null;
+  let ended = false;
+  const headers = new Headers();
+
+  return {
+    writeHead(nextStatus, values = {}) {
+      status = nextStatus;
+      for (const [name, value] of Object.entries(values)) {
+        for (const item of Array.isArray(value) ? value : [value]) headers.append(name, String(item));
+      }
+    },
+    end(value) {
+      body = value ?? null;
+      ended = true;
+    },
+    toResponse() {
+      if (!ended) throw new Error("A rota da API não concluiu a resposta HTTP.");
+      return new Response(body, { status, headers });
+    },
+  };
+}
+
+function requestAddress(request, server) {
+  const socketAddress = server?.requestIP?.(request)?.address;
+  if (socketAddress) return socketAddress;
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+function createApiRequestHandler({ pool, env = process.env, fetchImpl = fetch } = {}) {
   if (!pool) throw new Error("O pool PostgreSQL é obrigatório.");
   const config = appConfig(env);
   const rateLimit = createRateLimiter();
@@ -1100,13 +1169,27 @@ export function createApiServer({ pool, env = process.env, fetchImpl = fetch } =
     json(res, 404, { error: { code: "not_found", message: "Rota não encontrada." } });
   }
 
-  return createServer((req, res) => {
-    handle(req, res).catch((error) => {
-      if (error instanceof HttpError) return json(res, error.status, { error: { code: error.code, message: error.message } });
-      process.stderr.write(`API failure: ${error.name || "Error"}\n`);
-      return json(res, 500, { error: { code: "internal_error", message: "O serviço encontrou um erro. Tente de novo." } });
-    });
-  });
+  return async function handleRequest(request, server) {
+    const req = requestFromWebRequest(request, requestAddress(request, server));
+    const res = responseRecorder();
+    try {
+      await handle(req, res);
+    } catch (error) {
+      if (error instanceof HttpError) json(res, error.status, { error: { code: error.code, message: error.message } });
+      else {
+        process.stderr.write(`API failure: ${error.name || "Error"}\n`);
+        json(res, 500, { error: { code: "internal_error", message: "O serviço encontrou um erro. Tente de novo." } });
+      }
+    }
+    return res.toResponse();
+  };
+}
+
+export function createApiApp(options = {}) {
+  const handleRequest = createApiRequestHandler(options);
+  return new Elysia({ name: "spinda-stop-community-api" })
+    .all("/api", ({ request, server }) => handleRequest(request, server))
+    .all("/api/*", ({ request, server }) => handleRequest(request, server));
 }
 
 async function clearRoomFriendCodes(client, roomId) {
@@ -1197,12 +1280,37 @@ async function applyTournamentMatchResult(client, match, winnerId, decision) {
   return { status: tournament.status, championId: tournament.champion_id, bracketVersion: tournament.bracket_version };
 }
 
-if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
+let deploymentHandler;
+
+async function handleDeploymentRequest({ request, server }) {
+  try {
+    if (!deploymentHandler) {
+      const env = {
+        ...process.env,
+        APP_ENV: process.env.APP_ENV || process.env.VERCEL_ENV || "development",
+      };
+      deploymentHandler = createApiRequestHandler({ pool: createPool(), env });
+    }
+    return await deploymentHandler(request, server);
+  } catch (error) {
+    process.stderr.write(`API startup failure: ${error.name || "Error"}\n`);
+    return Response.json({ error: { code: "service_unavailable", message: "O serviço comunitário não está configurado neste ambiente." } }, { status: 503 });
+  }
+}
+
+const deploymentApp = new Elysia({ name: "spinda-stop-community-api" })
+  .all("/api", handleDeploymentRequest)
+  .all("/api/*", handleDeploymentRequest);
+
+export default deploymentApp;
+
+if (import.meta.main) {
   const pool = createPool();
-  const server = createApiServer({ pool });
+  const app = createApiApp({ pool });
   const host = process.env.API_HOST || "127.0.0.1";
   const port = Number(process.env.API_PORT || 8787);
-  server.listen(port, host, () => process.stdout.write(`Spinda Stop API em http://${host}:${port}\n`));
+  app.listen({ port, hostname: host });
+  process.stdout.write(`Spinda Stop API em http://${host}:${app.server?.port || port}\n`);
   const cleanupExpiredData = () => {
     pool.query("DELETE FROM sessions WHERE expires_at < now()").catch(() => {});
     pool.query("DELETE FROM oauth_states WHERE expires_at < now()").catch(() => {});
@@ -1217,9 +1325,14 @@ if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
            OR EXISTS (SELECT 1 FROM tournaments t WHERE t.id = tm.tournament_id AND t.status IN ('completed', 'cancelled'))`,
     ).catch(() => {});
   };
-  cleanupExpiredData();
+  void cleanupExpiredData();
   const cleanup = setInterval(cleanupExpiredData, 60 * 60 * 1000);
   cleanup.unref();
-  process.on("SIGTERM", () => server.close(() => pool.end().finally(() => process.exit(0))));
-  process.on("SIGINT", () => server.close(() => pool.end().finally(() => process.exit(0))));
+  const shutdown = async () => {
+    clearInterval(cleanup);
+    await app.stop();
+    await pool.end();
+  };
+  process.on("SIGTERM", () => void shutdown());
+  process.on("SIGINT", () => void shutdown());
 }

@@ -8,12 +8,42 @@ import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
-const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, "artifacts/visual-review"));
+const args = process.argv.slice(2);
+const fastMode = args.includes("--fast") || args.includes("--quick");
+const pageFlagIndex = args.findIndex((argument) => argument === "--pages" || argument === "--screens");
+const pageFlag = args.find((argument) => argument.startsWith("--pages=") || argument.startsWith("--screens="));
+const requestedPageList = process.env.VISUAL_REVIEW_PAGES
+  || (pageFlag ? pageFlag.slice(pageFlag.indexOf("=") + 1) : pageFlagIndex >= 0 ? args[pageFlagIndex + 1] : "");
+if (requestedPageList && !fastMode) {
+  throw new Error("A seleção de telas só está disponível no modo rápido (--fast). O modo completo sempre roda todas as telas.");
+}
+const reviewStartedAt = Date.now();
+const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, fastMode ? "artifacts/visual-review-fast" : "artifacts/visual-review"));
 const baseUrl = "http://127.0.0.1:4173";
 const spindaFaviconUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png";
 const observations = [];
 const failures = [];
 const accessibilityIssues = [];
+const quickScreenRegistry = {
+  home: "/",
+  dex: "/dex",
+  pokemon: "/dex/garchomp-mega-z",
+  usage: "/usage?pokemon=Garchomp",
+  builder: "/builder",
+  calculator: "/calculator",
+  speed: "/speed-tiers?target=garchomp-mega-z",
+  rooms: "/rooms",
+  tournaments: "/tournaments",
+};
+const quickAliases = { pokedex: "dex", detail: "pokemon", "dex-detail": "pokemon", "speed-tiers": "speed" };
+const requestedQuickPages = requestedPageList
+  ? requestedPageList.split(",").map((page) => quickAliases[page.trim()] || page.trim()).filter(Boolean)
+  : Object.keys(quickScreenRegistry);
+const unknownQuickPages = requestedQuickPages.filter((page) => !Object.hasOwn(quickScreenRegistry, page));
+if (unknownQuickPages.length) {
+  throw new Error("Telas desconhecidas no modo rápido: " + unknownQuickPages.join(", ") + ". Opções: " + Object.keys(quickScreenRegistry).join(", ") + ".");
+}
+const selectedQuickPages = [...new Set(requestedQuickPages)];
 const representativeCaptures = new Set([
   "home",
   "pokedex-loaded-more",
@@ -76,7 +106,8 @@ const server = spawn(process.execPath, [
   join(root, "node_modules/vite/bin/vite.js"), "preview",
   "--host", "127.0.0.1", "--port", "4173", "--strictPort",
 ], { cwd: join(root, "apps/web"), stdio: "inherit" });
-const apiServer = process.env.DATABASE_URL ? spawn(process.execPath, [
+const apiServer = !fastMode && process.env.DATABASE_URL ? spawn("bun", [
+  "--env-file-if-exists=.env",
   join(root, "apps/api/src/server.js"),
 ], {
   cwd: root,
@@ -1105,6 +1136,26 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
+  const usageComposition = await page.evaluate(() => {
+    const heading = document.querySelector(".usage-heading");
+    const title = heading?.querySelector("h1");
+    const switcher = heading?.querySelector(".usage-source-switch");
+    const species = document.querySelector(".usage-detail-heading");
+    const categoriesNav = document.querySelector(".usage-detail-panel > .usage-category-tabs");
+    return {
+      headingTop: heading ? Math.round(heading.getBoundingClientRect().top) : null,
+      sourceSwitcherInHeading: Boolean(heading && switcher && switcher.parentElement === heading),
+      headingBeforeControls: Boolean(title && switcher && (title.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      speciesBeforeCategories: Boolean(species && categoriesNav && (species.compareDocumentPosition(categoriesNav) & Node.DOCUMENT_POSITION_FOLLOWING)),
+    };
+  });
+  observations.push({ viewport: viewportName, name: "usage-heading-and-ranking-hierarchy", ...usageComposition });
+  if (!usageComposition.sourceSwitcherInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
+    failures.push(`${viewportName}: a fonte deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles de categorias.`);
+  }
+  if (viewport.width <= 760 && usageComposition.headingTop > 160) {
+    failures.push(`${viewportName}: o título de Usage deve aparecer sem um vão alto abaixo da navegação.`);
+  }
   if (viewport.width <= 760) {
     const mobileUsageOrder = await page.evaluate(() => ({
       selected: document.querySelector(".usage-results-column")?.getBoundingClientRect().top,
@@ -1200,7 +1251,9 @@ async function runViewport(viewportName, viewport) {
         failures.push("Usage mudou a espécie selecionada durante a atualização manual.");
       }
     }
-    await page.getByRole("button", { name: "Limpar filtros" }).click();
+    const clearUsageFilters = page.locator(".usage-browser-panel").getByRole("button", { name: "Limpar filtros" });
+    await clearUsageFilters.evaluate((button) => button.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
+    await clearUsageFilters.click();
     await usageSearch.fill("Garchomp");
     await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
     await waitForEither(page, ".usage-snapshot-picker, .usage-no-snapshots, .usage-error", 35_000);
@@ -1213,12 +1266,13 @@ async function runViewport(viewportName, viewport) {
     const activeSource = page.locator(".usage-source-switch button.is-active");
     await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeout: 10_000 });
     const keyboardSource = await metaRollButton.evaluate((button) => ({
+      focused: document.activeElement === button,
       pressed: button.getAttribute("aria-pressed"),
       outlineWidth: getComputedStyle(button).outlineWidth,
       outlineStyle: getComputedStyle(button).outlineStyle,
     }));
     observations.push({ viewport: viewportName, name: "keyboard-source-switch", ...keyboardSource });
-    if (keyboardSource.pressed !== "true" || keyboardSource.outlineWidth === "0px" || keyboardSource.outlineStyle === "none") {
+    if (!keyboardSource.focused || keyboardSource.pressed !== "true" || keyboardSource.outlineWidth === "0px" || keyboardSource.outlineStyle === "none") {
       failures.push(`${viewportName}: a troca de fonte por teclado não deixou estado e foco visíveis.`);
     }
     await page.getByRole("button", { name: "Battle Data", exact: true }).press("Enter");
@@ -1298,32 +1352,44 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
-  const emptyCalculatorInputs = await Promise.all([
-    'input[list="damage-attacker-species-options"]',
-    'input[list="damage-defender-species-options"]',
-    'input[list="damage-move-options"]',
-  ].map((selector) => page.locator(selector).inputValue()));
-  if (emptyCalculatorInputs.some(Boolean) || await page.getByText("Garchomp", { exact: true }).count()) failures.push(`${viewportName}: a calculadora direta não deve injetar uma espécie ou golpe padrão.`);
+  const emptyCalculatorSlots = await page.locator(".damage-move-slot").evaluateAll((slots) => slots.map((slot) => ({
+    empty: slot.classList.contains("is-empty"),
+    label: slot.querySelector(".damage-move-slot-select strong")?.textContent?.trim(),
+  })));
+  if (emptyCalculatorSlots.length !== 8 || emptyCalculatorSlots.some((slot) => !slot.empty || slot.label !== "Escolher golpe")
+    || await page.getByText("Garchomp", { exact: true }).count()) {
+    failures.push(`${viewportName}: a calculadora direta deve mostrar os oito slots vazios sem injetar espécie ou golpe padrão.`);
+  }
   await safeCapture(page, viewportName, "calculator-empty-choice", { audit: true, fullPage: false });
-  await page.locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
-  await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
-  await page.locator('input[list="damage-move-options"]').fill("Earthquake");
+  await page.locator(".damage-workbench-side").first().locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
+  await page.locator(".damage-workbench-side").nth(1).locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");
+  await page.getByRole("button", { name: "Catálogo do motor" }).first().click();
+  const attackerMoveSearch = page.getByRole("searchbox", { name: "Buscar golpes de Garchomp" });
+  await attackerMoveSearch.fill("Earthquake");
+  await page.locator(".damage-workbench-side").first().locator(".damage-move-options button").filter({ hasText: "Earthquake" }).first().click();
   await page.getByRole("heading", { name: "Garchomp usa Earthquake" }).waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("button", { name: "Mais ajustes" }).click();
   const damageEditor = page.locator(".damage-editor-disclosure");
+  await damageEditor.waitFor({ state: "visible", timeout: 10_000 });
   if (!(await damageEditor.evaluate((details) => details.open))) await damageEditor.locator(":scope > summary").click();
-  const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
-  if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
-  const attackerEditor = page.locator('.damage-side[aria-labelledby="attacker-heading"]');
-  await attackerEditor.getByLabel("Item", { exact: true }).fill("Clear Amulet");
-  await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("Habilidade criada pelo usuário");
+  await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
+  const unsupportedQuery = new URLSearchParams({ attacker: "Garchomp", defender: "Gardevoir-Mega", move: "Earthquake", ability: "Habilidade criada pelo usuário", item: "Item desconhecido importado" });
+  await page.goto(`${baseUrl}/calculator?${unsupportedQuery}`, { waitUntil: "domcontentloaded" });
+  const attackerEditor = page.locator(".damage-workbench-side").first();
+  const importedSetDetails = attackerEditor.locator(".damage-side-settings");
+  if (!(await importedSetDetails.evaluate((details) => details.open))) await importedSetDetails.locator(":scope > summary").click();
+  const importedItem = await attackerEditor.getByLabel("Item", { exact: true }).inputValue();
+  const importedAbility = await attackerEditor.getByLabel("Habilidade", { exact: true }).inputValue();
+  const itemLimitNote = await attackerEditor.locator(".damage-source-note.is-limited").textContent().catch(() => "");
   const attackerStatsVisible = await attackerEditor.locator(".damage-calculated-stats").isVisible();
-  if (!attackerStatsVisible) failures.push(`${viewportName}: stats válidos do atacante sumiram ao preencher item/habilidade desconhecidos.`);
-  await attackerEditor.getByLabel("Item", { exact: true }).fill("");
-  await attackerEditor.getByLabel("Habilidade", { exact: true }).fill("");
+  if (importedItem !== "Item desconhecido importado" || importedAbility !== "Habilidade criada pelo usuário") failures.push(`${viewportName}: item ou habilidade importados foram descartados do set.`);
+  if (!itemLimitNote || !attackerStatsVisible) failures.push(`${viewportName}: o limite do item desconhecido ou os stats válidos não foram apresentados.`);
+  await safeCapture(page, viewportName, "calculator-unsupported-imported-item", { audit: true, fullPage: false });
+  await attackerEditor.getByLabel("Item", { exact: true }).selectOption("");
+  await attackerEditor.getByLabel("Habilidade", { exact: true }).selectOption("");
   await page.evaluate(() => window.scrollTo(0, 0));
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
-  await safeCapture(page, viewportName, "calculator", { audit: true, fullPage: false });
-  await page.getByLabel("Comparar cenários").check();
+  await page.getByRole("checkbox", { name: "Comparar", exact: true }).check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
   if (!(await page.locator(".damage-editor-disclosure").evaluate((details) => details.open))) {
     await page.locator(".damage-editor-disclosure > summary").click();
@@ -1337,6 +1403,7 @@ async function runViewport(viewportName, viewport) {
   await page.evaluate(() => window.scrollTo(0, 0));
   const comparisonFirstFold = await page.evaluate(() => {
     const cards = [...document.querySelectorAll(".damage-comparison-results .damage-result")];
+    const results = document.querySelector(".damage-comparison-results");
     const bottomNav = document.querySelector(".mobile-primary-nav");
     const visibleBottom = bottomNav?.getBoundingClientRect().top ?? window.innerHeight;
     const ranges = cards.map((card) => {
@@ -1348,11 +1415,20 @@ async function runViewport(viewportName, viewport) {
         bottom: rect ? Math.round(rect.bottom) : null,
       };
     });
-    return { count: cards.length, ranges, visibleBottom, cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)) };
+    return {
+      count: cards.length,
+      columns: results ? getComputedStyle(results).gridTemplateColumns.split(" ").filter(Boolean).length : 0,
+      ranges,
+      visibleBottom,
+      cardBottom: Math.max(0, ...cards.map((card) => card.getBoundingClientRect().bottom)),
+    };
   });
   observations.push({ viewport: viewportName, name: "calculator-comparison-first-fold", ...comparisonFirstFold });
-  if (viewport.width <= 760 && (comparisonFirstFold.count !== 2 || comparisonFirstFold.ranges.some((range) => !range.visible))) {
-    failures.push(`${viewportName}: os danos dos cenários A e B devem aparecer juntos acima da navegação mobile.`);
+  if (comparisonFirstFold.columns !== 1 || comparisonFirstFold.count !== 2) {
+    failures.push(`${viewportName}: os cenários comparados devem usar uma coluna legível sem comprimir os nomes dos golpes.`);
+  }
+  if (viewport.width <= 760 && !comparisonFirstFold.ranges[0]?.visible) {
+    failures.push(`${viewportName}: o dano do cenário ativo deve aparecer acima da navegação mobile.`);
   }
   if (viewport.width <= 420) {
     const matchupIdentity = await page.locator(".damage-quickbar-side strong").evaluateAll((elements) => elements.map((element) => {
@@ -1420,12 +1496,18 @@ async function runViewport(viewportName, viewport) {
     const pokemonSetTask = page.locator(".damage-edit-task").filter({ hasText: "Pokémon e sets" });
     if (!(await pokemonSetTask.evaluate((details) => details.open))) await pokemonSetTask.locator(":scope > summary").click();
     if (!(await moveAndFieldTask.evaluate((details) => details.open))) await moveAndFieldTask.locator(":scope > summary").click();
-    await page.locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
-    await page.locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
-    await page.locator('input[list="damage-move-options"]').fill("Shadow Claw");
+    await page.locator(".damage-workbench-side").first().locator('input[list="damage-attacker-species-options"]').fill("Lucario-Mega-Z");
+    await page.locator(".damage-workbench-side").nth(1).locator('input[list="damage-defender-species-options"]').fill("Absol-Mega-Z");
+    const multiMovePicker = page.locator(".damage-move-picker").first();
+    await multiMovePicker.getByRole("button", { name: "Catálogo do motor" }).click();
+    await multiMovePicker.getByRole("searchbox", { name: "Buscar golpes de Lucario-Mega-Z" }).fill("Shadow Claw");
+    await multiMovePicker.locator(".damage-move-options button").filter({ hasText: "Shadow Claw" }).first().click();
     await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
-    await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading")), null, { timeout: 15_000 }).catch(() => {});
-    const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll(".damage-workbench-side .damage-side-art img")];
+      return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading"));
+    }, null, { timeout: 15_000 }).catch(() => {});
+    const alternateFormSprites = await page.locator(".damage-workbench-side .damage-side-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
     if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.endsWith("10310.png") || !alternateFormSprites[1].src.endsWith("10307.png") || alternateFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
       failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
     }
@@ -1775,27 +1857,305 @@ async function runViewport(viewportName, viewport) {
   console.log(`Visual review: end ${viewportName}; ${observations.length} observations, ${failures.length} failures so far.`);
 }
 
+async function runFastViewport(viewportName, viewport) {
+  console.log("Visual review fast: start " + viewportName + " at " + viewport.width + "×" + viewport.height + " for " + selectedQuickPages.join(", ") + ".");
+  const context = await browser.newContext({
+    viewport,
+    deviceScaleFactor: 1,
+    isMobile: viewport.width < 600,
+    hasTouch: viewport.width < 600,
+    reducedMotion: "reduce",
+  });
+
+  for (const screen of selectedQuickPages) {
+    const page = await context.newPage();
+    const applicationErrors = [];
+    page.on("pageerror", (error) => applicationErrors.push(error.message));
+    page.on("console", (message) => {
+      const consoleText = message.text().toLowerCase();
+      const expectedResourceFailure = consoleText.includes("failed to load resource")
+        || consoleText.includes("net::err")
+        || consoleText.includes("404 (not found)");
+      if (message.type() === "error" && !expectedResourceFailure) {
+        applicationErrors.push(message.text());
+      }
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      const payload = pathname.endsWith("/auth/status")
+        ? { githubOAuthAvailable: false, friendCodesAvailable: false }
+        : pathname === "/api/me"
+          ? { user: null }
+          : pathname === "/api/teams"
+            ? { teams: [] }
+            : pathname === "/api/rooms"
+              ? { rooms: [] }
+              : pathname === "/api/tournaments"
+                ? { tournaments: [] }
+                : { error: "API comunitária fora do escopo da revisão rápida." };
+      await route.fulfill({
+        status: pathname === "/api/me" ? 401 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(payload),
+      });
+    });
+
+    const path = quickScreenRegistry[screen];
+    await page.goto(baseUrl + path, { waitUntil: "domcontentloaded" });
+    const heading = page.locator("#main-content h1, #main-content h2").first();
+    try {
+      await heading.waitFor({ state: "visible", timeout: 15_000 });
+    } catch {
+      failures.push(viewportName + "/" + screen + ": não encontrou título após abrir " + path + ".");
+    }
+    await page.waitForTimeout(100);
+    const headingText = await heading.textContent().catch(() => "");
+    await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: false });
+
+    await page.keyboard.press("Tab");
+    const skipFocus = await page.evaluate(() => {
+      const active = document.activeElement;
+      const style = getComputedStyle(active);
+      return {
+        className: String(active?.className || ""),
+        label: active?.textContent?.trim() || active?.getAttribute("aria-label") || "",
+        outlineWidth: style.outlineWidth,
+        outlineStyle: style.outlineStyle,
+        focusVisible: active?.matches(":focus-visible") || false,
+      };
+    });
+    observations.push({ mode: "fast", viewport: viewportName, name: "quick-" + screen + "-skip-focus", heading: headingText?.trim(), ...skipFocus });
+    if (!skipFocus.className.includes("skip-link") || skipFocus.outlineWidth === "0px" || skipFocus.outlineStyle === "none") {
+      failures.push(viewportName + "/" + screen + ": o primeiro Tab não mostra o link de salto com foco visível.");
+    }
+
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    const mainControl = await page.evaluate(() => {
+      const active = document.activeElement;
+      const main = document.querySelector("#main-content");
+      const rect = active?.getBoundingClientRect();
+      const nav = document.querySelector(".mobile-primary-nav");
+      const navStyle = nav ? getComputedStyle(nav) : null;
+      const navRect = nav?.getBoundingClientRect();
+      let decoration = false;
+      for (let current = active; current; current = current.parentElement) {
+        const currentStyle = getComputedStyle(current);
+        if ((currentStyle.outlineStyle !== "none" && Number.parseFloat(currentStyle.outlineWidth) > 0)
+          || currentStyle.boxShadow !== "none") {
+          decoration = true;
+          break;
+        }
+      }
+      return {
+        tag: active?.tagName || "",
+        role: active?.getAttribute("role") || "",
+        label: active?.getAttribute("aria-label") || active?.textContent?.trim() || "",
+        insideMain: Boolean(main?.contains(active)),
+        focusVisible: active?.matches(":focus-visible") || false,
+        decoration,
+        top: rect?.top,
+        bottom: rect?.bottom,
+        overlapsMobileNav: Boolean(nav && navStyle.display !== "none" && rect && navRect && rect.bottom > navRect.top && rect.top < navRect.bottom),
+      };
+    });
+    observations.push({ mode: "fast", viewport: viewportName, name: "quick-" + screen + "-main-keyboard-focus", ...mainControl });
+    if (!mainControl.insideMain || !mainControl.focusVisible || !mainControl.decoration) {
+      failures.push(viewportName + "/" + screen + ": a navegação por teclado não chegou ao conteúdo com foco visual claro.");
+    }
+    if (mainControl.overlapsMobileNav) {
+      failures.push(viewportName + "/" + screen + ": o foco do conteúdo ficou sob a navegação fixa.");
+    }
+    await capture(page, viewportName, "quick-" + screen + "-keyboard-focus", { audit: false, fullPage: false });
+
+    if (screen === "calculator") {
+      try {
+        await runQuickCalculatorInteraction(page, viewportName);
+      } catch (error) {
+        failures.push(viewportName + "/calculator-interaction: " + error.message);
+      }
+    }
+
+    if (applicationErrors.length) {
+      observations.push({ mode: "fast", viewport: viewportName, name: "quick-" + screen + "-application-errors", errors: applicationErrors });
+      failures.push(viewportName + "/" + screen + ": erro de aplicação: " + applicationErrors.join(" | "));
+    }
+    await page.close();
+  }
+
+  await context.close();
+  console.log("Visual review fast: end " + viewportName + "; " + observations.length + " observations, " + failures.length + " failures so far.");
+}
+
+async function runQuickCalculatorInteraction(page, viewportName) {
+  const moves = ["Wood Hammer", "Grassy Glide", "U-turn", "Knock Off"];
+  await page.route("https://pokeapi.co/**", (route) => route.abort()).catch(() => {});
+  await page.goto(baseUrl + "/calculator?attacker=Rillaboom&defender=Incineroar", { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 });
+  const attackerSide = page.locator(".damage-workbench-side").first();
+  await attackerSide.getByRole("button", { name: "Catálogo do motor" }).click();
+  const states = [];
+
+  for (const [index, move] of moves.entries()) {
+    if (index > 0) await attackerSide.locator(".damage-move-slot-select").nth(index).click();
+    const search = attackerSide.getByRole("searchbox", { name: "Buscar golpes de Rillaboom" });
+    await search.fill(move);
+    const option = attackerSide.locator(".damage-move-options button").filter({ hasText: move }).first();
+    await option.waitFor({ state: "visible", timeout: 5_000 });
+    await option.click();
+    const resultHeading = (await page.locator(".damage-result-copy h2").textContent() || "").trim();
+    const damageRange = (await page.locator(".damage-result-range strong").textContent() || "").trim();
+    const active = await attackerSide.locator(".damage-move-slot-select").nth(index).getAttribute("aria-pressed");
+    if (!resultHeading.includes("usa " + move) || !damageRange || active !== "true") {
+      failures.push(`${viewportName}/calculator: ${move} não virou o golpe ativo com resultado visível (heading=${resultHeading}; range=${damageRange}; active=${active}).`);
+    }
+    states.push({ move, resultHeading, damageRange, active: active === "true" });
+    if (viewportName === "desktop") {
+      const slug = move.toLocaleLowerCase("en").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+      await capture(page, viewportName, `calculator-move-${index + 1}-${slug}`, { audit: false, fullPage: false });
+    }
+  }
+
+  const moveSlotCount = await attackerSide.locator(".damage-move-slot").count();
+  if (moveSlotCount !== 4) failures.push(`${viewportName}/calculator: esperava 4 slots de golpe e encontrei ${moveSlotCount}.`);
+  if (viewportName === "mobile") {
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await capture(page, viewportName, "calculator-four-moves-selected", { audit: false, fullPage: false });
+  }
+  observations.push({ mode: "fast", viewport: viewportName, name: "calculator-four-move-selection", moveSlotCount, states });
+
+  const firstMoveSlot = attackerSide.locator(".damage-move-slot-select").first();
+  await firstMoveSlot.focus();
+  await page.keyboard.press("Enter");
+  const keyboardSelectedMove = {
+    pressed: await firstMoveSlot.getAttribute("aria-pressed"),
+    resultHeading: (await page.locator(".damage-result-copy h2").textContent() || "").trim(),
+  };
+  if (keyboardSelectedMove.pressed !== "true" || !keyboardSelectedMove.resultHeading.includes("usa Wood Hammer")) {
+    failures.push(`${viewportName}/calculator: teclado não ativou o primeiro slot nem atualizou o dano.`);
+  }
+  observations.push({ mode: "fast", viewport: viewportName, name: "calculator-keyboard-move-selection", ...keyboardSelectedMove });
+  if (viewportName === "desktop") {
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await capture(page, viewportName, "calculator-keyboard-active-move", { audit: false, fullPage: false });
+  }
+
+  if (viewportName !== "desktop") return;
+
+  const changeSpecies = async (name) => {
+    await attackerSide.getByLabel("Pokémon", { exact: true }).fill(name);
+    await page.waitForTimeout(80);
+  };
+  const selectMove = async (species, move) => {
+    await attackerSide.getByRole("button", { name: "Catálogo do motor" }).click();
+    const search = attackerSide.getByRole("searchbox", { name: `Buscar golpes de ${species}` });
+    await search.fill(move);
+    const option = attackerSide.locator(".damage-move-options button").filter({ hasText: move }).first();
+    await option.waitFor({ state: "visible", timeout: 5_000 });
+    await option.click();
+  };
+  const readRange = async () => (await page.locator(".damage-result-range strong").textContent() || "").trim();
+  const numericRange = (value) => value.replace(/[^0-9.]/g, "");
+
+  await changeSpecies("Azumarill");
+  await selectMove("Azumarill", "Play Rough");
+  const azumarillBase = await readRange();
+  const setDetails = attackerSide.locator(".damage-side-settings");
+  if (!(await setDetails.evaluate((details) => details.open))) await setDetails.locator(":scope > summary").click();
+  await attackerSide.getByLabel("Habilidade", { exact: true }).selectOption({ label: "Huge Power" });
+  const azumarillAbility = await readRange();
+  if (!azumarillBase || numericRange(azumarillBase) === numericRange(azumarillAbility)) failures.push(`${viewportName}/calculator: Huge Power não atualizou o dano de Play Rough.`);
+  await attackerSide.getByLabel("Item", { exact: true }).selectOption({ label: "Life Orb" });
+  const azumarillItem = await readRange();
+  if (numericRange(azumarillAbility) === numericRange(azumarillItem)) failures.push(`${viewportName}/calculator: Life Orb não atualizou o dano de Play Rough.`);
+  const nature = attackerSide.locator("#damage-attacker-nature");
+  await nature.click();
+  await page.locator(".nature-picker-options").getByRole("button", { name: /Adamant/ }).click();
+  const azumarillNature = await readRange();
+  if (numericRange(azumarillItem) === numericRange(azumarillNature)) failures.push(`${viewportName}/calculator: Nature Adamant não atualizou o dano de Play Rough.`);
+  const advanced = attackerSide.locator(".damage-advanced");
+  if (!(await advanced.evaluate((details) => details.open))) await advanced.locator(":scope > summary").click();
+  await attackerSide.getByLabel("Atk", { exact: true }).fill("252");
+  const azumarillStats = await readRange();
+  if (numericRange(azumarillNature) === numericRange(azumarillStats)) failures.push(`${viewportName}/calculator: 252 SP em Atk não atualizou o dano.`);
+
+  await attackerSide.getByLabel("Habilidade", { exact: true }).selectOption("");
+  await attackerSide.getByLabel("Item", { exact: true }).selectOption("");
+  await attackerSide.locator(".damage-side-settings #damage-attacker-nature").click();
+  await page.locator(".nature-picker-options").getByRole("button", { name: /^Serious/ }).click();
+  await changeSpecies("Garchomp-Mega-Z");
+  await selectMove("Garchomp-Mega-Z", "Earthquake");
+  const formHeading = (await page.locator(".damage-result-copy h2").textContent() || "").trim();
+  const formAbility = await attackerSide.getByLabel("Habilidade", { exact: true }).locator("option").allTextContents();
+  const formSprite = await attackerSide.locator(".damage-side-art").getAttribute("data-sprite-url").catch(() => "");
+  const formSlug = await attackerSide.locator(".damage-side-art").getAttribute("data-pokemon-slug").catch(() => "");
+  const formSideLabel = (await attackerSide.locator(".damage-side-heading").innerText()).trim();
+  if (!formHeading.includes("usa Earthquake") || !formAbility.includes("Levitate") || formSlug !== "garchomp-mega-z" || !formSprite.includes("/10309.png") || !formSideLabel.includes("Mega Garchomp Z")) failures.push(`${viewportName}/calculator: a forma Mega Garchomp Z ou a habilidade própria da forma não foi atualizada (result=${formHeading}; side=${formSideLabel}; slug=${formSlug}; sprite=${formSprite}; abilities=${formAbility.join(", ")}).`);
+  const megaFormRange = await readRange();
+  observations.push({ mode: "fast", viewport: viewportName, name: "calculator-alternate-form", formHeading, formSideLabel, formSprite, abilities: formAbility, damageRange: megaFormRange });
+
+  await changeSpecies("Charizard");
+  await selectMove("Charizard", "Flamethrower");
+  const charizardBase = await readRange();
+  await page.locator(".damage-field-deck .damage-field select").nth(1).selectOption({ label: "Sun" });
+  const charizardSun = await readRange();
+  if (!charizardBase || numericRange(charizardBase) === numericRange(charizardSun)) failures.push(`${viewportName}/calculator: Sun não atualizou o dano de Flamethrower.`);
+  await changeSpecies("Rillaboom");
+  await selectMove("Rillaboom", "Grassy Glide");
+  const grassyGlideDryGround = await readRange();
+  await page.locator(".damage-field-deck .damage-field select").nth(2).selectOption({ label: "Grassy" });
+  const grassyGlideTerrain = await readRange();
+  if (!grassyGlideDryGround || numericRange(grassyGlideDryGround) === numericRange(grassyGlideTerrain)) failures.push(`${viewportName}/calculator: Grassy Terrain não atualizou o dano de Grassy Glide.`);
+
+  observations.push({
+    mode: "fast", viewport: viewportName, name: "calculator-calculation-controls",
+    azumarill: { base: azumarillBase, hugePower: azumarillAbility, lifeOrb: azumarillItem, adamant: azumarillNature, attack252: azumarillStats },
+    alternateForm: { heading: formHeading, range: megaFormRange, abilities: formAbility },
+    field: { charizardBase, sun: charizardSun, grassyGlideDryGround, grassyGlideTerrain },
+  });
+}
+
 let browser;
 try {
   await waitForServer();
   await waitForApi();
-  browser = await chromium.launch({ headless: true, executablePath: chromium.executablePath() });
-  const viewports = [
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || chromium.executablePath(),
+  });
+  const fullViewports = [
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
     ["mobile-320", { width: 320, height: 760 }],
     ["reflow-720", { width: 720, height: 960 }],
   ];
+  const quickViewports = [
+    ["desktop", { width: 1440, height: 960 }],
+    ["mobile", { width: 390, height: 844 }],
+  ];
+  const viewports = fastMode ? quickViewports : fullViewports;
   for (const [name, viewport] of viewports) {
     try {
-      await runViewport(name, viewport);
+      if (fastMode) await runFastViewport(name, viewport);
+      else await runViewport(name, viewport);
     } catch (error) {
       failures.push(`${name}: inspeção interrompida — ${error.message}`);
     }
   }
 
+  const durationMs = Date.now() - reviewStartedAt;
   const report = {
     generatedAt: new Date().toISOString(),
+    mode: fastMode ? "fast-development-subset" : "full-gate",
+    scope: fastMode
+      ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
+      : "All existing scenarios at four widths, with axe, community flows, and PostgreSQL when DATABASE_URL is set.",
+    durationMs,
+    selectedScreens: fastMode ? selectedQuickPages : "all",
+    axeIncluded: !fastMode,
+    communityApiIncluded: !fastMode && Boolean(process.env.DATABASE_URL),
     viewports: viewports.map(([name, viewport]) => ({
       name,
       cssWidth: viewport.width,
@@ -1806,6 +2166,7 @@ try {
     failures,
   };
   await writeFile(join(outputDir, "inspection.json"), JSON.stringify(report, null, 2) + "\n");
+  console.log("Visual review " + report.mode + " duration: " + (durationMs / 1000).toFixed(1) + "s.");
   console.log(JSON.stringify(report, null, 2));
   if (failures.length || accessibilityIssues.length) process.exitCode = 1;
 } finally {

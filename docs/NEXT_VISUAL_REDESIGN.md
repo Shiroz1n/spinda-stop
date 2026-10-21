@@ -1,5 +1,7 @@
 # Próxima reformulação visual
 
+> Registro do PR #30: o plano abaixo foi implementado por uma composição própria por rota, não apenas com mudanças de cor/contorno. Esta página preserva o diagnóstico e registra a versão entregue na seção final.
+
 ## Diagnóstico antes da implementação
 
 Comparação feita em 20/10/2026 entre as capturas selecionadas do Visual review #134 no bundle atual, a composição implementada no PR #28 e as 15 imagens DataDex contidas no mesmo pacote. DataDex orienta densidade, hierarquia e fluxo; nenhuma arte, cor, texto ou estrutura exclusiva foi reutilizada. Os estados integrados são fixtures de revisão, não dados de produção.
@@ -21,7 +23,7 @@ Comparação feita em 20/10/2026 entre as capturas selecionadas do Visual review
 | Ficha | Identidade/forma/sprite exato em uma faixa única; seletor de forma visível; abas que indicam continuação; seções com evolução e condições, stats gerais, multiplicadores defensivos e aprendibilidade por forma/jogo/método. A ficha não afirma legalidade Champions. |
 | Usage e ladder | Recorte ativo e fonte/período antes da espécie e ranking; tabelas de comparação com números alinhados; limites e contrato da integração em detalhes. Não combinar marginais entre fontes. |
 | Builder | Seis membros em seletor compacto permanente com foco ativo por borda e texto; o set escolhido vem a seguir e traz identidade, Nature com efeitos, habilidade, item, quatro golpes e SP. Importação/exportação sem mudanças na estrutura ou proveniência. |
-| Calculadora | Três modos em navegação curta; cenário editável e primeiro resultado na mesma região visual; editor extenso em disclosure acessível. Time vs 1 exibe primeira linha calculada na primeira dobra de 320/390 px e mantém 16 rolls por membro/golpe. |
+| Calculadora | Três modos em navegação curta; cenário editável e primeiro resultado na mesma região visual; editor extenso em disclosure acessível. Time vs 1 exibe primeira linha calculada na primeira dobra de 320/390 px e mantém 16 rolls por membro/golpe. Até 360 px, remove o kicker, a explicação e o atalho redundantes do cabeçalho; o modo ativo e a navegação fixa mantêm a orientação. |
 | Speed Tiers | Alvo e modelo em primeiro plano; comparação calculada antes dos controles menos usados; Trick Room e limites de SP continuam explicitados. |
 | Salas | Estado e pessoas envolvidas formam a área inicial; a próxima ação tem hierarquia clara; convite e configuração permanecem acessíveis depois do estado real. |
 | Torneios | Estado, chave e participantes precedem ações administrativas; nomes longos quebram linha e mensagens de falha mantêm recuperação próxima. |
@@ -47,3 +49,40 @@ O Visual review #139, no HEAD `d103aa17b88ed1ad6d63b0d94f1d8d14edaf7b54`, passou
 As imagens do artefato foram inspecionadas manualmente. Não encontrei clipping ou conteúdo encoberto nos estados selecionados: `desktop-home.png`, `mobile-320-pokedex-loaded-more.png`, `desktop-pokemon-sheet.png`, `mobile-320-pokemon-sprite-unavailable.png`, `mobile-320-usage-battle-data.png`, `mobile-320-builder-six-members-first-fold.png`, `mobile-320-calculator-team-vs-one-first-fold.png`, `mobile-speed-tiers-target-nature-open.png`, `mobile-320-speed-tiers-mega-garchomp-z-results.png`, `mobile-320-room-state-flow.png` e `mobile-320-tournament-state-flow.png`. O ZIP completo e as observações ficam no [artefato Visual review #139](https://github.com/Shiroz1n/spinda-stop/actions/runs/39507147769/artifacts/12303719480).
 
 O Chromium do workflow executa interações reais em viewport CSS; este ambiente local não tem o binário de navegador e não permite declarar zoom real de navegador testado. As limitações de fonte, direitos e legalidade continuam as descritas acima. Os estados interativos e as imagens não autorizam dados ou assets dos concorrentes no produto.
+
+### Ajuste posterior do primeiro resultado em 320 px
+
+O Visual review #150, no HEAD `e2a1e7063d1a56c22a363d0ef3d7c5fae575a81a`, percorreu 460 observações e quatro larguras, com zero grupos axe, mas encontrou um corte real em Time vs 1 a 320 px: a faixa `109–129` começava em y=704, atrás da navegação fixa em y=696. A duração foi 793,7 s no roteiro e 863 s no workflow. A captura e o relatório estão no [artefato #150](https://github.com/Shiroz1n/spinda-stop/actions/runs/39576944818/artifacts/12335985449).
+
+A composição em até 360 px remove o kicker, o texto explicativo e o atalho de volta redundantes, preservando a orientação pelo título, modo selecionado e navegação fixa. O Visual review #151 no HEAD `7848e25f7cbba4dd1e9ce2caca87c46c363462ea` confirmou a correção: a faixa `109–129` começa em y=552 e termina em y=581, antes da navegação fixa em y=696. O gate completo percorreu 460 observações em 1440, 390, 320 e 720 px, sem falhas nem violações axe; migração PostgreSQL também passou. Foram 798,3 s no roteiro e 870 s ponta a ponta. Veja o [run #151](https://github.com/Shiroz1n/spinda-stop/actions/runs/39579394813) e o [artefato final](https://github.com/Shiroz1n/spinda-stop/actions/runs/39579394813/artifacts/12336421698).
+
+As capturas finais do artefato foram inspecionadas manualmente em desktop, 390, 320 e 720 px. Os sprites carregados correspondem às formas mostradas; a Pokédex e o Usage exibem seus dados de revisão, o builder mostra seis integrantes e a primeira faixa de dano continua acima da navegação em 320 px.
+
+A revisão humana posterior do artefato #154 destacou que aprovação axe e ausência de overflow não bastam: em Usage mobile, o seletor de fonte ficava distante do título; na calculadora desktop, as colunas de resultado comprimiam a frase do golpe. A composição agrupa a escolha de fonte com o cabeçalho, apresenta forma/posição antes das abas da ficha e empilha A/B em uma coluna. O review #155 confirmou essas mudanças visuais, mas revelou perda de foco do teclado quando o botão era desmontado na troca de fonte. O follow-up atual mantém o seletor no pai compartilhado pelas duas fontes e verifica o foco ativo depois de Enter. A revisão rápida local não pôde abrir Chromium: o binário Playwright ausente não foi instalado porque o CDN retornou um arquivo vazio; o runner do GitHub fornece Chromium ao próximo gate completo.
+
+## PR #30 — execução da reformulação
+
+### Mudanças estruturais por tela
+
+| Tela | Antes | Implementação revisável |
+|---|---|---|
+| Home | Área de catálogo simulada, dois exemplos de espécie e chamadas repetidas em cartões. | Hero editorial assimétrico com busca real, um Spinda e destinos existentes em lista compacta; a primeira ação pesquisa ou monta o time. |
+| Pokédex | Cartões altos com estatísticas repetidas e chamada “Abrir ficha”. | Quatro colunas de catálogo no desktop, maior presença do sprite/nome/forma/tipos; grade refluída em mobile. Filtros úteis continuam, mas deixam de ocupar o centro visual. |
+| Ficha | Cabeçalho genérico e dados em blocos de peso parecido. | Espécie e forma exata são o protagonista; formas, evolução, stats e relações seguem como seções de consulta. A forma permanece explícita; ausência de sprite não troca para arte base. |
+| Usage | Fonte, consulta e metadados antes do ranking e da espécie. | Fonte/período compactos; ranking e espécie selecionada aparecem antes de filtros longos e metadados. Erro da fonte tem ação de repetição. |
+| Builder | Integrantes e campos em painéis paralelos que disputavam espaço. | Seis posições selecionáveis num único trilho visual e um set ativo abaixo. Não há seis cópias do formulário nem pilha de cartões aninhados. |
+| Calculadora | Editor longo, texto do golpe digitado e resultado com pouca proximidade aos sets. | Bancada atacante/resultado/alvo em três regiões; quatro slots com seleção assistida de golpes, campo e dano juntos. Mobile empilha a bancada. Escolher um slot ativa o cálculo imediatamente. |
+| Speed | Notas explicativas repetidas antes da comparação. | Alvo, stat e tabela calculada abrem a leitura; fórmula e limites ficam secundários e contextuais. |
+| Salas e torneios | Texto de entrada e formulários precediam o estado. | Estado, pessoas/chave e próxima ação ganham hierarquia; erros e vazios permanecem recuperáveis junto do contexto. |
+
+### Revisão do UI Humanizer nas capturas
+
+Usei `docs/UI_HUMANIZER.md` para questionar cada repetição e hierarquia no JSX/CSS e na inspeção de capturas. Removi o catálogo de demonstração, contadores decorativos e chamadas repetidas na Home; stats e CTA redundantes dos cartões da Pokédex; badges sem estado nos componentes novos; molduras aninhadas nos grupos de set/cálculo; metadados longos antes do ranking; e mensagens de bastidor da primeira dobra. Mantive chips de tipo, seleção do golpe, Nature ↑/↓, status de fonte/suporte, erro e resultado porque cada um comunica uma categoria, opção ou limite verificável.
+
+As capturas 1440 e 390 mostram diferença de composição além da paleta: hero assimétrico na Home; catálogo em grade mais visual; ficha com hierarquia de objeto; trilho de seis posições; e bancada de cálculo com três áreas. A comparação também inclui 320 e 720 px para conferir o reflow. As capturas de baseline do PR #28 e a revisão atual estão organizadas em `artifacts/reformulation/before/` e `artifacts/reformulation/after/`. A sequência de clique/teclado dos quatro golpes está em `artifacts/reformulation/calculator-selection/`.
+
+### Referências reaproveitadas e limites
+
+O pacote atualizado guarda 69 capturas reais de estados distintos de Pikalytics, Champions Lab, Pokémon Showdown, Silph Scope e VGC Multi Calc, além das 15 imagens DataDex fornecidas. O manifesto em `artifacts/reformulation/references/lived-sites/README.md` registra URL, viewport, ação, estado e decisão aproveitada. Todas as ferramentas ao vivo foram observadas em desktop porque o Work Browser não ofereceu emulação mobile; o produto foi revisado separadamente em 1440, 720, 390 e 320 CSS px. As imagens são evidência documental, não assets incorporados nem autorização de uso de conteúdo alheio.
+
+O estado final da CI e o SHA/URL do Preview serão acrescentados depois que a branch atualizada rodar no GitHub. O deployment Vercel previamente identificado servia `main` (`d5ef83f`) no alvo `production`, portanto não representa esta PR nem serve como prova de validação do Preview.

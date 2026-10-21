@@ -276,7 +276,6 @@ export function DexDetailPage() {
         <a href="#detail-types">Relações de tipo</a>
         <a href="#detail-moves">Golpes aprendidos</a>
         <a href="#detail-profile">Dados da espécie</a>
-        <span className="detail-nav-hint" aria-hidden="true">Arraste →</span>
       </nav>
 
       <EvolutionSection pokemon={pokemon} />

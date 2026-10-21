@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -35,6 +39,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate

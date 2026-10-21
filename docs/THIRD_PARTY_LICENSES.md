@@ -20,7 +20,11 @@ Exemplos de arquivos fixados: [`10304.png` (Mega Raichu X)](https://github.com/P
 
 Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares; atribuição ao repositório que hospeda os arquivos não transfere direitos. O MIT deste projeto cobre somente o código original.
 
-O ZIP de pesquisa fornecido para esta reformulação contém capturas de referência do DataDex e de outras interfaces. Elas foram abertas para análise, não foram copiadas para o bundle do produto nem distribuídas como assets. Essas imagens não demonstram cobertura/licença de sprites shiny ou modelos por forma. Qualquer galeria exige uma fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
+O arquivo desta PR inclui capturas do DataDex e de interfaces comunitárias em `artifacts/reformulation/references/` para discussão e auditoria visual do redesign. Elas não são importadas pelo app, não são assets do bundle e não autorizam reutilização comercial de arte, texto, ícones ou dados de terceiros; origem/viewport conhecido e limitações estão no manifesto e em [SECOND_VISUAL_RESEARCH.md](SECOND_VISUAL_RESEARCH.md). A pasta registra 69 capturas de cinco sites ao vivo e 15 imagens DataDex fornecidas. URLs, viewports, ações/estados e decisões estão no manifesto; não afirmamos direitos sobre as capturas. Essas capturas não demonstram licença ou cobertura de sprites shiny/modelos por forma. Qualquer galeria exige fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
+
+## Elysia 1.4.30
+
+A camada HTTP da API usa Elysia, dependência publicada sob MIT. O código original do framework não é copiado para este repositório: [repositório e licença](https://github.com/elysiajs/elysia/blob/main/LICENSE).
 
 ## `@smogon/calc` 0.12.0
 

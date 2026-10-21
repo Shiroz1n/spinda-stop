@@ -1,6 +1,6 @@
 # Spinda Stop — design system e fluxos
 
-Estado: direção ampliada na próxima PR, em revisão. A linha de base visual do PR #28 está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); as decisões e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md). Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: reformulação composicional implementada na PR #30, aguardando os gates finais e inspeção do Preview. A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões, auditoria baseada no UI Humanizer e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e `artifacts/reformulation/`. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
@@ -29,22 +29,22 @@ As imagens enviadas pelo usuário servem como referência para revisão. Não in
 
 | Papel | Token | Valor atual |
 | --- | --- | --- |
-| Página | `--paper` | `#f1f2e8` |
-| Sombra de superfície | `--paper-shadow` | `#d6ded2` |
-| Painel | `--surface` | `#fffdf7` |
-| Agrupamento secundário | `--surface-alt` | `#e5eddf` |
-| Campo de formulário | `--field` | `#fcfbf5` |
-| Sprite: céu / chão | `--sky` / `--grass` | `#d8e9e3` / `#9dbf82` |
-| Seleção | `--selection` | `#f2e2b0` |
-| Texto / texto secundário | `--ink` / `--muted` | `#18382f` / `#52675e` |
-| Divisória | `--line` | `#bdc9bf` |
-| Acento azul / navegação | `--blue` / `--blue-dark` | `#267186` / `#1f4d5b` |
-| Ação / ação em texto | `--coral` / `--coral-dark` | `#bc5546` / `#82382f` |
-| Confirmação / seleção em texto | `--green` / `--gold` | `#39764b` / `#8a6516` |
-| Foco | `--focus` | `#005c9a` |
-| Geometria / sombra de elevação | `--radius` / `--pixel-edge` | `9px` / `0 2px 8px rgb(24 56 47 / 7%)` |
+| Página | `--paper` | `#f5f1e3` |
+| Sombra de superfície | `--paper-shadow` | `#d7d1bc` |
+| Painel | `--surface` | `#fffdf4` |
+| Agrupamento secundário | `--surface-alt` | `#e4ebd9` |
+| Campo de formulário | `--field` | `#fffef8` |
+| Sprite: céu / chão | `--sky` / `--grass` | `#c8e0d9` / `#a7c88a` |
+| Seleção | `--selection` | `#f0d77f` |
+| Texto / texto secundário | `--ink` / `--muted` | `#173e35` / `#465b4d` |
+| Divisória | `--line` | `#bdc8b6` |
+| Acento azul / navegação | `--blue` / `--blue-dark` | `#2c6b70` / `#174b4e` |
+| Ação / ação em texto | `--coral` / `--coral-dark` | `#c24f3c` / `#82382f` |
+| Confirmação / seleção em texto | `--green` / `--gold` | `#39764b` / `#9a6a12` |
+| Foco | `--focus` | `#005d9b` |
+| Geometria / sombra de elevação | `--radius` / `--pixel-edge` | `4px` / `2px 3px 0 #cbd2bf` |
 
-O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores pelo CSS. A linguagem atual reserva borda/fundo destacado para seleção, resultado e estado; demais agrupamentos usam alinhamento e divisórias. Estados selecionados, desabilitados, erro e foco têm rótulo ou forma além da cor. Não há alegação de uma matriz completa de contraste.
+O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use estes papéis em vez de espalhar valores pelo CSS. A linguagem reserva borda e fundo destacado para seleção, resultado e estado; os demais agrupamentos usam alinhamento e divisórias. Estados selecionados, desabilitados, erro e foco têm rótulo ou forma além da cor. O token de texto secundário foi escurecido para preservar contraste legível sobre a seleção amarela; a aprovação visual continua dependendo da revisão humana, mesmo quando axe não aponta violações.
 
 ### Tipografia, molduras, imagens e movimento
 
@@ -64,7 +64,7 @@ O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use 
 | `DexDetailPage` | Identidade exata, navegação de seção acessível, formas, condições e método de evolução por fonte/versão, multiplicadores gerais e aprendibilidade por forma, jogo, método, tipo e categoria. |
 | `TypeTag` | Nome/símbolo e cor contextual para reconhecer tipo sem depender só da cor. |
 | `NaturePicker` + `BuilderPage` | Seleção de Nature com efeitos ↑/↓, seis sets, campos editáveis, importação/exportação e stats recalculados. |
-| `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1, resumo do confronto, resultados e rolls por golpe. |
+| `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1; o resultado 1 vs 1 mostra as formas exatas quando não há barra de confronto, e A/B usa a barra para evitar repetir identidades. Em Time vs 1, telas até 360 px omitem o contexto repetido do cabeçalho para manter o primeiro dano acima da navegação. Os rolls ficam no detalhe do golpe. |
 | `UsagePage` e vistas MetaRoll | Fonte, formato e período junto da seleção, ranking e filtros publicados por cada fonte. |
 | `RoomsPage` e `TournamentsPage` | Participantes, estado e próxima ação; vazio, erro, convite e resultado em contexto. |
 
@@ -79,10 +79,25 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Ficha | Sprite/forma/tipos/stats primeiro; seções de evolução/condições, formas, relações de tipo e aprendibilidade. | Trocar forma pela ficha e pelo filtro de golpes; preservar forma exata; alcançar seções por toque/teclado. | Aprendibilidade geral por jogo/versão/método não equivale a compatibilidade de set ou legalidade Champions. Galeria shiny só após licença/cobertura confirmadas. |
 | Usage | Ranking e detalhe de uma espécie, seções compactas para movimentos, item, Nature, SP, parceiros e histórico. | Buscar, selecionar, combinar filtros, trocar fonte/período, atualizar e falhar. | Battle Data e MetaRoll separados; sem inventar denominador. |
 | Builder | Seis slots e set selecionado; Nature com nome e ↑/↓, quatro golpes, SP e orçamento; ações próximas ao set. | Trocar slot, importar/exportar, item desconhecido, golpe não validado, preservar set. | Distinguir `unknown` de `unavailable`; só afirmar validade oficial após fonte. |
-| Calculadora | Confronto e dano/HP primeiro; 1 vs 1, 1 vs vários, Time vs 1; detalhes e rolls recolhíveis. | Alterar golpe/campo, comparar A/B, carregar seis sets válidos, registrar erro por membro. | `@smogon/calc`; não tratar KO empírico como dano teórico. |
+| Calculadora | Confronto e dano/HP primeiro; 1 vs 1, 1 vs vários, Time vs 1; detalhes e rolls recolhíveis. Em Time vs 1, a seleção do modo identifica o contexto em larguras até 360 px, enquanto a navegação fixa mantém acesso ao builder; a primeira faixa de dano fica visível antes dela. | Alterar golpe/campo, comparar A/B, carregar seis sets válidos, registrar erro por membro. | `@smogon/calc`; não tratar KO empírico como dano teórico. |
 | Speed Tiers | Alvo, modos de Nature/SP e lista dos seis; empate ≠ ultrapassagem. | Arrastar/editar SP, orçamento de 66 e teto de 32, aplicar ao set. | Fórmula e modificadores comprovados; não chamar de uso no meta. |
 | Salas/torneios | Participantes, estado e próxima ação antes de formulários. | Convite, permissão, check-in, contestação e conclusão em mobile. | Identidade, privacidade e resultados manuais conforme modelo comunitário. |
 | Matchups, ladder, rentals | Identidade e dados escaneáveis; contexto de fonte e período. | Filtros e navegação para ficha/equipe quando a fonte permite. | Rentals exigem fonte legal e funcional antes de virar tela populada. |
+
+## Composição entregue pela PR #30
+
+| Tela | Estrutura vigente | Decisão humanizer que orienta o CSS e a revisão |
+|---|---|---|
+| Home | Hero assimétrico com busca real e cinco destinos existentes em lista compacta. | Remove catálogo simulado, contadores sem fonte e cartões repetidos; a busca define a tarefa. |
+| Pokédex | Quatro colunas com arte dominante no desktop; filtros menores. | Cada entrada é uma entidade comparável; removidos stats e CTA repetidos de cada cartão. |
+| Ficha | Identidade da forma em destaque; evolução, formas, stats, relações e perfil em seções contínuas. | O objeto selecionado ocupa o começo; seções usam navegação e divisórias. |
+| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. No mobile, o navegador de espécies usa o fluxo natural da página; só a lista mantém rolagem própria. | Fonte/período têm rótulo funcional; “Limpar filtros” fica ao lado da contagem de espécies e só aparece quando necessário; metadados repetidos ficam fora do primeiro plano. |
+| Builder | Seis posições selecionáveis e um editor para o set ativo. | Seis sets são comparáveis; formulários não são duplicados nem aninhados em cartões decorativos. |
+| Calculadora | Bancada atacante → golpe ativo → resultado/campo → alvo, com quatro slots por lado. | A seleção atualiza o valor; borda e `aria-pressed` indicam o golpe; listas, Nature, habilidade e item são assistidos. |
+| Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |
+| Salas e torneios | Estado operacional, pessoas/chave e próxima ação antes de configuração. | Erro/vazio mantém recuperação junto ao contexto; formulários não antecedem a tarefa. |
+
+O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e PostgreSQL.
 
 ## Oportunidades de produto
 

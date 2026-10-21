@@ -14,6 +14,8 @@ export function PokemonSprite({ pokemon, name, size = 72, priority = false, deco
     <span
       className={`pokemon-art${failed ? " is-fallback" : loading ? " is-loading" : ""}${className ? ` ${className}` : ""}`}
       style={{ "--sprite-size": `${size}px` }}
+      data-pokemon-slug={pokemon?.slug || undefined}
+      data-sprite-url={src || undefined}
       role={decorative ? undefined : "img"}
       aria-label={decorative ? undefined : (failed ? `${label}, sprite indisponível` : label)}
       aria-hidden={decorative || undefined}
