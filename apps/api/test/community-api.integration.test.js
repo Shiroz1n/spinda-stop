@@ -1,14 +1,13 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { createPool } from "../src/db.js";
-import { createApiServer } from "../src/server.js";
+import { createApiApp } from "../src/server.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const appOrigin = "http://127.0.0.1:4173";
 const testKey = "ab".repeat(32);
 let pool;
-let server;
-let apiOrigin;
+let api;
 let testHandles = [];
 
 before(async () => {
@@ -20,13 +19,11 @@ before(async () => {
     if (url === "https://api.github.com/user") return new Response(JSON.stringify({ id: 987654, login: "community-tester", email: "must-not-be-stored@example.test" }), { status: 200 });
     throw new Error("Unexpected external call from the OAuth test.");
   };
-  server = createApiServer({
+  api = createApiApp({
     pool,
     fetchImpl: fakeOAuthFetch,
     env: { ...process.env, APP_ENV: "test", APP_ORIGIN: appOrigin, FRIEND_CODE_ENCRYPTION_KEY: testKey, GITHUB_CLIENT_ID: "test-client", GITHUB_CLIENT_SECRET: "test-secret" },
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  apiOrigin = `http://127.0.0.1:${server.address().port}`;
 });
 
 after(async () => {
@@ -43,12 +40,11 @@ after(async () => {
     }
   }
   await pool.query("DELETE FROM users WHERE provider = 'github' AND provider_subject = '987654'");
-  await new Promise((resolve) => server.close(resolve));
   await pool.end();
 });
 
 async function request(path, { method = "GET", body, cookie = "" } = {}) {
-  const response = await fetch(`${apiOrigin}${path}`, {
+  const response = await api.handle(new Request(`http://127.0.0.1${path}`, {
     method,
     headers: {
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -57,9 +53,13 @@ async function request(path, { method = "GET", body, cookie = "" } = {}) {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     redirect: "manual",
-  });
+  }));
   const text = await response.text();
   return { response, body: text ? JSON.parse(text) : null };
+}
+
+function apiFetch(path, options = {}) {
+  return api.handle(new Request(`http://127.0.0.1${path}`, options));
 }
 
 async function user(handle) {
@@ -312,7 +312,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
 });
 
 test("API rejects writes from another origin", { skip: !enabled }, async () => {
-  const response = await fetch(`${apiOrigin}/api/test/session`, {
+  const response = await apiFetch("/api/test/session", {
     method: "POST",
     headers: { Origin: "https://attacker.example", "Content-Type": "application/json" },
     body: JSON.stringify({ handle: "origin-check" }),
@@ -321,7 +321,7 @@ test("API rejects writes from another origin", { skip: !enabled }, async () => {
 });
 
 test("GitHub OAuth checks one-use state, stores no email and issues a scoped session cookie", { skip: !enabled }, async () => {
-  const start = await fetch(`${apiOrigin}/api/auth/github`, { redirect: "manual" });
+  const start = await apiFetch("/api/auth/github", { redirect: "manual" });
   assert.equal(start.status, 302);
   const authorizationUrl = new URL(start.headers.get("location"));
   assert.equal(authorizationUrl.origin, "https://github.com");
@@ -331,7 +331,7 @@ test("GitHub OAuth checks one-use state, stores no email and issues a scoped ses
   const stateCookie = start.headers.getSetCookie().find((value) => value.startsWith("spinda_oauth_state=")).split(";")[0];
   assert.ok(state);
 
-  const callback = await fetch(`${apiOrigin}/api/auth/github/callback?code=temporary-code&state=${state}`, {
+  const callback = await apiFetch(`/api/auth/github/callback?code=temporary-code&state=${state}`, {
     headers: { Cookie: stateCookie },
     redirect: "manual",
   });
@@ -348,7 +348,7 @@ test("GitHub OAuth checks one-use state, stores no email and issues a scoped ses
   assert.equal((await pool.query("SELECT provider_subject FROM users WHERE provider = 'github' AND provider_subject = '987654'")).rowCount, 1);
   assert.equal((await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email'")).rowCount, 0);
 
-  const reused = await fetch(`${apiOrigin}/api/auth/github/callback?code=temporary-code&state=${state}`, { headers: { Cookie: stateCookie }, redirect: "manual" });
+  const reused = await apiFetch(`/api/auth/github/callback?code=temporary-code&state=${state}`, { headers: { Cookie: stateCookie }, redirect: "manual" });
   assert.equal(reused.status, 400);
   const logout = await request("/api/auth/logout", { method: "POST", cookie: sessionCookie, body: {} });
   assert.equal(logout.response.status, 200);

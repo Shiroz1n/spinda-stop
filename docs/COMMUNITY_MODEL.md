@@ -72,7 +72,9 @@ As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita C
 - Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
 - Convites expiram em sete dias e sua rotação invalida o anterior. Tentativas de login e convite têm limite básico por IP no processo.
 - Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e por rotina horária após a validade máxima de sete dias.
-- Em desenvolvimento, o serviço ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. CI usa PostgreSQL 16 efêmero. Banco, OAuth, chave e domínio de produção não foram configurados nem publicados.
+- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero. Banco, OAuth, chave e domínio de produção não foram configurados nem publicados.
+
+O processo local persistente executa limpeza horária de sessões, estados OAuth e códigos de amizade. Em Vercel, instâncias serverless não garantem a execução de timers; leituras ainda limpam o registro do evento acessado, mas a rotina geral requer um cron autenticado antes de uso público.
 
 O rate limit é local ao processo e não basta para uma implantação com múltiplas instâncias. Antes de abrir cadastro em produção, configurar limite distribuído, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
 

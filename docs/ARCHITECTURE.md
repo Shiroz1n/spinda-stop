@@ -7,13 +7,15 @@
 | `apps/web` | Rotas, telas, componentes e persistência local do rascunho. |
 | `packages/domain` | Busca, estrutura de equipe e importação/exportação; funções puras. |
 | `packages/data` | Importador versionado da PokéAPI, índice compacto da Dex, ficha e blocos de aprendibilidade/evolução. Dados gerados ficam fora do Git. |
-| `apps/api` | API Node, OAuth do GitHub, autorização de equipe/sala, PostgreSQL e migrações SQL. |
+| `apps/api` | API Bun + Elysia, OAuth do GitHub, autorização de equipe/sala, PostgreSQL e migrações SQL. |
 
 O editor não depende de uma conta nem de servidor. Um rascunho fica no navegador. A UI não contém regras de formato: elas entram por um `Ruleset` versionado.
 
 ## Depois
 
-Contas, salas, torneios e resultados usam API Node separada do Vite, PostgreSQL e transações. A API é a única camada que guarda segredos e acessa o banco. OAuth e código de amizade são configurados por ambiente; nenhum serviço de produção está conectado.
+Contas, salas, torneios e resultados usam API Bun + Elysia separada do Vite, PostgreSQL e transações. A API é a única camada que guarda segredos e acessa o banco. As rotas existentes mantêm seus contratos por meio de um adaptador Fetch/Response enquanto o listener e o despacho HTTP passam por Elysia; os dados, autorização e transações não mudam nesta migração. OAuth e código de amizade são configurados por ambiente; nenhum banco ou OAuth de produção está conectado.
+
+O comando local e as migrações rodam no Bun 1.4.3. As funções Vercel em `api/` exportam a mesma aplicação Elysia para `/api` e seus subcaminhos, e `vercel.json` fixa a família de runtime Bun 1.4.x. A configuração de Preview deriva a origem de `VERCEL_URL` quando `APP_ORIGIN` não foi informado. Funções serverless não mantêm o processo horário de limpeza; implantação pública ainda depende de manutenção agendada, limite distribuído, retenção e resposta a incidentes.
 
 O fornecedor de dados competitivos fica atrás de uma interface `MetaProvider`. Isso permite desligar uma fonte ou mostrar cobertura parcial sem misturar dados de formatos e temporadas diferentes.
 

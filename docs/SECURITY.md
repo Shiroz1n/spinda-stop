@@ -16,6 +16,7 @@ Os fluxos comunitários de conta, sala e torneio estão em `apps/api` e usam Pos
 - Código de amizade nunca vai para URL ou log. O valor é cifrado em AES-256-GCM e só pode ser aberto por membro do evento; apaga ao encerrar ou ao expirar.
 - Equipes são privadas por padrão. A cópia pública depende de escolha explícita. Nenhuma equipe é validada como legal no jogo.
 - O rate limit de login e convite reside na memória do processo. Ele não protege serviço multi-instância e precisa de reforço antes de implantação pública.
+- A limpeza horária depende de um processo Bun persistente. Vercel Functions não garantem timers entre pedidos; configure uma rotina agendada e autenticada antes de abrir a API nesse ambiente.
 - Ainda faltam exportação/exclusão de conta, limite distribuído, política operacional de retenção e resposta a incidentes. As rotas não devem ser abertas ao público em produção até essa etapa.
 
 Não guardar credenciais da Nintendo, senha do jogo ou e-mail. Upload de comprovantes não faz parte dos fluxos atuais.

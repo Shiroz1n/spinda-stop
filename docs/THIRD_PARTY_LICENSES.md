@@ -22,6 +22,10 @@ Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares;
 
 O arquivo desta PR inclui capturas do DataDex e de interfaces comunitárias em `artifacts/reformulation/references/` para discussão e auditoria visual do redesign. Elas não são importadas pelo app, não são assets do bundle e não autorizam reutilização comercial de arte, texto, ícones ou dados de terceiros; origem/viewport conhecido e limitações estão no manifesto e em [SECOND_VISUAL_RESEARCH.md](SECOND_VISUAL_RESEARCH.md). A pasta registra 69 capturas de cinco sites ao vivo e 15 imagens DataDex fornecidas. URLs, viewports, ações/estados e decisões estão no manifesto; não afirmamos direitos sobre as capturas. Essas capturas não demonstram licença ou cobertura de sprites shiny/modelos por forma. Qualquer galeria exige fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
 
+## Elysia 1.4.30
+
+A camada HTTP da API usa Elysia, dependência publicada sob MIT. O código original do framework não é copiado para este repositório: [repositório e licença](https://github.com/elysiajs/elysia/blob/main/LICENSE).
+
 ## `@smogon/calc` 0.12.0
 
 O motor de cálculo está disponível sob a licença MIT. A origem é [smogon/damage-calc](https://github.com/smogon/damage-calc); o arquivo de licença oficial está em [LICENSE](https://github.com/smogon/damage-calc/blob/master/LICENSE). O pacote publica a licença como MIT nos metadados do npm.

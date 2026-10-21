@@ -30,7 +30,7 @@ As partidas continuam acontecendo dentro do jogo. O site organiza participantes 
 
 ## Rodar localmente
 
-Requer Node.js 22.12 ou mais recente.
+Requer Node.js 22.12 ou mais recente para o site; Bun 1.4.3 é necessário para rodar a API comunitária.
 
 ```sh
 npm ci

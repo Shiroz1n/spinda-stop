@@ -20,8 +20,9 @@
     "test": "node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js apps/api/test/*.test.js",
     "validate:damage-oracle": "node scripts/validate-damage-oracle.mjs",
     "sync:type-chart": "node scripts/sync-type-chart.mjs",
-    "api:migrate": "node --env-file-if-exists=.env apps/api/src/migrate.js",
-    "api:start": "node --env-file-if-exists=.env apps/api/src/server.js",
+    "api:migrate": "bun --env-file-if-exists=.env apps/api/src/migrate.js",
+    "api:start": "bun --env-file-if-exists=.env apps/api/src/server.js",
+    "api:runtime:smoke": "bun apps/api/test/bun-runtime-smoke.mjs",
     "data:sync": "npm run sync --workspace @spinda-stop/data"
   },
   "devDependencies": {
