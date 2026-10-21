@@ -1,5 +1,13 @@
 # Revisão visual
 
+## Modos de revisão
+
+O comando **npm run visual:review:fast -- --pages=calculator,builder** é o ciclo de desenvolvimento para telas selecionadas. Também aceita o argumento **--screens** e a variável **VISUAL_REVIEW_PAGES=calculator,builder**. IDs aceitos: **home**, **dex** (alias **pokedex**), **pokemon** (aliases **detail** e **dex-detail**), **usage**, **builder**, **calculator**, **speed** (alias **speed-tiers**), **rooms** e **tournaments**. Sem seleção, o modo rápido percorre essas rotas. Ele gera capturas da primeira dobra e do foco de teclado em 1440 e 390 CSS px, registra overflow horizontal e erros de aplicação, e não inicia o servidor comunitário/PostgreSQL.
+
+O modo rápido não executa axe nem substitui os fluxos extensos. **npm run visual:review** continua sendo o gate completo: constrói o app e percorre todos os cenários nas quatro larguras, incluindo axe, fluxos comunitários e PostgreSQL quando DATABASE_URL está configurada. O workflow Visual review executa esse modo completo em cada PR. Ambos os workflows usam concorrência por workflow e PR e cancelam a execução obsoleta da mesma PR.
+
+Cada execução salva inspection.json com o modo, escopo e duração da inspeção (da inicialização do roteiro até o relatório; não inclui o build). Os comandos npm também devem ser cronometrados separadamente para comparar a duração ponta a ponta, incluindo o build.
+
 ## PR #17 — inspeção com Playwright
 
 A inspeção foi executada no Chromium do GitHub Actions, com a prévia Vite do próprio build. O run [Visual review #11](https://github.com/Shiroz1n/spinda-stop/actions/runs/39118793206) terminou com `passed`; o artefato reúne 21 capturas por viewport e o relatório da execução.
