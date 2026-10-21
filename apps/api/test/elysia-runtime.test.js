@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { Elysia } from "elysia";
 import rootApi from "../../../api/index.js";
@@ -119,4 +120,9 @@ test("Vercel production origin uses the stable project domain", async () => {
 test("Vercel API entrypoints export the same Elysia app", () => {
   assert.ok(rootApi instanceof Elysia);
   assert.equal(catchAllApi, rootApi);
+});
+
+test("Vercel config selects its supported Bun runtime family", async () => {
+  const config = JSON.parse(await readFile(new URL("../../../vercel.json", import.meta.url), "utf8"));
+  assert.equal(config.bunVersion, "1.x");
 });
