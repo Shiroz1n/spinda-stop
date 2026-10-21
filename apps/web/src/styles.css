@@ -3091,4 +3091,4 @@ a:hover { color: var(--coral-dark); }
 
 
 .usage-browser-actions { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
-.usage-browser-actions .usage-clear-filters { min-height: 34px; justify-self: auto; padding-inline: 8px; font-size: 0.72rem; }
+.usage-browser-actions .usage-clear-filters { min-height: 34px; justify-self: auto; padding-inline: 8px; font-size: 0.72rem; scroll-margin-block: 112px; }

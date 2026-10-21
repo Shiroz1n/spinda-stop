@@ -64,7 +64,7 @@ O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use 
 | `DexDetailPage` | Identidade exata, navegação de seção acessível, formas, condições e método de evolução por fonte/versão, multiplicadores gerais e aprendibilidade por forma, jogo, método, tipo e categoria. |
 | `TypeTag` | Nome/símbolo e cor contextual para reconhecer tipo sem depender só da cor. |
 | `NaturePicker` + `BuilderPage` | Seleção de Nature com efeitos ↑/↓, seis sets, campos editáveis, importação/exportação e stats recalculados. |
-| `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1, resumo do confronto, resultados e rolls por golpe. |
+| `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1; o resultado 1 vs 1 mostra as formas exatas quando não há barra de confronto, e A/B usa a barra para evitar repetir identidades. Os rolls ficam no detalhe do golpe. |
 | `UsagePage` e vistas MetaRoll | Fonte, formato e período junto da seleção, ranking e filtros publicados por cada fonte. |
 | `RoomsPage` e `TournamentsPage` | Participantes, estado e próxima ação; vazio, erro, convite e resultado em contexto. |
 
@@ -91,7 +91,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Home | Hero assimétrico com busca real e cinco destinos existentes em lista compacta. | Remove catálogo simulado, contadores sem fonte e cartões repetidos; a busca define a tarefa. |
 | Pokédex | Quatro colunas com arte dominante no desktop; filtros menores. | Cada entrada é uma entidade comparável; removidos stats e CTA repetidos de cada cartão. |
 | Ficha | Identidade da forma em destaque; evolução, formas, stats, relações e perfil em seções contínuas. | O objeto selecionado ocupa o começo; seções usam navegação e divisórias. |
-| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. | Fonte/período têm rótulo funcional; “Limpar filtros” fica logo abaixo de “Mais filtros e período”, fora da grade expansível, só quando necessário; metadados repetidos ficam fora do primeiro plano. |
+| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. No mobile, o navegador de espécies usa o fluxo natural da página; só a lista mantém rolagem própria. | Fonte/período têm rótulo funcional; “Limpar filtros” fica ao lado da contagem de espécies e só aparece quando necessário; metadados repetidos ficam fora do primeiro plano. |
 | Builder | Seis posições selecionáveis e um editor para o set ativo. | Seis sets são comparáveis; formulários não são duplicados nem aninhados em cartões decorativos. |
 | Calculadora | Bancada atacante → golpe ativo → resultado/campo → alvo, com quatro slots por lado. | A seleção atualiza o valor; borda e `aria-pressed` indicam o golpe; listas, Nature, habilidade e item são assistidos. |
 | Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |

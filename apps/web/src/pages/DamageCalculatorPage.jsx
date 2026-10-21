@@ -809,7 +809,7 @@ export function DamageCalculatorPage() {
                   <section className="damage-comparison-empty" role="status"><p className="page-label">Cenário B</p><h2>Escolha uma variação</h2><p>Abra “Mais ajustes” para mudar golpe, campo, atacante ou alvo.</p></section>
                 )}
               </div>
-            ) : <DamageResultPanel calculation={calculation} form={activeScenario} label="Resultado" compactMatchup />}
+            ) : <DamageResultPanel calculation={calculation} form={activeScenario} label="Resultado" compactMatchup={comparison.enabled} />}
             <section className="damage-field-deck" aria-label="Campo do confronto">
               <div className="damage-field-deck-heading"><div><p className="page-label">Cenário</p><h2>Campo e modificadores</h2></div><span>Atualiza o resultado ao mudar</span></div>
               <div className="damage-field-strip">

@@ -1230,7 +1230,9 @@ async function runViewport(viewportName, viewport) {
         failures.push("Usage mudou a espécie selecionada durante a atualização manual.");
       }
     }
-    await page.getByRole("button", { name: "Limpar filtros" }).click();
+    const clearUsageFilters = page.locator(".usage-browser-panel").getByRole("button", { name: "Limpar filtros" });
+    await clearUsageFilters.evaluate((button) => button.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
+    await clearUsageFilters.click();
     await usageSearch.fill("Garchomp");
     await page.locator('.usage-filters .usage-filter-field:has-text("Período") select').selectOption("history");
     await waitForEither(page, ".usage-snapshot-picker, .usage-no-snapshots, .usage-error", 35_000);
@@ -1469,8 +1471,11 @@ async function runViewport(viewportName, viewport) {
     await multiMovePicker.getByRole("searchbox", { name: "Buscar golpes de Lucario-Mega-Z" }).fill("Shadow Claw");
     await multiMovePicker.locator(".damage-move-options button").filter({ hasText: "Shadow Claw" }).first().click();
     await page.getByRole("heading", { name: /Lucario-Mega-Z usa Shadow Claw/ }).waitFor({ state: "visible", timeout: 10_000 });
-    await page.waitForFunction(() => [...document.querySelectorAll(".damage-quickbar .pokemon-art img")].every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading")), null, { timeout: 15_000 }).catch(() => {});
-    const alternateFormSprites = await page.locator(".damage-quickbar .pokemon-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll(".damage-workbench-side .damage-side-art img")];
+      return images.length === 2 && images.every((image) => image.complete && image.naturalWidth === 512 && !image.closest(".pokemon-art")?.classList.contains("is-loading"));
+    }, null, { timeout: 15_000 }).catch(() => {});
+    const alternateFormSprites = await page.locator(".damage-workbench-side .damage-side-art img").evaluateAll((images) => images.map((image) => ({ src: image.src, width: image.naturalWidth, loaded: !image.closest(".pokemon-art")?.classList.contains("is-loading") })));
     if (alternateFormSprites.length !== 2 || !alternateFormSprites[0].src.endsWith("10310.png") || !alternateFormSprites[1].src.endsWith("10307.png") || alternateFormSprites.some(({ width, loaded }) => width !== 512 || !loaded)) {
       failures.push(`${viewportName}: a calculadora não mostrou os sprites específicos de Mega Lucario Z e Mega Absol Z.`);
     }
