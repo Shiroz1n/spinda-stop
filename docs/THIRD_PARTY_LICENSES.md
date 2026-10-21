@@ -20,7 +20,7 @@ Exemplos de arquivos fixados: [`10304.png` (Mega Raichu X)](https://github.com/P
 
 Nomes, personagens e imagens de Pokémon continuam pertencendo a seus titulares; atribuição ao repositório que hospeda os arquivos não transfere direitos. O MIT deste projeto cobre somente o código original.
 
-O ZIP de pesquisa fornecido para esta reformulação contém capturas de referência do DataDex e de outras interfaces. Elas foram abertas para análise, não foram copiadas para o bundle do produto nem distribuídas como assets. Essas imagens não demonstram cobertura/licença de sprites shiny ou modelos por forma. Qualquer galeria exige uma fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
+O arquivo desta PR inclui capturas do DataDex e de interfaces comunitárias em `artifacts/reformulation/references/` para discussão e auditoria visual do redesign. Elas não são importadas pelo app, não são assets do bundle e não autorizam reutilização comercial de arte, texto, ícones ou dados de terceiros; origem/viewport conhecido e limitações estão no manifesto e em [SECOND_VISUAL_RESEARCH.md](SECOND_VISUAL_RESEARCH.md). A pasta registra 17 screenshots individuais de sites ao vivo e 15 imagens DataDex fornecidas; não é uma cobertura de 60–70 screenshots. Essas capturas não demonstram licença ou cobertura de sprites shiny/modelos por forma. Qualquer galeria exige fonte própria, direitos e atribuição confirmados, cobertura exata e fallback testado.
 
 ## `@smogon/calc` 0.12.0
 

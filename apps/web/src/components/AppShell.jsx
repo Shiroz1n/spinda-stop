@@ -57,7 +57,7 @@ export function AppShell({ children }) {
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <header className="site-header">
-        <Link className="brand" to="/" aria-label="Spinda Stop — início">
+        <Link className="brand" to="/">
           <BrandMark />
           <span>Spinda Stop</span>
         </Link>

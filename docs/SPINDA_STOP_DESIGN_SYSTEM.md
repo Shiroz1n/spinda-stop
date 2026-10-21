@@ -1,6 +1,6 @@
 # Spinda Stop — design system e fluxos
 
-Estado: direção ampliada na próxima PR, em revisão. A linha de base visual do PR #28 está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); as decisões e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md). Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: reformulação composicional implementada na PR #30, aguardando os gates finais e inspeção do Preview. A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões, auditoria baseada no UI Humanizer e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e `artifacts/reformulation/`. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
@@ -83,6 +83,21 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Speed Tiers | Alvo, modos de Nature/SP e lista dos seis; empate ≠ ultrapassagem. | Arrastar/editar SP, orçamento de 66 e teto de 32, aplicar ao set. | Fórmula e modificadores comprovados; não chamar de uso no meta. |
 | Salas/torneios | Participantes, estado e próxima ação antes de formulários. | Convite, permissão, check-in, contestação e conclusão em mobile. | Identidade, privacidade e resultados manuais conforme modelo comunitário. |
 | Matchups, ladder, rentals | Identidade e dados escaneáveis; contexto de fonte e período. | Filtros e navegação para ficha/equipe quando a fonte permite. | Rentals exigem fonte legal e funcional antes de virar tela populada. |
+
+## Composição entregue pela PR #30
+
+| Tela | Estrutura vigente | Decisão humanizer que orienta o CSS e a revisão |
+|---|---|---|
+| Home | Hero assimétrico com busca real e cinco destinos existentes em lista compacta. | Remove catálogo simulado, contadores sem fonte e cartões repetidos; a busca define a tarefa. |
+| Pokédex | Quatro colunas com arte dominante no desktop; filtros menores. | Cada entrada é uma entidade comparável; removidos stats e CTA repetidos de cada cartão. |
+| Ficha | Identidade da forma em destaque; evolução, formas, stats, relações e perfil em seções contínuas. | O objeto selecionado ocupa o começo; seções usam navegação e divisórias. |
+| Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. | Fonte/período têm rótulo funcional; badges sem ação e metadados repetidos ficam fora do primeiro plano. |
+| Builder | Seis posições selecionáveis e um editor para o set ativo. | Seis sets são comparáveis; formulários não são duplicados nem aninhados em cartões decorativos. |
+| Calculadora | Bancada atacante → golpe ativo → resultado/campo → alvo, com quatro slots por lado. | A seleção atualiza o valor; borda e `aria-pressed` indicam o golpe; listas, Nature, habilidade e item são assistidos. |
+| Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |
+| Salas e torneios | Estado operacional, pessoas/chave e próxima ação antes de configuração. | Erro/vazio mantém recuperação junto ao contexto; formulários não antecedem a tarefa. |
+
+O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e PostgreSQL.
 
 ## Oportunidades de produto
 

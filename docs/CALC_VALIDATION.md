@@ -67,3 +67,7 @@ D-01–D-15 e D-23 estão automatizados em `apps/web/test/damage-calculator.test
 ## Ainda sem validação suficiente
 
 Não há conferência contra partida controlada no próprio jogo. Os cenários do oráculo cobrem exemplos, não todo o catálogo: combinações de habilidade/item/clima/terreno, críticos cancelados, todos os alvos, golpes de dano fixo, efeitos residuais e todas as formas não foram validados um a um. Também seguem fora do modelo: precisão e evasão, chance de crítico, distribuição aleatória de hits, legalidade do set/regulamento, troca e dano residual por turno, recuperação, itens consumidos e sequência de ações. O resultado deve ser lido como cenário do motor fixado, com limites explícitos, e não como previsão perfeita de batalha.
+
+## Validação da interface de seleção
+
+Além dos casos de motor acima, `apps/web/test/visual-review.mjs --fast --pages=calculator` escolhe os quatro golpes por slot visível, verifica `aria-pressed`, ativa um golpe com teclado e compara o texto/faixa imediatamente atualizados em 1440 e 390 px. O caso usa Rillaboom contra Incineroar: Wood Hammer 45–53, Grassy Glide 21–24, U-turn 35–42 e Knock Off 16–19. Também confere as alterações de campo, forma, Nature, habilidade, item e SP no fluxo de revisão automatizado. São resultados reproduzíveis do motor para a fixture, não dados de partida nem prova de legalidade.

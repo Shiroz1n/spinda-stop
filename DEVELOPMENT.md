@@ -21,6 +21,17 @@ npm run build
 
 Use uma branch por mudança. Se mudar interface, confira uma largura mobile e uma desktop, navegação por teclado, foco visível e zoom. O primeiro `dev` ou `build` baixa os CSVs fixados em `packages/data/scripts/sync-pokedex.mjs`. Não publique o site nem conecte serviços externos sem uma decisão registrada.
 
+## Revisão visual
+
+Durante o desenvolvimento, rode somente as rotas afetadas nas larguras 1440 e 390 px:
+
+```sh
+npm run visual:review:fast -- --pages=calculator,builder
+# ou VISUAL_REVIEW_PAGES=calculator,builder npm run visual:review:fast
+```
+
+O modo rápido preserva screenshots, mede overflow e erros de aplicação, e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. O modo completo continua obrigatório antes de concluir uma PR: `npm run visual:review`. Ele mantém os cenários de todas as telas em 1440, 390, 320 e 720 px, axe e fluxos comunitários com PostgreSQL quando `DATABASE_URL` está configurada. A versão rápida não é equivalente ao gate completo. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
+
 ## API comunitária
 
 Contas, salas e torneios usam Node.js, PostgreSQL 16 e OAuth do GitHub. Nenhum segredo ou banco de produção fica no repositório.

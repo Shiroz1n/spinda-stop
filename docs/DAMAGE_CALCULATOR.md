@@ -2,6 +2,19 @@
 
 A tela `/calculator` usa `@smogon/calc` 0.12.0 no navegador. Os sets ficam no dispositivo e não são enviados a uma API. O motor tem um modo de mecânicas de Pokémon Champions, mas isso não confirma sozinho que cada regra atual do jogo esteja correta.
 
+## Editor guiado de golpes, habilidades e itens
+
+Cada lado tem quatro slots persistentes e uma lista pesquisável. O usuário escolhe qual slot editar e seleciona uma opção da lista; os quatro golpes ficam visíveis, e clicar/tocar num slot preenchido ativa aquele golpe no cálculo imediatamente. O ativo usa contorno e texto de estado, além de `aria-pressed`; `Enter`/`Space` alcançam os mesmos botões. Um slot vazio não inventa golpe nem resultado.
+
+A lista oferece duas fontes com significados separados:
+
+- **Aprendidos na versão**: relações gerais da forma exata na revisão fixa da PokéAPI, filtradas pelo jogo/grupo de versão. Não são prova de que o golpe esteja disponível em Pokémon Champions, que quatro golpes coexistam no mesmo set, ou que a combinação seja legal num regulamento.
+- **Catálogo do motor**: golpes em `@smogon/calc` 0.12.0 para o conjunto Champions. Constarem aqui significa que o motor reconhece o nome; não significa que a espécie aprende ou que o golpe é permitido no jogo/regulamento.
+
+Quando a aprendibilidade não carrega, a lista do motor segue disponível. Golpe escolhido fora do catálogo de dano permanece no slot e recebe indicação de limite; não produz resultado falso. As habilidades são opções do registro geral da espécie/forma em PokéAPI; habilidade importada permanece visível e recebe nota se o motor não a reconhecer. Essa lista também não declara disponibilidade/legalidade em Champions.
+
+O seletor de item inclui itens conhecidos pelo catálogo Champions e os itens gerais da geração 9 conhecidos pela dependência. Um item importado/desconhecido não é apagado. Itens desconhecidos ou reconhecidos fora do subconjunto do motor que possam alterar dano/ordem bloqueiam o cálculo daquele lado com explicação; itens reconhecidos e modelados mostram o estado. Em todos os casos, disponibilidade e legalidade em Pokémon Champions continuam não verificadas. O erro de item de um integrante não esconde resultados dos outros integrantes em Time vs 1.
+
 ## O que o cálculo representa
 
 - Nível 50. Stat Points são passados como pontos de atributo do modo Champions: HP é `base + SP + 75` (ou 1 para base 1); os outros stats são `floor((base + SP + 20) × nature)`, com modificador 1,1 / 1 / 0,9.

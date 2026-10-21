@@ -8,6 +8,16 @@ O modo rápido não executa axe nem substitui os fluxos extensos. **npm run visu
 
 Cada execução salva inspection.json com o modo, escopo e duração da inspeção (da inicialização do roteiro até o relatório; não inclui o build). Os comandos npm também devem ser cronometrados separadamente para comparar a duração ponta a ponta, incluindo o build.
 
+### Medição da reformulação PR #30
+
+| Modo | Escopo | Duração medida | Leitura |
+|---|---|---:|---|
+| Rápido, nove rotas | 1440 e 390 px; capturas, foco/teclado, overflow e erros. | 18,446 s na inspeção; 21,8 s ponta a ponta com build. | Ciclo de iteração; não contém axe, cenários completos, 320/720 nem PostgreSQL. |
+| Rápido, só calculadora | 1440 e 390 px; quatro golpes e teclado. | 7,489 s na inspeção; 11,3 s ponta a ponta com build. | Evidência específica da seleção guiada; não representa o custo do gate. |
+| Completo local | Cenários do roteiro em quatro larguras, axe e tentativas de carregar sprites. | 78,812 s na inspeção; 83,1 s ponta a ponta com build. | `needs-review`: o ambiente local não decodificou o favicon remoto e bloqueou sprites; uma correção de contraste posterior foi validada separadamente com axe. Não é aprovação do gate completo. |
+
+O gate completo no GitHub, incluindo PostgreSQL, será medido depois da execução final no HEAD da PR; o modo rápido nunca substitui essa execução. Uma auditoria axe pontual de salas em 1440 e 390 px após a correção encontrou zero violações; ela não substitui a auditoria completa.
+
 ## PR #17 — inspeção com Playwright
 
 A inspeção foi executada no Chromium do GitHub Actions, com a prévia Vite do próprio build. O run [Visual review #11](https://github.com/Shiroz1n/spinda-stop/actions/runs/39118793206) terminou com `passed`; o artefato reúne 21 capturas por viewport e o relatório da execução.
