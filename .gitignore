@@ -5,6 +5,7 @@ dist/
 !.env.example
 coverage/
 artifacts/visual-review/
+artifacts/visual-review-fast/
 .DS_Store
 packages/data/generated/*.json
 packages/data/generated/learnsets/

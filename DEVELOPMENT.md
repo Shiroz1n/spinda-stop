@@ -43,7 +43,7 @@ Contas, salas e torneios usam Bun 1.4.3, Elysia 1.4.x, PostgreSQL 16 e OAuth do 
 4. Em um terminal, rode `npm run api:start`; em outro, rode `npm run dev`.
 5. Registre no OAuth App do GitHub o callback `http://127.0.0.1:5173/api/auth/github/callback`.
 
-Gere a chave de 32 bytes para códigos de amizade com `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'`. Mantenha a chave fora do Git e faça backup seguro; perder a chave torna os códigos ainda cifrados ilegíveis. O fluxo de teste automatizado usa um endpoint de sessão disponível somente com `APP_ENV=test` e exige loopback.
+Gere a chave de 32 bytes para códigos de amizade com `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'`. Mantenha a chave fora do Git e faça backup seguro; perder a chave torna os códigos ainda cifrados ilegíveis. O fluxo de teste automatizado usa um endpoint de sessão disponível somente com `APP_ENV=test` em execução local; `VERCEL_ENV` prevalece no deployment para impedir que ele seja habilitado em Preview ou Production.
 
 O servidor Bun atende `/api` por Elysia. A função `npm run api:runtime:smoke` exercita o listener HTTP real em Bun; `npm test` verifica os mesmos contratos de rota pelo Fetch do Elysia. No Vercel, `/api` e seus subcaminhos entram nas funções definidas em `api/`, usando `bunVersion` do `vercel.json`. Preview sem `DATABASE_URL` responde `503` com uma mensagem de serviço não configurado. Use um PostgreSQL separado para Preview; não aponte testes de PR ao banco de produção. OAuth em Preview exige credenciais e callback compatíveis com a origem daquele ambiente.
 

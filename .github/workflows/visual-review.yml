@@ -45,10 +45,14 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate
+      - name: Fast review of community screens
+        run: npm run visual:review:fast -- --pages=rooms,tournaments
       - run: npm run visual:review
       - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: visual-review-${{ github.sha }}
-          path: artifacts/visual-review/
+          path: |
+            artifacts/visual-review/
+            artifacts/visual-review-fast/
           retention-days: 14
