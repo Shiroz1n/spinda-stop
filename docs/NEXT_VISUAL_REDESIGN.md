@@ -54,7 +54,9 @@ O Chromium do workflow executa interações reais em viewport CSS; este ambiente
 
 O Visual review #150, no HEAD `e2a1e7063d1a56c22a363d0ef3d7c5fae575a81a`, percorreu 460 observações e quatro larguras, com zero grupos axe, mas encontrou um corte real em Time vs 1 a 320 px: a faixa `109–129` começava em y=704, atrás da navegação fixa em y=696. A duração foi 793,7 s no roteiro e 863 s no workflow. A captura e o relatório estão no [artefato #150](https://github.com/Shiroz1n/spinda-stop/actions/runs/39576944818/artifacts/12335985449).
 
-A composição em até 360 px agora remove o kicker, o texto explicativo e o atalho de volta redundantes, preservando a orientação pelo título, modo selecionado e navegação fixa. O gate seguinte precisa confirmar que o primeiro dano está inteiro acima da navegação e que os fluxos restantes continuam intactos.
+A composição em até 360 px remove o kicker, o texto explicativo e o atalho de volta redundantes, preservando a orientação pelo título, modo selecionado e navegação fixa. O Visual review #151 no HEAD `7848e25f7cbba4dd1e9ce2caca87c46c363462ea` confirmou a correção: a faixa `109–129` começa em y=552 e termina em y=581, antes da navegação fixa em y=696. O gate completo percorreu 460 observações em 1440, 390, 320 e 720 px, sem falhas nem violações axe; migração PostgreSQL também passou. Foram 798,3 s no roteiro e 870 s ponta a ponta. Veja o [run #151](https://github.com/Shiroz1n/spinda-stop/actions/runs/39579394813) e o [artefato final](https://github.com/Shiroz1n/spinda-stop/actions/runs/39579394813/artifacts/12336421698).
+
+As capturas finais do artefato foram inspecionadas manualmente em desktop, 390, 320 e 720 px. Os sprites carregados correspondem às formas mostradas; a Pokédex e o Usage exibem seus dados de revisão, o builder mostra seis integrantes e a primeira faixa de dano continua acima da navegação em 320 px.
 
 ## PR #30 — execução da reformulação
 
