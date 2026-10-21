@@ -146,7 +146,6 @@ h3 { font-size: 1rem; line-height: 1.25; }
 .detail-section-nav { position: relative; display: flex; gap: 4px; margin: 14px 0 18px; padding: 0 0 1px; border-bottom: 1px solid var(--line); overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .detail-section-nav a { min-height: 42px; display: inline-flex; align-items: center; flex: 0 0 auto; padding: 7px 10px; border-bottom: 2px solid transparent; color: var(--muted); font-size: 0.83rem; font-weight: 750; text-decoration: none; scroll-snap-align: start; }
 .detail-section-nav a:hover, .detail-section-nav a:focus-visible { border-bottom-color: var(--blue); color: var(--ink); }
-.detail-nav-hint { display: none; }
 .detail-evolutions, .detail-forms, .detail-type-relations, .detail-learnsets { margin-top: 18px; padding: 15px 0 0; border-top: 1px solid var(--line); }
 .evolution-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 9px; margin: 12px 0 0; }
 .evolution-list li { min-width: 0; grid-template-columns: 1fr; gap: 5px; padding: 11px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 6px; background: var(--surface); }
@@ -456,7 +455,6 @@ h3 { font-size: 1rem; line-height: 1.25; }
   .detail-data-caption { font-size: 0.65rem; line-height: 1.25; }
   .detail-section-nav { gap: 2px; margin-block: 10px 12px; }
   .detail-section-nav a { min-height: 39px; padding: 6px 8px; font-size: 0.75rem; }
-  .detail-nav-hint { position: sticky; right: 0; display: inline-flex; align-items: center; flex: 0 0 auto; padding: 0 4px 0 12px; background: linear-gradient(90deg, transparent, var(--paper) 35%); color: var(--blue-dark); font-size: 0.68rem; font-weight: 750; }
   .detail-evolutions, .detail-forms, .detail-type-relations, .detail-learnsets { margin-top: 13px; padding-top: 10px; }
   .evolution-list { grid-template-columns: minmax(0, 1fr); gap: 5px; margin-top: 8px; }
   .evolution-list li { grid-template-columns: minmax(90px, 0.45fr) minmax(0, 1fr); gap: 5px 8px; padding: 7px; }
@@ -653,7 +651,6 @@ h3 { font-size: 1rem; line-height: 1.25; }
   .detail-hero-actions .button { min-height: 30px; padding: 3px; font-size: 0.61rem; }
   .detail-data-caption { font-size: 0.59rem; }
   .detail-section-nav a { font-size: 0.7rem; }
-  .detail-nav-hint { font-size: 0.61rem; }
   .detail-learnset-filters { gap: 5px; }
   .detail-learnset-filters label { font-size: 0.65rem; }
   .detail-learnset-filters input, .detail-learnset-filters select { min-height: 36px; padding-inline: 4px; font-size: 0.67rem; }
