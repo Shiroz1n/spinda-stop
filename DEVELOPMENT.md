@@ -37,15 +37,17 @@ O modo rápido preserva screenshots, mede overflow e erros de aplicação, e ver
 
 Contas, salas e torneios usam Bun 1.4.3, Elysia 1.4.x, PostgreSQL 16 e OAuth do GitHub. Nenhum segredo ou banco de produção fica no repositório.
 
-1. Copie `.env.example` para `.env` e preencha `DATABASE_URL`, `APP_ORIGIN`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e `FRIEND_CODE_ENCRYPTION_KEY`.
+1. Copie `.env.example` para `.env`. `DATABASE_URL` é a conta limitada de runtime; `DATABASE_MIGRATION_URL` é a conta local de migrações. Mantenha `POSTGRES_PASSWORD` alinhada com a URL de migração. Preencha `APP_ORIGIN`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e, se quiser testar códigos de amizade, `FRIEND_CODE_ENCRYPTION_KEY`.
 2. Em um terminal, inicie o PostgreSQL local: `docker compose up -d db`.
-3. Aplique as migrações com `npm run api:migrate`.
+3. Aplique as migrações com `npm run api:migrate` e prepare o usuário de runtime local com `npm run api:db:prepare`. Esse comando só aceita `localhost`, loopback ou o serviço local `postgres`, e recusa execução em Vercel.
 4. Em um terminal, rode `npm run api:start`; em outro, rode `npm run dev`.
 5. Registre no OAuth App do GitHub o callback `http://127.0.0.1:5173/api/auth/github/callback`.
 
 Gere a chave de 32 bytes para códigos de amizade com `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'`. Mantenha a chave fora do Git e faça backup seguro; perder a chave torna os códigos ainda cifrados ilegíveis. O fluxo de teste automatizado usa um endpoint de sessão disponível somente com `APP_ENV=test` em execução local; `VERCEL_ENV` prevalece no deployment para impedir que ele seja habilitado em Preview ou Production.
 
 O servidor Bun atende `/api` por Elysia. A função `npm run api:runtime:smoke` exercita o listener HTTP real em Bun; `npm test` verifica os mesmos contratos de rota pelo Fetch do Elysia. No Vercel, `/api` e seus subcaminhos entram nas funções definidas em `api/`, usando `bunVersion` do `vercel.json`. Preview sem `DATABASE_URL` responde `503` com uma mensagem de serviço não configurado. Use um PostgreSQL separado para Preview; não aponte testes de PR ao banco de produção. OAuth em Preview exige credenciais e callback compatíveis com a origem daquele ambiente.
+
+Em CI, `DATABASE_URL` aponta para um papel de runtime limitado e `DATABASE_MIGRATION_URL` para a instância PostgreSQL efêmera da migração. A suíte usa a URL de migração apenas para montar e limpar fixtures; a aplicação de teste conecta com a URL de runtime. Em Vercel, configure somente `DATABASE_URL` com um login sem DDL; não configure a URL de migração nem execute `api:db:prepare`. Provisionar o papel limitado em um banco remoto é uma operação do administrador do banco e não foi feita nesta revisão.
 
 A mudança para Elysia não conclui a preparação para abrir a API publicamente. O limite de tentativas continua local a cada instância e a limpeza horária do servidor persistente não é executada de forma confiável em funções serverless. Revise [Segurança](docs/SECURITY.md) e [Modelo comunitário](docs/COMMUNITY_MODEL.md) antes de habilitar esses fluxos em produção.
 

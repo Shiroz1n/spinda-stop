@@ -30,11 +30,15 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://spinda:stop@localhost:5432/spinda_visual
+      APP_ENV: test
+      DATABASE_URL: postgresql://spinda_app:spinda-test@localhost:5432/spinda_visual
+      DATABASE_MIGRATION_URL: postgresql://spinda:stop@localhost:5432/spinda_visual
       APP_ORIGIN: http://127.0.0.1:4173
       FRIEND_CODE_ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -45,6 +49,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate
+      - run: npm run api:db:prepare
       - name: Fast review of community screens
         run: npm run visual:review:fast -- --pages=rooms,tournaments
       - run: npm run visual:review

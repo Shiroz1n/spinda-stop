@@ -3,6 +3,7 @@ dist/
 .env
 .env.*
 !.env.example
+.vercel/
 coverage/
 artifacts/visual-review/
 artifacts/visual-review-fast/
