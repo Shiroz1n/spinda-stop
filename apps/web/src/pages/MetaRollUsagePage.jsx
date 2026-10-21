@@ -200,7 +200,7 @@ function MatchupMoveCard({ title, rows, outcomeLabel }) {
   );
 }
 
-export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect, sourceSwitcher }) {
+export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [indexData, setIndexData] = useState(null);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [season, setSeason] = useState("");
@@ -390,16 +390,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect, so
     : [];
 
   return (
-    <section className="page-wrap usage-page metaroll-page">
-      <div className="page-heading-row usage-heading">
-        <div>
-          <p className="page-label">Pesquisa de Doubles</p>
-          <h1>Usage · MetaRoll</h1>
-          <p className="page-intro">Ranking e distribuições da captura selecionada.</p>
-        </div>
-        {sourceSwitcher}
-      </div>
-
+    <div className="usage-source-content">
       <div className="usage-source-banner metaroll-source-banner">
         <span className="usage-source-icon" aria-hidden="true">MR</span>
         <div className="usage-source-copy">
@@ -648,6 +639,6 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect, so
           </section>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

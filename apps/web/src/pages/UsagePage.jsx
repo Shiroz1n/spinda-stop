@@ -249,7 +249,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
   );
 }
 
-function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, sourceSwitcher }) {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
@@ -402,16 +402,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, sourceS
     || itemFilter !== "all" || abilityFilter !== "all";
 
   return (
-    <section className="page-wrap usage-page">
-      <div className="page-heading-row usage-heading">
-        <div>
-          <p className="page-label">Pesquisa de Doubles</p>
-          <h1>Usage</h1>
-          <p className="page-intro">Ranking, ficha e distribuições da fonte selecionada.</p>
-        </div>
-        {sourceSwitcher}
-      </div>
-
+    <div className="usage-source-content">
       <div className="usage-source-banner">
         <span className="usage-source-icon" aria-hidden="true">BD</span>
         <div className="usage-source-copy">
@@ -686,7 +677,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, sourceS
           </div>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -727,7 +718,19 @@ export function UsagePage() {
     </div>
   );
 
-  return sourceId === "metaroll"
-    ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} sourceSwitcher={sourceSwitcher} />
-    : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} sourceSwitcher={sourceSwitcher} />;
+  return (
+    <section className={"page-wrap usage-page" + (sourceId === "metaroll" ? " metaroll-page" : "")}>
+      <div className="page-heading-row usage-heading">
+        <div>
+          <p className="page-label">Pesquisa de Doubles</p>
+          <h1>{sourceId === "metaroll" ? "Usage · MetaRoll" : "Usage"}</h1>
+          <p className="page-intro">{sourceId === "metaroll" ? "Ranking e distribuições da captura selecionada." : "Ranking, ficha e distribuições da fonte selecionada."}</p>
+        </div>
+        {sourceSwitcher}
+      </div>
+      {sourceId === "metaroll"
+        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
+        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
+    </section>
+  );
 }
