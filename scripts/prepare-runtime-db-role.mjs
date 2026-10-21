@@ -41,7 +41,7 @@ const client = new pg.Client({ connectionString: migrationUrl.toString() });
 let transactionOpen = false;
 
 async function executeForRuntimeRole(template) {
-  const result = await client.query("SELECT format($1, $2) AS statement", [template, runtimeRole]);
+  const result = await client.query("SELECT format($1::text, $2::text) AS statement", [template, runtimeRole]);
   await client.query(result.rows[0].statement);
 }
 
@@ -86,12 +86,12 @@ try {
   const roleTemplate = roleExists
     ? "ALTER ROLE %I WITH LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS"
     : "CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS";
-  const roleDdl = await client.query("SELECT format($1, $2, $3) AS statement", [roleTemplate, runtimeRole, runtimePassword]);
+  const roleDdl = await client.query("SELECT format($1::text, $2::text, $3::text) AS statement", [roleTemplate, runtimeRole, runtimePassword]);
   await client.query(roleDdl.rows[0].statement);
 
-  const revokeDatabase = await client.query("SELECT format('REVOKE ALL ON DATABASE %I FROM %I', $1, $2) AS statement", [database, runtimeRole]);
+  const revokeDatabase = await client.query("SELECT format('REVOKE ALL ON DATABASE %I FROM %I', $1::text, $2::text) AS statement", [database, runtimeRole]);
   await client.query(revokeDatabase.rows[0].statement);
-  const connect = await client.query("SELECT format('GRANT CONNECT ON DATABASE %I TO %I', $1, $2) AS statement", [database, runtimeRole]);
+  const connect = await client.query("SELECT format('GRANT CONNECT ON DATABASE %I TO %I', $1::text, $2::text) AS statement", [database, runtimeRole]);
   await client.query(connect.rows[0].statement);
   await executeForRuntimeRole("REVOKE ALL ON SCHEMA public FROM %I");
   await executeForRuntimeRole("GRANT USAGE ON SCHEMA public TO %I");
