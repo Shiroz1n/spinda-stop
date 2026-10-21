@@ -111,7 +111,7 @@ try {
     "GRANT INSERT (owner_id, name, visibility, data_json, schema_version) ON TABLE teams TO %I",
     "GRANT UPDATE (name, visibility, data_json, updated_at) ON TABLE teams TO %I",
     "GRANT DELETE ON TABLE teams TO %I",
-    "GRANT INSERT (host_id, name, invite_hash, invite_expires_at) ON TABLE rooms TO %I",
+    "GRANT INSERT (host_id, name, capacity, invite_hash, invite_expires_at) ON TABLE rooms TO %I",
     "GRANT UPDATE (status, invite_hash, invite_expires_at, locked_at, finished_at) ON TABLE rooms TO %I",
     "GRANT INSERT (room_id, user_id) ON TABLE room_members TO %I",
     "GRANT UPDATE (status, checked_in_at, friend_code_ciphertext, friend_code_nonce, friend_code_tag, friend_code_created_at, shared_roster_json, shared_roster_updated_at) ON TABLE room_members TO %I",
