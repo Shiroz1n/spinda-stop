@@ -227,7 +227,10 @@ async function githubIdentity({ code, config, fetchImpl }) {
 }
 
 function appConfig(env) {
-  const deploymentOrigin = env.VERCEL_URL ? `https://${env.VERCEL_URL}` : "";
+  const deploymentHost = env.VERCEL_ENV === "production" || env.APP_ENV === "production"
+    ? env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL
+    : env.VERCEL_BRANCH_URL || env.VERCEL_URL;
+  const deploymentOrigin = deploymentHost ? `https://${deploymentHost}` : "";
   const origin = new URL(env.APP_ORIGIN || deploymentOrigin || "http://127.0.0.1:5173");
   if (origin.pathname !== "/" || origin.search || origin.hash) throw new Error("APP_ORIGIN deve conter somente a origem do aplicativo.");
   const secureCookies = env.COOKIE_SECURE === "true" || env.APP_ENV === "production" || Boolean(env.VERCEL_URL);

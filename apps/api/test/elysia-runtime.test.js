@@ -76,11 +76,39 @@ test("Elysia keeps OAuth redirect and cookie headers intact", async () => {
 test("Vercel preview origin enables secure cookies and same-origin writes", async () => {
   const app = createApiApp({
     pool: { query: async () => ({ rows: [], rowCount: 1 }) },
-    env: { APP_ENV: "preview", VERCEL_URL: "spinda-preview.example.vercel.app" },
+    env: {
+      APP_ENV: "preview",
+      VERCEL_ENV: "preview",
+      VERCEL_URL: "spinda-deploy-123.example.vercel.app",
+      VERCEL_BRANCH_URL: "spinda-pr-30.example.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+    },
   });
-  const response = await app.handle(new Request("https://spinda-preview.example.vercel.app/api/auth/logout", {
+  const response = await app.handle(new Request("https://spinda-pr-30.example.vercel.app/api/auth/logout", {
     method: "POST",
-    headers: { Origin: "https://spinda-preview.example.vercel.app", "Content-Type": "application/json" },
+    headers: { Origin: "https://spinda-pr-30.example.vercel.app", "Content-Type": "application/json" },
+    body: "{}",
+  }));
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("set-cookie") || "", /; Secure/);
+});
+
+test("Vercel production origin uses the stable project domain", async () => {
+  const app = createApiApp({
+    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    env: {
+      APP_ENV: "production",
+      VERCEL_ENV: "production",
+      VERCEL_URL: "spinda-deploy-123.example.vercel.app",
+      VERCEL_BRANCH_URL: "spinda-main.example.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+      FRIEND_CODE_ENCRYPTION_KEY: "a".repeat(64),
+    },
+  });
+  const response = await app.handle(new Request("https://spinda-stop.example.com/api/auth/logout", {
+    method: "POST",
+    headers: { Origin: "https://spinda-stop.example.com", "Content-Type": "application/json" },
     body: "{}",
   }));
 
