@@ -243,7 +243,9 @@ function appConfig(env) {
   return {
     appOrigin: origin.origin,
     secureCookies,
-    envName: env.APP_ENV || "development",
+    // Vercel's deployment context is authoritative over an accidentally
+    // configured APP_ENV, especially for routes that exist only in tests.
+    envName: env.VERCEL_ENV || env.APP_ENV || "development",
     githubClientId: env.GITHUB_CLIENT_ID || "",
     githubClientSecret: env.GITHUB_CLIENT_SECRET || "",
     friendKey,
@@ -309,16 +311,22 @@ function responseRecorder() {
   };
 }
 
-function requestAddress(request, server) {
+function requestAddress(request, server, trustVercelForwardedFor) {
+  if (trustVercelForwardedFor) {
+    const forwardedAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (forwardedAddress) return forwardedAddress;
+  }
   const socketAddress = server?.requestIP?.(request)?.address;
-  if (socketAddress) return socketAddress;
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // Outside Vercel, forwarded headers are request input unless a separately
+  // trusted proxy contract is configured. Do not let callers choose their key.
+  return socketAddress || "unknown";
 }
 
 function createApiRequestHandler({ pool, env = process.env, fetchImpl = fetch } = {}) {
   if (!pool) throw new Error("O pool PostgreSQL é obrigatório.");
   const config = appConfig(env);
   const rateLimit = createRateLimiter();
+  const trustVercelForwardedFor = Boolean(env.VERCEL_ENV);
 
   async function handle(req, res) {
     const url = new URL(req.url, config.appOrigin);
@@ -1170,7 +1178,7 @@ function createApiRequestHandler({ pool, env = process.env, fetchImpl = fetch } 
   }
 
   return async function handleRequest(request, server) {
-    const req = requestFromWebRequest(request, requestAddress(request, server));
+    const req = requestFromWebRequest(request, requestAddress(request, server, trustVercelForwardedFor));
     const res = responseRecorder();
     try {
       await handle(req, res);

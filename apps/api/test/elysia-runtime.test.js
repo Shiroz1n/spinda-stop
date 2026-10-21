@@ -74,6 +74,39 @@ test("Elysia keeps OAuth redirect and cookie headers intact", async () => {
   assert.match(response.headers.get("set-cookie") || "", /spinda_oauth_state=/);
 });
 
+test("rate limiting does not trust caller supplied X-Forwarded-For values", async () => {
+  const { app } = createApi();
+  const responses = [];
+
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    responses.push(await app.handle(new Request("http://api.test/api/auth/github", {
+      headers: { "X-Forwarded-For": `198.51.100.${attempt + 1}` },
+    })));
+  }
+
+  assert.equal(responses.filter((response) => response.status === 302).length, 24);
+  assert.equal(responses.filter((response) => response.status === 429).length, 6);
+  assert.equal((await responses[24].json()).error.code, "rate_limited");
+});
+
+test("Vercel deployment context disables the test-session endpoint", async () => {
+  const { app } = createApi({ env: {
+    APP_ENV: "test",
+    APP_ORIGIN: "http://localhost:5173",
+    GITHUB_CLIENT_ID: "client-id",
+    GITHUB_CLIENT_SECRET: "client-secret",
+    VERCEL_ENV: "preview",
+  } });
+  const response = await app.handle(new Request("http://api.test/api/test/session", {
+    method: "POST",
+    headers: { Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ handle: "remote-test-session" }),
+  }));
+
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get("set-cookie"), null);
+});
+
 test("Vercel preview origin enables secure cookies and same-origin writes", async () => {
   const app = createApiApp({
     pool: { query: async () => ({ rows: [], rowCount: 1 }) },

@@ -1,6 +1,6 @@
 # Spinda Stop — design system e fluxos
 
-Estado: reformulação composicional implementada na PR #30, aguardando os gates finais e inspeção do Preview. A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões, auditoria baseada no UI Humanizer e capturas desta rodada ficam em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e `artifacts/reformulation/`. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`). A revisão técnica segue na PR de manutenção documentada em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md). A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões e auditoria visual estão em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e `artifacts/reformulation/`. As imagens comparativas geradas pelo CI estão nos artefatos de workflow e no histórico da PR #30, não no checkout atual. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
