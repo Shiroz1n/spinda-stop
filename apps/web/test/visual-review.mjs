@@ -1328,12 +1328,14 @@ async function runViewport(viewportName, viewport) {
 
   await page.goto(`${baseUrl}/calculator`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Calculadora de dano" }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
-  const emptyCalculatorInputs = await Promise.all([
-    'input[list="damage-attacker-species-options"]',
-    'input[list="damage-defender-species-options"]',
-    'input[list="damage-move-options"]',
-  ].map((selector) => page.locator(selector).inputValue()));
-  if (emptyCalculatorInputs.some(Boolean) || await page.getByText("Garchomp", { exact: true }).count()) failures.push(`${viewportName}: a calculadora direta não deve injetar uma espécie ou golpe padrão.`);
+  const emptyCalculatorSlots = await page.locator(".damage-move-slot").evaluateAll((slots) => slots.map((slot) => ({
+    empty: slot.classList.contains("is-empty"),
+    label: slot.querySelector(".damage-move-slot-select strong")?.textContent?.trim(),
+  })));
+  if (emptyCalculatorSlots.length !== 8 || emptyCalculatorSlots.some((slot) => !slot.empty || slot.label !== "Escolher golpe")
+    || await page.getByText("Garchomp", { exact: true }).count()) {
+    failures.push(`${viewportName}: a calculadora direta deve mostrar os oito slots vazios sem injetar espécie ou golpe padrão.`);
+  }
   await safeCapture(page, viewportName, "calculator-empty-choice", { audit: true, fullPage: false });
   await page.locator('input[list="damage-attacker-species-options"]').fill("Garchomp");
   await page.locator('input[list="damage-defender-species-options"]').fill("Gardevoir-Mega");

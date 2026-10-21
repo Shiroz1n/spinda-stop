@@ -392,13 +392,20 @@
   .detail-move-list > li { grid-template-columns: minmax(0, 1fr) auto; }
   .usage-layout { grid-template-columns: minmax(0, 1fr); gap: 13px; }
   .usage-results-column { order: 0; }
-  .usage-browser-panel { position: static; max-height: none; padding-inline: 0; border-left: 0; }
+  .usage-browser-panel { position: static; order: 1; max-height: none; padding-inline: 0; border-left: 0; }
   .usage-browser-heading { position: static; margin-inline: 0; padding: 0 0 6px; background: transparent; }
   .usage-species-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 230px; overflow: auto; border-top-width: 2px; }
   .usage-species-list > li { border-right: 1px solid #c7cfbf; }
   .usage-species-link { min-height: 49px; grid-template-columns: 37px minmax(0, 1fr) 23px; gap: 4px; }
   .usage-species-art { width: 35px; height: 35px; }
   .usage-species-art .pokemon-art { --sprite-size: 34px !important; }
+  .usage-species-button { min-height: 49px; grid-template-columns: 34px minmax(0, 1fr) 31px; gap: 3px; padding: 4px; }
+  .usage-species-button .usage-species-art { width: 33px; height: 33px; }
+  .usage-species-button .usage-species-art .pokemon-art { --sprite-size: 32px !important; }
+  .usage-species-button .usage-species-name > strong { font-size: 0.75rem; line-height: 1.05; }
+  .usage-species-button .usage-species-name .type-list { gap: 2px; }
+  .usage-species-button .usage-species-name .type-tag { min-height: 15px; padding-inline: 3px; font-size: 0.48rem; }
+  .usage-species-button .usage-position { min-width: 0; padding: 0; border: 0; font-size: 0.65rem; text-align: right; }
   .usage-detail-heading { grid-template-columns: 67px minmax(0, 1fr) auto; gap: 8px; min-height: 78px; }
   .usage-detail-art { width: 64px; height: 64px; }
   .usage-detail-art .pokemon-art { --sprite-size: 61px !important; }
@@ -525,4 +532,14 @@
   .damage-side .text-input, .damage-side select, .damage-nature-picker .nature-picker-trigger { min-height: 33px; font-size: 0.66rem; }
   .damage-field-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .damage-field-deck-heading > span { max-width: 13ch; text-align: right; }
+}
+
+@media (max-width: 360px) {
+  .team-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usage-species-button { grid-template-columns: 30px minmax(0, 1fr) 27px; gap: 2px; padding: 3px; }
+  .usage-species-button .usage-species-art { width: 29px; height: 29px; }
+  .usage-species-button .usage-species-art .pokemon-art { --sprite-size: 28px !important; }
+  .usage-species-button .usage-species-name > strong { font-size: 0.67rem; }
+  .usage-species-button .usage-species-name .type-tag { min-height: 14px; font-size: 0.43rem; }
+  .usage-species-button .usage-position { font-size: 0.58rem; }
 }
