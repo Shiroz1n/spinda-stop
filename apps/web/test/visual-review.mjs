@@ -1365,7 +1365,7 @@ async function runViewport(viewportName, viewport) {
   await attackerEditor.getByLabel("Habilidade", { exact: true }).selectOption("");
   await page.evaluate(() => window.scrollTo(0, 0));
   await waitForSpritePaint(page, ".damage-quickbar .pokemon-art img, .damage-result-matchup .pokemon-art img");
-  await page.getByLabel("Comparar cenários").check();
+  await page.getByRole("checkbox", { name: "Comparar", exact: true }).check();
   await page.locator(".damage-comparison-results").waitFor({ state: "visible", timeout: 10_000 });
   if (!(await page.locator(".damage-editor-disclosure").evaluate((details) => details.open))) {
     await page.locator(".damage-editor-disclosure > summary").click();
