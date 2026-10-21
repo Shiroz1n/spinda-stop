@@ -106,7 +106,8 @@ const server = spawn(process.execPath, [
   join(root, "node_modules/vite/bin/vite.js"), "preview",
   "--host", "127.0.0.1", "--port", "4173", "--strictPort",
 ], { cwd: join(root, "apps/web"), stdio: "inherit" });
-const apiServer = !fastMode && process.env.DATABASE_URL ? spawn(process.execPath, [
+const apiServer = !fastMode && process.env.DATABASE_URL ? spawn("bun", [
+  "--env-file-if-exists=.env",
   join(root, "apps/api/src/server.js"),
 ], {
   cwd: root,
