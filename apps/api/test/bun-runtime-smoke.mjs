@@ -1,22 +1,9 @@
 import assert from "node:assert/strict";
 import { createApiApp } from "../src/server.js";
+import { createPool } from "../src/db.js";
 
-const rateBuckets = new Map();
-const pool = {
-  async query(sql, values = []) {
-    if (sql.includes("INSERT INTO api_rate_limits")) {
-      const [bucketKey, bucketWindow, , maximumCount] = values;
-      const current = rateBuckets.get(bucketKey);
-      const hitCount = current?.bucketWindow === bucketWindow ? Math.min(current.hitCount + 1, maximumCount) : 1;
-      rateBuckets.set(bucketKey, { bucketWindow, hitCount });
-      return { rows: [{ hit_count: hitCount }], rowCount: 1 };
-    }
-    if (sql.includes("SELECT count(*)::int AS count FROM api_rate_limits")) {
-      return { rows: [{ count: rateBuckets.size }], rowCount: 1 };
-    }
-    return { rows: [{ ok: 1 }], rowCount: 1 };
-  },
-};
+if (!process.env.DATABASE_URL) throw new Error("O smoke test Bun exige DATABASE_URL para MySQL efêmero.");
+const pool = createPool();
 
 const app = createApiApp({
   pool,
@@ -38,11 +25,36 @@ try {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
 
-  const oauth = await fetch(`http://127.0.0.1:${port}/api/auth/github`, { redirect: "manual" });
+  const base = `http://127.0.0.1:${port}`;
+  const oauth = await fetch(`${base}/api/auth/github`, { redirect: "manual" });
   assert.equal(oauth.status, 302);
   assert.match(oauth.headers.get("set-cookie") || "", /spinda_oauth_state=/);
 
-  process.stdout.write(`Bun ${process.versions.bun} + Elysia HTTP smoke passed.\n`);
+  const handle = `bun-http-${Date.now()}`;
+  const login = await fetch(`${base}/api/test/session`, {
+    method: "POST",
+    headers: { Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ handle }),
+  });
+  assert.equal(login.status, 200);
+  const session = login.headers.get("set-cookie")?.split(";")[0];
+  assert.match(session || "", /^spinda_session=/);
+
+  const me = await fetch(`${base}/api/me`, { headers: { Cookie: session } });
+  assert.equal(me.status, 200);
+  assert.equal((await me.json()).user.handle, handle);
+
+  const logout = await fetch(`${base}/api/auth/logout`, {
+    method: "POST",
+    headers: { Origin: "http://localhost:5173", Cookie: session, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(logout.status, 200);
+  assert.deepEqual(await logout.json(), { ok: true });
+  assert.equal((await (await fetch(`${base}/api/me`, { headers: { Cookie: session } })).json()).user, null);
+
+  process.stdout.write(`Bun ${process.versions.bun} + Elysia + MySQL HTTP smoke passed (health, OAuth start, session, logout).\n`);
 } finally {
   await app.stop();
+  await pool.end();
 }

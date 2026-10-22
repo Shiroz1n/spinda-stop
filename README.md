@@ -26,7 +26,7 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Ampliar torneios comunitários sem abrir mão de confirmação de resultados e controles de privacidade.
 
-As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API comunitária precisa de PostgreSQL e OAuth do GitHub configurados pelo operador.
+As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API comunitária usa MySQL e OAuth do GitHub configurados pelo operador.
 
 ## Rodar localmente
 
@@ -39,7 +39,7 @@ npm run dev
 
 Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da PokéAPI e guardado localmente. Depois de instalar, rode `npm run lint`, `npm test` e `npm run build` para conferir o projeto.
 
-Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige PostgreSQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com PostgreSQL 16.
+Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige MySQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com MySQL 8.4 efêmero.
 
 ## Documentação
 

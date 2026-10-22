@@ -1,6 +1,6 @@
 # Crítica e mudanças do redesign
 
-> A tabela seguinte preserva a crítica que abriu a rodada. A PR #30 aplica a composição estrutural e os critérios do UI Humanizer; a auditoria atual e suas capturas ficam no final do documento.
+> A tabela seguinte preserva a crítica que abriu a rodada. A PR #30 aplica a composição estrutural e os critérios do UI Humanizer; a auditoria atual e suas capturas ficam no final do documento. A referência da época a PostgreSQL descreve o banco que a CI usava naquele commit; a conversão atual está em [MYSQL_MIGRATION.md](MYSQL_MIGRATION.md).
 
 As capturas do PR #23 registram uma CI correta, mas uma interface que não serve como Pokédex visual. Esta crítica trata as imagens como referência de antes, não como aprovação estética.
 

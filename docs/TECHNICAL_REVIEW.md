@@ -1,6 +1,6 @@
 # Revisão técnica do monorepo
 
-> Este catálogo registra a revisão anterior à PR #32. Seus números e o estado Vercel abaixo são históricos; para o estado atual do Preview, configurações pendentes e limpeza desta continuação, consulte [SECURITY_AUDIT.md](SECURITY_AUDIT.md). A pesquisa visual em texto está em [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md).
+> Este catálogo registra a revisão anterior à PR #32 e descreve o backend PostgreSQL daquele commit. O estado da conversão para MySQL e as lacunas do Preview estão em [MYSQL_MIGRATION.md](MYSQL_MIGRATION.md). Os números e o estado Vercel abaixo são históricos. A pesquisa visual está em [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md).
 
 ## Escopo e conclusão
 

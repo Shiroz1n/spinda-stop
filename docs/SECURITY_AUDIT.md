@@ -1,6 +1,6 @@
 # Auditoria de segurança e organização
 
-Atualizado em 22 out. 2026 para a continuação da PR #33, branch `chore/repository-audit-2026-10`. A auditoria original abaixo corresponde à PR #32; as correções de rate limit e limpeza descritas nesta atualização ainda precisam passar pelo PostgreSQL efêmero da CI. O projeto Vercel está conectado ao GitHub, mas ainda não tem banco. Há três segredos somente em Preview (`CRON_SECRET`, `FRIEND_CODE_ENCRYPTION_KEY`, `RATE_LIMIT_HASH_SECRET`); não há `DATABASE_URL` nem credenciais OAuth. Nenhuma consulta ou teste usou banco de produção.
+Atualizado em 22 out. 2026 para a PR #33. A auditoria original e a tabela abaixo descrevem o estado anterior à migração MySQL; use [MYSQL_MIGRATION.md](MYSQL_MIGRATION.md) para a implementação e o bloqueio do provedor atuais. O projeto Vercel `spinda-stop` não tinha integração de banco configurada nem `DATABASE_URL` nos ambientes consultáveis; não há prova de uma base fora desta conta/projeto. Nenhuma consulta ou teste usou dados de produção.
 
 ## Estado atual do backend e do repositório
 

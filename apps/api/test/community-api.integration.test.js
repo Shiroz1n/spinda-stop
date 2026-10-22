@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { after, before, test } from "node:test";
 import { createPool } from "../src/db.js";
-import { createApiApp } from "../src/server.js";
+import { createApiApp, transaction } from "../src/server.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const appOrigin = "http://127.0.0.1:4173";
@@ -33,13 +33,15 @@ after(async () => {
   if (!enabled) return;
   if (testHandles.length) {
     const handles = testHandles.map((handle) => handle.toLowerCase());
-    const testUsers = await adminPool.query("SELECT id FROM users WHERE provider = 'test' AND provider_subject = ANY($1::text[])", [handles]);
+    const handleSlots = handles.map(() => "?").join(", ");
+    const testUsers = await adminPool.query(`SELECT id FROM users WHERE provider = 'test' AND provider_subject IN (${handleSlots})`, handles);
     const ids = testUsers.rows.map((row) => row.id);
     if (ids.length) {
-      await adminPool.query("DELETE FROM teams WHERE owner_id = ANY($1::uuid[])", [ids]);
-      await adminPool.query("DELETE FROM tournaments WHERE host_id = ANY($1::uuid[])", [ids]);
-      await adminPool.query("DELETE FROM rooms WHERE host_id = ANY($1::uuid[])", [ids]);
-      await adminPool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [ids]);
+      const idSlots = ids.map(() => "?").join(", ");
+      await adminPool.query(`DELETE FROM teams WHERE owner_id IN (${idSlots})`, ids);
+      await adminPool.query(`DELETE FROM tournaments WHERE host_id IN (${idSlots})`, ids);
+      await adminPool.query(`DELETE FROM rooms WHERE host_id IN (${idSlots})`, ids);
+      await adminPool.query(`DELETE FROM users WHERE id IN (${idSlots})`, ids);
     }
   }
   await adminPool.query("DELETE FROM users WHERE provider = 'github' AND provider_subject = '987654'");
@@ -91,7 +93,7 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   const guest = await user(`guest-${Date.now()}`);
   const outsider = await user(`outside-${Date.now()}`);
   const moderator = await user(`mod-${Date.now()}`);
-  await adminPool.query("UPDATE users SET is_moderator = true WHERE id = $1", [moderator.id]);
+  await adminPool.query("UPDATE users SET is_moderator = true WHERE id = ?", [moderator.id]);
 
   const unauthorizedTeams = await request("/api/teams");
   assert.equal(unauthorizedTeams.response.status, 401);
@@ -114,6 +116,7 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   const createdRoom = await request("/api/rooms", { method: "POST", cookie: host.cookie, body: { name: "Sala de teste" } });
   assert.equal(createdRoom.response.status, 201);
   const roomId = createdRoom.body.room.id;
+  assert.equal((await request(`/api/rooms/${roomId.toUpperCase()}`, { cookie: host.cookie })).response.status, 200);
   const inviteToken = new URL(createdRoom.body.inviteUrl).hash.slice(1);
   assert.equal((await request(`/api/rooms/${roomId}`)).response.status, 401);
   assert.equal((await request(`/api/rooms/${roomId}`, { cookie: outsider.cookie })).response.status, 404);
@@ -143,7 +146,7 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
 
   const code = "1234-5678-9012";
   assert.equal((await request(`/api/rooms/${roomId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code } })).response.status, 200);
-  const storedCode = await adminPool.query("SELECT friend_code_ciphertext, friend_code_nonce, friend_code_tag FROM room_members WHERE room_id = $1 AND user_id = $2", [roomId, host.id]);
+  const storedCode = await adminPool.query("SELECT friend_code_ciphertext, friend_code_nonce, friend_code_tag FROM room_members WHERE room_id = ? AND user_id = ?", [roomId, host.id]);
   assert.equal(storedCode.rows[0].friend_code_ciphertext.includes(Buffer.from(code)), false);
   const roomView = await request(`/api/rooms/${roomId}`, { cookie: guest.cookie });
   assert.equal(roomView.body.members.find((member) => member.id === host.id).friendCode, code);
@@ -162,8 +165,8 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   assert.equal(resolution.body.status, "confirmed");
   assert.equal(resolution.body.winnerId, guest.id);
   assert.equal((await request(`/api/rooms/${roomId}`, { cookie: host.cookie })).body.room.status, "completed");
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM room_members WHERE room_id = $1 AND friend_code_ciphertext IS NOT NULL", [roomId])).rows[0].count, 0);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM room_members WHERE room_id = $1 AND shared_roster_json IS NOT NULL", [roomId])).rows[0].count, 0);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM room_members WHERE room_id = ? AND friend_code_ciphertext IS NOT NULL", [roomId])).rows[0].count, 0);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM room_members WHERE room_id = ? AND shared_roster_json IS NOT NULL", [roomId])).rows[0].count, 0);
 
   const confirmationRoom = await request("/api/rooms", { method: "POST", cookie: host.cookie, body: { name: "Sala com confirmação" } });
   const confirmationId = confirmationRoom.body.room.id;
@@ -187,7 +190,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   const playerC = await user(`t-c-${stamp}`);
   const outsider = await user(`t-out-${stamp}`);
   const moderator = await user(`t-mod-${stamp}`);
-  await adminPool.query("UPDATE users SET is_moderator = true WHERE id = $1", [moderator.id]);
+  await adminPool.query("UPDATE users SET is_moderator = true WHERE id = ?", [moderator.id]);
 
   assert.equal((await request("/api/tournaments")).response.status, 401);
   const created = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles local" } });
@@ -231,7 +234,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   }
   const shared = await request(`/api/tournaments/${tournamentId}/friend-code`, { method: "PUT", cookie: host.cookie, body: { code: "1234-5678-9012" } });
   assert.equal(shared.response.status, 200);
-  const encrypted = await adminPool.query("SELECT friend_code_ciphertext FROM tournament_members WHERE tournament_id = $1 AND user_id = $2", [tournamentId, host.id]);
+  const encrypted = await adminPool.query("SELECT friend_code_ciphertext FROM tournament_members WHERE tournament_id = ? AND user_id = ?", [tournamentId, host.id]);
   assert.equal(encrypted.rows[0].friend_code_ciphertext.includes(Buffer.from("1234-5678-9012")), false);
   assert.equal((await request(`/api/tournaments/${tournamentId}`, { cookie: outsider.cookie })).response.status, 404);
   const started = await request(`/api/tournaments/${tournamentId}/start`, { method: "POST", cookie: host.cookie, body: {} });
@@ -276,7 +279,7 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   assert.equal(playerConfirmation.body.tournament.status, "in_progress");
   const withFinal = await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie });
   assert.equal(withFinal.body.matches.length, 3);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM matches WHERE tournament_id = $1 AND round_number = 2", [tournamentId])).rows[0].count, 1);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM matches WHERE tournament_id = ? AND round_number = 2", [tournamentId])).rows[0].count, 1);
   const final = withFinal.body.matches.find((match) => match.roundNumber === 2);
   assert.ok(final);
   assert.equal((await request(`/api/matches/${final.id}/report`, { method: "POST", cookie: cookiesById.get(final.playerA.id), body: { winnerId: final.playerA.id } })).body.status, "awaiting_confirmation");
@@ -286,9 +289,9 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   const finished = await request(`/api/tournaments/${tournamentId}`, { cookie: host.cookie });
   assert.equal(finished.body.tournament.status, "completed");
   assert.equal(finished.body.matches.length, 3);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND friend_code_ciphertext IS NOT NULL", [tournamentId])).rows[0].count, 0);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND shared_roster_json IS NOT NULL", [tournamentId])).rows[0].count, 0);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM moderation_events WHERE tournament_id = $1 AND action = 'resolve_dispute_confirm'", [tournamentId])).rows[0].count, 1);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM tournament_members WHERE tournament_id = ? AND friend_code_ciphertext IS NOT NULL", [tournamentId])).rows[0].count, 0);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM tournament_members WHERE tournament_id = ? AND shared_roster_json IS NOT NULL", [tournamentId])).rows[0].count, 0);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM moderation_events WHERE tournament_id = ? AND action = 'resolve_dispute_confirm'", [tournamentId])).rows[0].count, 1);
 
   const cancelledCreation = await request("/api/tournaments", { method: "POST", cookie: host.cookie, body: { name: "Doubles cancelado" } });
   const cancelledId = cancelledCreation.body.tournament.id;
@@ -311,8 +314,8 @@ test("private four-person tournament enforces entry, check-in, bracket and moder
   assert.equal(cancelledFinalState.body.tournament.status, "cancelled");
   assert.ok(cancelledFinalState.body.matches.every((match) => match.status === "void"));
   assert.equal(cancelledFinalState.body.members.find((member) => member.id === host.id).friendCode, null);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM tournament_members WHERE tournament_id = $1 AND friend_code_ciphertext IS NOT NULL", [cancelledId])).rows[0].count, 0);
-  assert.equal((await adminPool.query("SELECT count(*)::int AS count FROM moderation_events WHERE tournament_id = $1 AND action = 'resolve_dispute_void'", [cancelledId])).rows[0].count, 1);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM tournament_members WHERE tournament_id = ? AND friend_code_ciphertext IS NOT NULL", [cancelledId])).rows[0].count, 0);
+  assert.equal((await adminPool.query("SELECT count(*) AS count FROM moderation_events WHERE tournament_id = ? AND action = 'resolve_dispute_void'", [cancelledId])).rows[0].count, 1);
 });
 
 test("API rejects writes from another origin", { skip: !enabled }, async () => {
@@ -359,7 +362,7 @@ test("GitHub OAuth checks one-use state, stores no email and issues a scoped ses
   assert.equal((await request("/api/me", { cookie: sessionCookie })).body.user, null);
 });
 
-if (!enabled) test("PostgreSQL integration needs DATABASE_URL", { skip: true }, () => {});
+if (!enabled) test("MySQL integration needs DATABASE_URL", { skip: true }, () => {});
 
 test("team writes keep SQL-shaped names as data and cannot cross account ownership", { skip: !enabled }, async () => {
   const owner = await user(`sql-owner-${Date.now()}`);
@@ -385,39 +388,92 @@ test("team writes keep SQL-shaped names as data and cannot cross account ownersh
   })).response.status, 404);
   assert.equal((await request(`/api/teams/${created.body.team.id}`, { method: "DELETE", cookie: other.cookie })).response.status, 404);
   assert.equal((await request("/api/teams/'%20OR%201=1", { cookie: owner.cookie })).response.status, 404);
-  const ownerRow = await adminPool.query("SELECT owner_id FROM teams WHERE id = $1", [created.body.team.id]);
+  const ownerRow = await adminPool.query("SELECT owner_id FROM teams WHERE id = ?", [created.body.team.id]);
   assert.equal(ownerRow.rows[0].owner_id, owner.id);
-  assert.equal((await adminPool.query("SELECT is_moderator FROM users WHERE id = $1", [other.id])).rows[0].is_moderator, false);
+  assert.equal((await adminPool.query("SELECT is_moderator FROM users WHERE id = ?", [other.id])).rows[0].is_moderator, false);
 
   const stillPrivate = await request("/api/teams", { cookie: owner.cookie });
   assert.equal(stillPrivate.body.teams.find((team) => team.id === created.body.team.id).visibility, "private");
-  assert.equal((await adminPool.query("SELECT name FROM teams WHERE id = $1", [created.body.team.id])).rows[0].name, maliciousName);
+  assert.equal((await adminPool.query("SELECT name FROM teams WHERE id = ?", [created.body.team.id])).rows[0].name, maliciousName);
 });
 
-test("runtime PostgreSQL role cannot grant moderator privileges", {
+test("runtime MySQL role cannot grant moderator privileges", {
   skip: !enabled || process.env.REQUIRE_RESTRICTED_DB_ROLE !== "true",
 }, async () => {
   const account = await user(`least-privilege-${Date.now()}`);
   await assert.rejects(
     pool.query("SELECT * FROM moderation_events LIMIT 1"),
-    /permission denied/i,
+    /denied/i,
   );
   await assert.rejects(
-    pool.query("UPDATE users SET is_moderator = true WHERE id = $1", [account.id]),
-    /permission denied/i,
+    pool.query("UPDATE users SET is_moderator = true WHERE id = ?", [account.id]),
+    /denied/i,
   );
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await assert.rejects(client.query("CREATE TABLE runtime_role_must_not_create (id integer)"), /permission denied/i);
+    await assert.rejects(client.query("CREATE TABLE runtime_role_must_not_create (id integer)"), /denied/i);
   } finally {
     await client.query("ROLLBACK").catch(() => {});
     client.release();
   }
   assert.equal((await request("/api/moderation/disputes", { cookie: account.cookie })).response.status, 403);
+  await assert.rejects(pool.query("SELECT * FROM schema_migrations"), /denied/i);
 });
 
-test("rate limiting is shared between independent API instances in PostgreSQL", { skip: !enabled }, async () => {
+test("MySQL enforces constraints, cascades and the API transaction rollback", { skip: !enabled }, async () => {
+  const owner = await user(`mysql-rules-${Date.now()}`);
+  await assert.rejects(
+    adminPool.query(
+      "INSERT INTO users (id, provider, provider_subject, handle) VALUES (?, 'test', ?, ?)",
+      [randomUUID(), owner.handle.toLowerCase(), "duplicated subject"],
+    ),
+    (error) => error.code === "ER_DUP_ENTRY",
+  );
+
+  const room = await request("/api/rooms", { method: "POST", cookie: owner.cookie, body: { name: "Sala para constraints" } });
+  assert.equal(room.response.status, 201);
+
+  await assert.rejects(
+    adminPool.query(
+      `INSERT INTO room_members (room_id, user_id) VALUES (?, ?)`,
+      [room.body.room.id, randomUUID()],
+    ),
+    (error) => error.code === "ER_NO_REFERENCED_ROW_2",
+  );
+
+  await assert.rejects(
+    adminPool.query(
+      `INSERT INTO rooms (id, host_id, name, capacity, invite_hash, invite_expires_at)
+       VALUES (?, ?, ?, 3, ?, DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 1 DAY))`,
+      [randomUUID(), owner.id, "Capacidade inválida", createHmac("sha256", testKey).update(randomUUID()).digest("hex")],
+    ),
+    (error) => error.code === "ER_CHECK_CONSTRAINT_VIOLATED",
+  );
+
+  const teamId = randomUUID();
+  await assert.rejects(transaction(pool, async (client) => {
+    await client.query(
+      `INSERT INTO teams (id, owner_id, name, visibility, data_json, schema_version)
+       VALUES (?, ?, ?, 'private', ?, 1)`,
+      [teamId, owner.id, "Equipe revertida", JSON.stringify(sampleTeam)],
+    );
+    throw new Error("rollback de teste");
+  }), /rollback de teste/);
+  assert.equal((await adminPool.query("SELECT id FROM teams WHERE id = ?", [teamId])).rowCount, 0);
+
+  const cascadeOwner = await user(`mysql-cascade-${Date.now()}`);
+  const team = await request("/api/teams", {
+    method: "POST",
+    cookie: cascadeOwner.cookie,
+    body: { visibility: "private", data: { ...sampleTeam, name: "Equipe em cascata" } },
+  });
+  assert.equal(team.response.status, 201);
+  await adminPool.query("DELETE FROM users WHERE id = ?", [cascadeOwner.id]);
+  assert.equal((await adminPool.query("SELECT id FROM teams WHERE id = ?", [team.body.team.id])).rowCount, 0);
+});
+
+test("rate limiting is shared between independent API instances in MySQL", { skip: !enabled }, async () => {
   const ip = `203.0.113.${(Date.now() % 200) + 1}`;
   const rateHashSecret = "integration-rate-hash-secret";
   const bucketKey = createHmac("sha256", rateHashSecret).update(`tournament-invite-join\0${ip}`).digest("hex");
@@ -450,18 +506,18 @@ test("rate limiting is shared between independent API instances in PostgreSQL", 
     const limited = await send(second);
     assert.equal(limited.status, 429);
     assert.equal((await limited.json()).error.code, "rate_limited");
-    const storedBucket = await adminPool.query("SELECT hit_count FROM api_rate_limits WHERE bucket_key = $1", [bucketKey]);
+    const storedBucket = await adminPool.query("SELECT hit_count FROM api_rate_limits WHERE bucket_key = ?", [bucketKey]);
     assert.equal(storedBucket.rows[0].hit_count, 25);
     assert.notEqual(bucketKey, ip);
   } finally {
-    await adminPool.query("DELETE FROM api_rate_limits WHERE bucket_key = $1", [bucketKey]);
+    await adminPool.query("DELETE FROM api_rate_limits WHERE bucket_key = ?", [bucketKey]);
   }
 });
 
 test("cron cleanup requires a secret and removes expired rows using runtime permissions", { skip: !enabled }, async () => {
   const expiredBucket = "f".repeat(64);
   await adminPool.query(
-    "INSERT INTO api_rate_limits (bucket_key, bucket_window, hit_count, expires_at) VALUES ($1, 1, 1, now() - interval '1 minute') ON CONFLICT (bucket_key) DO UPDATE SET expires_at = now() - interval '1 minute'",
+    "INSERT INTO api_rate_limits (bucket_key, bucket_window, hit_count, expires_at) VALUES (?, 1, 1, DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 1 MINUTE)) ON DUPLICATE KEY UPDATE expires_at = DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 1 MINUTE)",
     [expiredBucket],
   );
   const maintenanceApi = createApiApp({
@@ -471,7 +527,7 @@ test("cron cleanup requires a secret and removes expired rows using runtime perm
 
   const denied = await maintenanceApi.handle(new Request("http://127.0.0.1/api/cron/cleanup"));
   assert.equal(denied.status, 401);
-  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = $1", [expiredBucket])).rowCount, 1);
+  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = ?", [expiredBucket])).rowCount, 1);
 
   const cleaned = await maintenanceApi.handle(new Request("http://127.0.0.1/api/cron/cleanup", {
     headers: { Authorization: "Bearer integration-cron-secret" },
@@ -480,5 +536,5 @@ test("cron cleanup requires a secret and removes expired rows using runtime perm
   const body = await cleaned.json();
   assert.equal(body.ok, true);
   assert.ok(body.cleanup.rateLimitBuckets >= 1);
-  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = $1", [expiredBucket])).rowCount, 0);
+  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = ?", [expiredBucket])).rowCount, 0);
 });

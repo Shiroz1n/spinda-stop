@@ -12,15 +12,15 @@ Se a moderação anular uma partida do torneio, o evento é cancelado e não exi
 
 Equipes da conta são cópias do rascunho do builder. A pessoa escolhe `private` ou `public` ao salvar; a opção inicial é privada. Carregar uma cópia para o builder é uma ação explícita e não altera a versão salva. O servidor valida a estrutura do arquivo, mas não legalidade, compatibilidade de golpes ou regulamento.
 
-O código de amizade é opcional. A pessoa o compartilha por ação própria, só fica visível aos membros inscritos do evento, pode removê-lo e é apagado quando a sala ou torneio termina ou após sete dias. Um processo horário apaga códigos vencidos no servidor ativo; a leitura também limpa o evento em questão. Não é lido do jogo e nunca aparece em uma equipe pública. O armazenamento usa AES-256-GCM; sem a chave de ambiente, a função fica desativada.
+O código de amizade é opcional. A pessoa o compartilha por ação própria, só fica visível aos membros inscritos do evento, pode removê-lo e é apagado quando a sala ou torneio termina ou após sete dias. Um timer local tenta limpar a cada hora; no Vercel, a limpeza confiável depende do cron diário em Production e das leituras que limpam o evento consultado. Preview não executa cron. Não é lido do jogo e nunca aparece em uma equipe pública. O armazenamento usa AES-256-GCM; sem a chave de ambiente, a função fica desativada.
 
 O compartilhamento de Pokémon também é opcional e separado da visibilidade da equipe salva. A pessoa escolhe uma equipe da própria conta dentro da sala ou torneio. Só os seis IDs de espécie e forma são copiados para o evento, e apenas integrantes ativos conseguem lê-los; golpes, itens, habilidades, naturezas, pontos e nome privado da equipe não saem do registro do dono. A pessoa pode substituir ou remover o compartilhamento. O snapshot é limpo quando o evento termina ou quando a pessoa deixa a inscrição.
 
-## Modelo PostgreSQL
+## Modelo MySQL
 
 | Tabela | Responsabilidade | Proteção principal |
 |---|---|---|
-| `users` | ID interno, provedor, ID do GitHub, handle e flag de moderação | Provedor e ID externos únicos; sem e-mail |
+| `users` | ID interno, provedor, ID do GitHub, handle e flag de moderação | Provedor e ID externos únicos; sem e-mail; o runtime não pode alterar a flag |
 | `oauth_states` | Hash e expiração de cada `state` de OAuth | Uso único; nunca guardar o estado em claro |
 | `sessions` | Hash do token aleatório e expiração | Cookie `HttpOnly`; revogação no logout |
 | `api_rate_limits` | HMAC-SHA-256 de rota/endereço, janela, contador e expiração | Incremento atômico compartilhado; sem IP em claro; papel de runtime sem DDL |
@@ -34,9 +34,9 @@ O compartilhamento de Pokémon também é opcional e separado da visibilidade da
 | `disputes` | Motivo e decisão da contestação | Só moderador decide, com justificativa |
 | `moderation_events` | Histórico append-only de decisões | Ator, evento, alvo, ação e motivo registrados |
 
-As migrações SQL ficam em `apps/api/migrations/`. IDs são UUIDs; horários são `timestamptz` em UTC. Transições de sala, torneio e partida usam transações e bloqueios de linha. Um índice único impede mais de uma partida por rodada e vaga no chaveamento.
+As migrações MySQL ficam em `apps/api/migrations/`. IDs são UUIDs gerados pela API e armazenados em `CHAR(36)` com comparação binária; horários são `DATETIME(3)` com a sessão em UTC; blobs cifrados usam `VARBINARY`; equipes e snapshots ficam em colunas `JSON`. As tabelas usam `InnoDB`, `utf8mb4_bin`, foreign keys e checks. Transições de sala, torneio e partida usam transações e `SELECT ... FOR UPDATE`. Um índice único impede mais de uma partida por rodada e vaga no chaveamento. Operações de limpeza de roster que antes eram executadas por triggers PostgreSQL agora são atualizações explícitas dentro das transações de domínio.
 
-Runtime e migrações usam credenciais PostgreSQL distintas: `DATABASE_URL` para a aplicação e `DATABASE_MIGRATION_URL` para alterações de schema controladas. O papel de runtime não deve ser dono das tabelas nem poder conceder papéis ou alterar `users.is_moderator`; a matriz de permissões executável para CI está em `scripts/prepare-runtime-db-role.mjs`. A configuração equivalente no banco de Preview/Production continua a cargo do operador e precisa ser verificada antes de uso público.
+Runtime e migrações usam credenciais MySQL distintas: `DATABASE_URL` para a aplicação e `DATABASE_MIGRATION_URL` para alterações de schema controladas. O usuário de runtime não pode executar DDL, criar/grant usuários nem alterar `users.is_moderator`; a matriz executável em banco local/CI está em `scripts/prepare-runtime-mysql-role.mjs`. A mesma separação ainda precisa ser criada e testada no MySQL remoto de Preview.
 
 ## Estados e autorização
 
@@ -72,14 +72,14 @@ As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita C
 
 - OAuth Authorization Code do GitHub, com `state` aleatório, salvo como hash e conferido contra cookie de curta duração. O escopo pedido é `read:user`; o token do provedor não é persistido.
 - Só o ID do GitHub e o handle público são guardados. O aplicativo não recebe senha de usuário, e-mail, senha do jogo ou credenciais da Nintendo.
-- Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
-- Convites expiram em sete dias e sua rotação invalida o anterior. Login e entrada por convite compartilham um limite de 24 tentativas por rota/endereço em 15 minutos, armazenado de forma atômica no PostgreSQL; o identificador usa HMAC-SHA-256 com `RATE_LIMIT_HASH_SECRET` e não guarda o endereço em claro.
+- Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. MySQL armazena somente SHA-256 do token.
+- Convites expiram em sete dias e sua rotação invalida o anterior. Login e entrada por convite compartilham um limite de 24 tentativas por rota/endereço em 15 minutos, armazenado de forma atômica no MySQL; o identificador usa HMAC-SHA-256 com `RATE_LIMIT_HASH_SECRET` e não guarda o endereço em claro.
 - Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e pela limpeza horária local ou diária Vercel após a validade máxima de sete dias.
-- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero; Preview usa banco independente e credenciais de teste, sem acesso a Production.
+- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa MySQL 8.4 efêmero; Preview deve usar banco MySQL independente e credenciais sem acesso a Production.
 
 O processo local persistente executa limpeza horária. `GET /api/cron/cleanup` fornece a mesma rotina para Vercel e exige `CRON_SECRET`; `vercel.json` agenda uma chamada diária às 06:00 UTC. Vercel só executa cron em Production, não no Preview. No plano Hobby a execução é diária, com precisão de até ±59 minutos; a plataforma não tenta novamente uma chamada que falhe. O Preview precisa ser limpo por chamada autenticada ou por um processo administrativo de teste.
 
-O limite de tentativas já é compartilhado por PostgreSQL, mas não substitui defesa contra abuso distribuído na borda. Antes de abrir cadastro em produção, confirmar as credenciais e o papel do banco, `CRON_SECRET`, OAuth, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
+O limite de tentativas já é compartilhado por MySQL, mas não substitui defesa contra abuso distribuído na borda. Antes de abrir cadastro em produção, confirmar as credenciais e o usuário do banco, `CRON_SECRET`, OAuth, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
 
 ## Limites operacionais
 

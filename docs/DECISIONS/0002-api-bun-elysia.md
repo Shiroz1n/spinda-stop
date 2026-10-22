@@ -1,5 +1,7 @@
 # ADR 0002 — Runtime da API comunitária
 
+> **Histórico:** a decisão abaixo foi escrita quando a API usava PostgreSQL. A escolha do banco foi substituída pela [ADR 0003 — MySQL](0003-mysql-backend.md); Bun + Elysia permanecem.
+
 - **Estado:** aceita para a API comunitária; produção ainda não habilitada.
 - **Decisão:** executar `apps/api` em Bun 1.4.3 e usar Elysia 1.4.x para receber e rotear pedidos HTTP. Manter PostgreSQL e o pacote `pg`.
 - **Motivo:** disponibilizar um runtime e um servidor próprios para a API sem alterar o contrato de salas, torneios, contas, banco ou respostas durante esta migração.

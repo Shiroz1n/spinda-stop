@@ -16,23 +16,23 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     services:
-      postgres:
-        image: postgres:16
+      mysql:
+        image: mysql:8.4
         env:
-          POSTGRES_USER: spinda
-          POSTGRES_PASSWORD: stop
-          POSTGRES_DB: spinda_test
+          MYSQL_ROOT_PASSWORD: stop
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: spinda_test
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd "pg_isready -U spinda -d spinda_test"
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD}"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     env:
       APP_ENV: test
-      DATABASE_URL: postgresql://spinda_app:spinda-test@localhost:5432/spinda_test
-      DATABASE_MIGRATION_URL: postgresql://spinda:stop@localhost:5432/spinda_test
+      DATABASE_URL: mysql://spinda_app:spinda-test@127.0.0.1:3306/spinda_test
+      DATABASE_MIGRATION_URL: mysql://root:stop@127.0.0.1:3306/spinda_test
       REQUIRE_RESTRICTED_DB_ROLE: "true"
       APP_ORIGIN: http://127.0.0.1:4173
       FRIEND_CODE_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -50,6 +50,8 @@ jobs:
       - run: npm ci
       - run: npm run data:sync
       - run: npm run api:migrate
+      - name: Verify MySQL migration is repeatable
+        run: npm run api:migrate
       - run: npm run api:db:prepare
       - run: npm run api:runtime:smoke
       - run: npm run lint

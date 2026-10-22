@@ -1,19 +1,19 @@
 services:
   db:
-    image: postgres:16
+    image: mysql:8.4
     environment:
-      POSTGRES_USER: spinda
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spinda-local}
-      POSTGRES_DB: spinda_stop
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-spinda-local-root}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: spinda_stop
     ports:
-      - "5432:5432"
+      - "127.0.0.1:3306:3306"
     volumes:
-      - spinda-stop-postgres:/var/lib/postgresql/data
+      - spinda-stop-mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U spinda -d spinda_stop"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
 volumes:
-  spinda-stop-postgres:
+  spinda-stop-mysql:

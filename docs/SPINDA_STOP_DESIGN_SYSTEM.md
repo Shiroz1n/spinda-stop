@@ -97,7 +97,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |
 | Salas e torneios | Estado operacional, pessoas/chave e próxima ação antes de configuração. | Erro/vazio mantém recuperação junto ao contexto; formulários não antecedem a tarefa. |
 
-O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e PostgreSQL.
+O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e MySQL.
 
 ## Oportunidades de produto
 

@@ -1682,7 +1682,7 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
-      const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral PostgreSQL integration fixture");
+      const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral MySQL integration fixture");
       if (!roomHierarchy.inviteAfterGrid) failures.push(`${viewportName}/room: painel de convite aparece antes de participantes e resultado.`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "room-live-first-fold", { audit: true, fullPage: false });
@@ -1748,7 +1748,7 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
-      const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral PostgreSQL integration fixture");
+      const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral MySQL integration fixture");
       if (!tournamentHierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: painel de convite aparece antes de participantes e chaveamento.`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "tournament-live-first-fold", { audit: true, fullPage: false });
@@ -2151,7 +2151,7 @@ try {
     mode: fastMode ? "fast-development-subset" : "full-gate",
     scope: fastMode
       ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
-      : "All existing scenarios at four widths, with axe, community flows, and PostgreSQL when DATABASE_URL is set.",
+      : "All existing scenarios at four widths, with axe, community flows, and MySQL when DATABASE_URL is set.",
     durationMs,
     selectedScreens: fastMode ? selectedQuickPages : "all",
     axeIncluded: !fastMode,

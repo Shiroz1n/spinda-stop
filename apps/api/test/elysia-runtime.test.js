@@ -18,9 +18,13 @@ function createApi(options = {}) {
         const current = rateBuckets.get(bucketKey);
         const hitCount = current?.bucketWindow === bucketWindow ? Math.min(current.hitCount + 1, maximumCount) : 1;
         rateBuckets.set(bucketKey, { bucketWindow, hitCount });
-        return { rows: [{ hit_count: hitCount }], rowCount: 1 };
+        return { rows: [], rowCount: 1 };
       }
-      if (sql.includes("SELECT count(*)::int AS count FROM api_rate_limits")) {
+      if (sql.includes("SELECT hit_count FROM api_rate_limits")) {
+        const bucket = rateBuckets.get(values[0]);
+        return { rows: bucket ? [{ hit_count: bucket.hitCount }] : [], rowCount: bucket ? 1 : 0 };
+      }
+      if (sql.includes("SELECT count(*) AS count FROM api_rate_limits")) {
         return { rows: [{ count: rateBuckets.size }], rowCount: 1 };
       }
       if (sql.includes("DELETE FROM api_rate_limits WHERE bucket_key")) {
