@@ -104,7 +104,9 @@ No estado remoto inspecionado, o projeto Vercel `spinda-stop` no escopo `alaninh
 
 ## Hospedagem
 
-Vercel Functions têm filesystem efêmero e compartilhamento de arquivos não persistente entre execuções. Por isso os handlers Vercel respondem `503 persistent_storage_required` para `/api` antes de abrir qualquer banco. Nenhum `.db` é criado em `/tmp` ou incluído no bundle, e a interface recebe uma mensagem de disponibilidade em vez de uma confirmação falsa de salvamento. O projeto Vercel não foi alterado e nenhum deployment foi criado nesta migração.
+Vercel Functions têm filesystem efêmero e compartilhamento de arquivos não persistente entre execuções. Por isso os handlers Vercel respondem `503 persistent_storage_required` para `/api/*` antes de abrir qualquer banco. O rewrite do Vercel encaminha caminhos aninhados ao adaptador Elysia antes do fallback SPA, para que `/api/health` não pareça bem-sucedido com HTML `200`. Nenhum `.db` é criado em `/tmp` ou incluído no bundle, e a interface recebe uma mensagem de disponibilidade em vez de uma confirmação falsa de salvamento.
+
+O projeto e suas variáveis Vercel não foram alterados manualmente. A integração GitHub–Vercel cria um Preview automaticamente ao abrir/atualizar a PR; a resposta `503` explícita das rotas comunitárias é o estado esperado enquanto não houver hospedagem persistente. Nenhum deploy manual ou de Production foi feito nesta migração.
 
 Hospedagem futura depende de uma decisão separada:
 
