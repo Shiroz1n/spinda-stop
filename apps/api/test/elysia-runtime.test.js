@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { Elysia } from "elysia";
 import rootApi from "../../../api/index.js";
 import catchAllApi from "../../../api/[...path].js";
-import { createApiApp } from "../src/server.js";
+import { createApiApp, createRateLimiter } from "../src/server.js";
 
 function createApi(options = {}) {
   const pool = {
@@ -89,6 +89,17 @@ test("rate limiting does not trust caller supplied X-Forwarded-For values", asyn
   assert.equal((await responses[24].json()).error.code, "rate_limited");
 });
 
+test("rate-limit buckets stay capped when callers rotate addresses", () => {
+  const limit = createRateLimiter({ limit: 2, windowMs: 60_000, maxBuckets: 2 });
+  const requestFor = (remoteAddress) => ({ socket: { remoteAddress } });
+
+  limit(requestFor("192.0.2.1"), "invite");
+  limit(requestFor("192.0.2.2"), "invite");
+  assert.throws(() => limit(requestFor("192.0.2.3"), "invite"), /Muitas tentativas/);
+  assert.doesNotThrow(() => limit(requestFor("192.0.2.1"), "invite"));
+  assert.throws(() => limit(requestFor("192.0.2.1"), "invite"), /Muitas tentativas/);
+});
+
 test("Vercel deployment context disables the test-session endpoint", async () => {
   const { app } = createApi({ env: {
     APP_ENV: "test",
@@ -150,6 +161,35 @@ test("Vercel production origin uses the stable project domain", async () => {
   assert.match(response.headers.get("set-cookie") || "", /; Secure/);
 });
 
+test("Vercel production context enforces production encryption settings", () => {
+  assert.throws(() => createApiApp({
+    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    env: {
+      APP_ENV: "development",
+      VERCEL_ENV: "production",
+      VERCEL_URL: "spinda-deploy-123.example.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+    },
+  }), /FRIEND_CODE_ENCRYPTION_KEY é obrigatória em produção/);
+
+  const app = createApiApp({
+    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    env: {
+      APP_ENV: "development",
+      VERCEL_ENV: "production",
+      VERCEL_URL: "spinda-deploy-123.example.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+      FRIEND_CODE_ENCRYPTION_KEY: "c".repeat(64),
+    },
+  });
+
+  return app.handle(new Request("https://spinda-stop.example.com/api/auth/logout", {
+    method: "POST",
+    headers: { Origin: "https://spinda-stop.example.com", "Content-Type": "application/json" },
+    body: "{}",
+  })).then((response) => assert.match(response.headers.get("set-cookie") || "", /; Secure/));
+});
+
 test("Vercel API entrypoints export the same Elysia app", () => {
   assert.ok(rootApi instanceof Elysia);
   assert.equal(catchAllApi, rootApi);
@@ -158,4 +198,9 @@ test("Vercel API entrypoints export the same Elysia app", () => {
 test("Vercel config selects its supported Bun runtime family", async () => {
   const config = JSON.parse(await readFile(new URL("../../../vercel.json", import.meta.url), "utf8"));
   assert.equal(config.bunVersion, "1.x");
+  const headers = new Map(config.headers.flatMap((entry) => entry.headers.map(({ key, value }) => [key, value])));
+  assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
+  assert.equal(headers.get("X-Frame-Options"), "DENY");
+  assert.equal(headers.get("Referrer-Policy"), "strict-origin-when-cross-origin");
+  assert.equal(headers.get("Permissions-Policy"), "camera=(), geolocation=(), microphone=()");
 });

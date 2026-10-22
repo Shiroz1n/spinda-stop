@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createPool } from "./db.js";
 
 const directory = join(dirname(fileURLToPath(import.meta.url)), "../migrations");
-const pool = createPool();
+const pool = createPool(process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL);
 const client = await pool.connect();
 
 try {

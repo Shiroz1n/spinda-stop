@@ -35,6 +35,8 @@ O compartilhamento de Pokémon também é opcional e separado da visibilidade da
 
 As migrações SQL ficam em `apps/api/migrations/`. IDs são UUIDs; horários são `timestamptz` em UTC. Transições de sala, torneio e partida usam transações e bloqueios de linha. Um índice único impede mais de uma partida por rodada e vaga no chaveamento.
 
+Runtime e migrações usam credenciais PostgreSQL distintas: `DATABASE_URL` para a aplicação e `DATABASE_MIGRATION_URL` para alterações de schema controladas. O papel de runtime não deve ser dono das tabelas nem poder conceder papéis ou alterar `users.is_moderator`; a matriz de permissões executável para CI está em `scripts/prepare-runtime-db-role.mjs`. A configuração equivalente no banco de Preview/Production continua a cargo do operador e precisa ser verificada antes de uso público.
+
 ## Estados e autorização
 
 - Sala: `open → locked → in_progress → completed`; o host pode cancelar antes de começar.
@@ -72,7 +74,7 @@ As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita C
 - Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
 - Convites expiram em sete dias e sua rotação invalida o anterior. Tentativas de login e convite têm limite básico por IP no processo.
 - Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e por rotina horária após a validade máxima de sete dias.
-- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero. Banco, OAuth, chave e domínio de produção não foram configurados nem publicados.
+- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero. Esta revisão não acessou banco, OAuth, chaves ou deployment de produção; o estado remoto precisa ser confirmado pelo operador.
 
 O processo local persistente executa limpeza horária de sessões, estados OAuth e códigos de amizade. Em Vercel, instâncias serverless não garantem a execução de timers; leituras ainda limpam o registro do evento acessado, mas a rotina geral requer um cron autenticado antes de uso público.
 

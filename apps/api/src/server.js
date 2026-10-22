@@ -171,21 +171,32 @@ function sharedRosterFromTeam(data) {
   }));
 }
 
-function createRateLimiter({ limit = 24, windowMs = 15 * 60 * 1000 } = {}) {
+export function createRateLimiter({ limit = 24, windowMs = 15 * 60 * 1000, maxBuckets = 10_000 } = {}) {
   const attempts = new Map();
+  let lastPrunedAt = 0;
   return (req, key) => {
     const now = Date.now();
     const bucketKey = `${key}:${req.socket.remoteAddress || "unknown"}`;
-    const current = attempts.get(bucketKey);
-    if (!current || current.expiresAt <= now) {
+    let current = attempts.get(bucketKey);
+    if (current?.expiresAt <= now) {
+      attempts.delete(bucketKey);
+      current = null;
+    }
+    if (!current && attempts.size >= maxBuckets) {
+      if (now - lastPrunedAt >= 1_000) {
+        for (const [entry, bucket] of attempts) if (bucket.expiresAt <= now) attempts.delete(entry);
+        lastPrunedAt = now;
+      }
+      if (attempts.size >= maxBuckets) {
+        throw new HttpError(429, "rate_limited", "Muitas tentativas. Aguarde alguns minutos e tente de novo.");
+      }
+    }
+    if (!current) {
       attempts.set(bucketKey, { count: 1, expiresAt: now + windowMs });
       return;
     }
     current.count += 1;
     if (current.count > limit) throw new HttpError(429, "rate_limited", "Muitas tentativas. Aguarde alguns minutos e tente de novo.");
-    if (attempts.size > 10_000) {
-      for (const [entry, bucket] of attempts) if (bucket.expiresAt <= now) attempts.delete(entry);
-    }
   };
 }
 
@@ -227,19 +238,20 @@ async function githubIdentity({ code, config, fetchImpl }) {
 }
 
 function appConfig(env) {
-  const deploymentHost = env.VERCEL_ENV === "production" || env.APP_ENV === "production"
+  const isProduction = env.VERCEL_ENV === "production" || env.APP_ENV === "production";
+  const deploymentHost = isProduction
     ? env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL
     : env.VERCEL_BRANCH_URL || env.VERCEL_URL;
   const deploymentOrigin = deploymentHost ? `https://${deploymentHost}` : "";
   const origin = new URL(env.APP_ORIGIN || deploymentOrigin || "http://127.0.0.1:5173");
   if (origin.pathname !== "/" || origin.search || origin.hash) throw new Error("APP_ORIGIN deve conter somente a origem do aplicativo.");
-  const secureCookies = env.COOKIE_SECURE === "true" || env.APP_ENV === "production" || Boolean(env.VERCEL_URL);
+  const secureCookies = env.COOKIE_SECURE === "true" || isProduction || Boolean(env.VERCEL_URL);
   if (env.APP_ENV === "test" && env.API_HOST && !["127.0.0.1", "::1", "localhost"].includes(env.API_HOST)) {
     throw new Error("O servidor de teste só pode ouvir em loopback.");
   }
   let friendKey = null;
   if (env.FRIEND_CODE_ENCRYPTION_KEY) friendKey = encryptionKey(env.FRIEND_CODE_ENCRYPTION_KEY);
-  if (env.APP_ENV === "production" && !friendKey) throw new Error("FRIEND_CODE_ENCRYPTION_KEY é obrigatória em produção.");
+  if (isProduction && !friendKey) throw new Error("FRIEND_CODE_ENCRYPTION_KEY é obrigatória em produção.");
   return {
     appOrigin: origin.origin,
     secureCookies,
