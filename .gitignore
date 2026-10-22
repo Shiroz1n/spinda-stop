@@ -5,8 +5,7 @@ dist/
 !.env.example
 .vercel/
 coverage/
-artifacts/visual-review/
-artifacts/visual-review-fast/
+artifacts/
 .DS_Store
 packages/data/generated/*.json
 packages/data/generated/learnsets/
