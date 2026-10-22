@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { Elysia } from "elysia";
 import rootApi from "../../../api/index.js";
-import catchAllApi from "../../../api/[...path].js";
+import pathRouter from "../../../api/router.js";
 import { createApiApp, createRateLimiter } from "../src/server.js";
+import { createVercelPathRouter } from "../src/vercel-router.js";
 
 function createApi(options = {}) {
   const rateBuckets = new Map();
@@ -253,9 +254,38 @@ test("Vercel production context enforces production encryption settings", () => 
   })).then((response) => assert.match(response.headers.get("set-cookie") || "", /; Secure/));
 });
 
-test("Vercel API entrypoints export the same Elysia app", () => {
+test("Vercel API entrypoints expose the Elysia app and a Web-compatible subpath adapter", () => {
   assert.ok(rootApi instanceof Elysia);
-  assert.equal(catchAllApi, rootApi);
+  assert.equal(typeof pathRouter.fetch, "function");
+});
+
+test("Vercel subpath adapter restores the API path and preserves original query and body", async () => {
+  let routedRequest;
+  const adapter = createVercelPathRouter({
+    async handle(request) {
+      routedRequest = request;
+      return new Response("routed", { status: 200 });
+    },
+  });
+  const response = await adapter.fetch(new Request("https://preview.test/api/router?__spinda_path=rooms%2Fjoin&returnTo=%2Frooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ inviteToken: "test-token" }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.equal(new URL(routedRequest.url).pathname, "/api/rooms/join");
+  assert.equal(new URL(routedRequest.url).search, "?returnTo=%2Frooms");
+  assert.deepEqual(await routedRequest.json(), { inviteToken: "test-token" });
+});
+
+test("Vercel subpath adapter rejects traversal and does not call Elysia", async () => {
+  let called = false;
+  const adapter = createVercelPathRouter({ handle: async () => { called = true; return new Response(); } });
+  const response = await adapter.fetch(new Request("https://preview.test/api/router?__spinda_path=rooms%2F..%2Fteams"));
+
+  assert.equal(response.status, 404);
+  assert.equal(called, false);
 });
 
 test("Vercel config selects its supported Bun runtime family", async () => {
