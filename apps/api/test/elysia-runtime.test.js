@@ -296,4 +296,7 @@ test("Vercel config selects its supported Bun runtime family", async () => {
   assert.equal(headers.get("X-Frame-Options"), "DENY");
   assert.equal(headers.get("Referrer-Policy"), "strict-origin-when-cross-origin");
   assert.equal(headers.get("Permissions-Policy"), "camera=(), geolocation=(), microphone=()");
+  assert.equal(config.rewrites[0].source, "/api/:path*");
+  assert.equal(config.rewrites[0].destination, "/api/router?__spinda_path=:path*");
+  assert.equal(config.rewrites[1].destination, "/");
 });
