@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { after, before, test } from "node:test";
 import { createPool } from "../src/db.js";
 import { createApiApp } from "../src/server.js";
@@ -414,4 +415,70 @@ test("runtime PostgreSQL role cannot grant moderator privileges", {
     client.release();
   }
   assert.equal((await request("/api/moderation/disputes", { cookie: account.cookie })).response.status, 403);
+});
+
+test("rate limiting is shared between independent API instances in PostgreSQL", { skip: !enabled }, async () => {
+  const ip = `203.0.113.${(Date.now() % 200) + 1}`;
+  const rateHashSecret = "integration-rate-hash-secret";
+  const bucketKey = createHmac("sha256", rateHashSecret).update(`tournament-invite-join\0${ip}`).digest("hex");
+  const env = {
+    APP_ENV: "test",
+    VERCEL_ENV: "preview",
+    VERCEL_BRANCH_URL: "spinda-rate-test.example.vercel.app",
+    APP_ORIGIN: "https://spinda-rate-test.example.vercel.app",
+    RATE_LIMIT_HASH_SECRET: rateHashSecret,
+    GITHUB_CLIENT_ID: "test-client",
+    GITHUB_CLIENT_SECRET: "test-secret",
+  };
+  const first = createApiApp({ pool, env });
+  const second = createApiApp({ pool, env });
+  const send = (app) => app.handle(new Request(`${env.APP_ORIGIN}/api/tournaments/join`, {
+    method: "POST",
+    headers: {
+      Origin: env.APP_ORIGIN,
+      "Content-Type": "application/json",
+      "X-Forwarded-For": ip,
+    },
+    body: "{}",
+  }));
+
+  try {
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      const response = await send(attempt % 2 === 0 ? first : second);
+      assert.equal(response.status, 401);
+    }
+    const limited = await send(second);
+    assert.equal(limited.status, 429);
+    assert.equal((await limited.json()).error.code, "rate_limited");
+    const storedBucket = await adminPool.query("SELECT hit_count FROM api_rate_limits WHERE bucket_key = $1", [bucketKey]);
+    assert.equal(storedBucket.rows[0].hit_count, 25);
+    assert.notEqual(bucketKey, ip);
+  } finally {
+    await adminPool.query("DELETE FROM api_rate_limits WHERE bucket_key = $1", [bucketKey]);
+  }
+});
+
+test("cron cleanup requires a secret and removes expired rows using runtime permissions", { skip: !enabled }, async () => {
+  const expiredBucket = "f".repeat(64);
+  await adminPool.query(
+    "INSERT INTO api_rate_limits (bucket_key, bucket_window, hit_count, expires_at) VALUES ($1, 1, 1, now() - interval '1 minute') ON CONFLICT (bucket_key) DO UPDATE SET expires_at = now() - interval '1 minute'",
+    [expiredBucket],
+  );
+  const maintenanceApi = createApiApp({
+    pool,
+    env: { APP_ENV: "test", APP_ORIGIN: appOrigin, CRON_SECRET: "integration-cron-secret" },
+  });
+
+  const denied = await maintenanceApi.handle(new Request("http://127.0.0.1/api/cron/cleanup"));
+  assert.equal(denied.status, 401);
+  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = $1", [expiredBucket])).rowCount, 1);
+
+  const cleaned = await maintenanceApi.handle(new Request("http://127.0.0.1/api/cron/cleanup", {
+    headers: { Authorization: "Bearer integration-cron-secret" },
+  }));
+  assert.equal(cleaned.status, 200);
+  const body = await cleaned.json();
+  assert.equal(body.ok, true);
+  assert.ok(body.cleanup.rateLimitBuckets >= 1);
+  assert.equal((await adminPool.query("SELECT 1 FROM api_rate_limits WHERE bucket_key = $1", [expiredBucket])).rowCount, 0);
 });

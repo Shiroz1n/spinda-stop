@@ -7,11 +7,29 @@ import catchAllApi from "../../../api/[...path].js";
 import { createApiApp, createRateLimiter } from "../src/server.js";
 
 function createApi(options = {}) {
+  const rateBuckets = new Map();
   const pool = {
     calls: [],
-    async query(sql) {
+    async query(sql, values = []) {
       this.calls.push(sql);
+      if (sql.includes("INSERT INTO api_rate_limits")) {
+        const [bucketKey, bucketWindow, , maximumCount] = values;
+        const current = rateBuckets.get(bucketKey);
+        const hitCount = current?.bucketWindow === bucketWindow ? Math.min(current.hitCount + 1, maximumCount) : 1;
+        rateBuckets.set(bucketKey, { bucketWindow, hitCount });
+        return { rows: [{ hit_count: hitCount }], rowCount: 1 };
+      }
+      if (sql.includes("SELECT count(*)::int AS count FROM api_rate_limits")) {
+        return { rows: [{ count: rateBuckets.size }], rowCount: 1 };
+      }
+      if (sql.includes("DELETE FROM api_rate_limits WHERE bucket_key")) {
+        rateBuckets.delete(values[0]);
+        return { rows: [], rowCount: 1 };
+      }
       return { rows: [{ ok: 1 }], rowCount: 1 };
+    },
+    async connect() {
+      return { query: this.query.bind(this), release() {} };
     },
   };
   const app = createApiApp({
@@ -89,15 +107,45 @@ test("rate limiting does not trust caller supplied X-Forwarded-For values", asyn
   assert.equal((await responses[24].json()).error.code, "rate_limited");
 });
 
-test("rate-limit buckets stay capped when callers rotate addresses", () => {
-  const limit = createRateLimiter({ limit: 2, windowMs: 60_000, maxBuckets: 2 });
+test("rate-limit buckets stay capped when callers rotate addresses", async () => {
+  const { pool } = createApi();
+  const limit = createRateLimiter({ pool, limit: 2, windowMs: 60_000, maxBuckets: 2 });
   const requestFor = (remoteAddress) => ({ socket: { remoteAddress } });
 
-  limit(requestFor("192.0.2.1"), "invite");
-  limit(requestFor("192.0.2.2"), "invite");
-  assert.throws(() => limit(requestFor("192.0.2.3"), "invite"), /Muitas tentativas/);
-  assert.doesNotThrow(() => limit(requestFor("192.0.2.1"), "invite"));
-  assert.throws(() => limit(requestFor("192.0.2.1"), "invite"), /Muitas tentativas/);
+  await limit(requestFor("192.0.2.1"), "invite");
+  await limit(requestFor("192.0.2.2"), "invite");
+  await assert.rejects(limit(requestFor("192.0.2.3"), "invite"), /Muitas tentativas/);
+  await limit(requestFor("192.0.2.1"), "invite");
+  await assert.rejects(limit(requestFor("192.0.2.1"), "invite"), /Muitas tentativas/);
+});
+
+test("independent Elysia handlers share rate-limit storage", async () => {
+  const { app: first, pool } = createApi();
+  const second = createApi({ pool }).app;
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const app = attempt % 2 === 0 ? first : second;
+    const response = await app.handle(new Request("http://api.test/api/auth/github"));
+    assert.equal(response.status, 302);
+  }
+  const denied = await second.handle(new Request("http://api.test/api/auth/github"));
+  assert.equal(denied.status, 429);
+  assert.equal((await denied.json()).error.code, "rate_limited");
+});
+
+test("scheduled cleanup requires its bearer secret and clears only through the authenticated route", async () => {
+  const { app, pool } = createApi({ env: { CRON_SECRET: "test-cron-secret" } });
+  const unauthorized = await app.handle(new Request("http://api.test/api/cron/cleanup"));
+  assert.equal(unauthorized.status, 401);
+
+  const authorized = await app.handle(new Request("http://api.test/api/cron/cleanup", {
+    headers: { Authorization: "Bearer test-cron-secret" },
+  }));
+  assert.equal(authorized.status, 200);
+  assert.deepEqual(await authorized.json(), {
+    ok: true,
+    cleanup: { sessions: 1, oauthStates: 1, rateLimitBuckets: 1, roomFriendCodes: 1, tournamentFriendCodes: 1 },
+  });
+  assert.equal(pool.calls.filter((sql) => /DELETE FROM sessions|DELETE FROM oauth_states|DELETE FROM api_rate_limits/.test(sql)).length, 3);
 });
 
 test("Vercel deployment context disables the test-session endpoint", async () => {
@@ -107,6 +155,7 @@ test("Vercel deployment context disables the test-session endpoint", async () =>
     GITHUB_CLIENT_ID: "client-id",
     GITHUB_CLIENT_SECRET: "client-secret",
     VERCEL_ENV: "preview",
+    RATE_LIMIT_HASH_SECRET: "local-test-rate-secret",
   } });
   const response = await app.handle(new Request("http://api.test/api/test/session", {
     method: "POST",
@@ -118,6 +167,16 @@ test("Vercel deployment context disables the test-session endpoint", async () =>
   assert.equal(response.headers.get("set-cookie"), null);
 });
 
+test("Vercel API requires the keyed rate-limit identifier secret", () => {
+  assert.throws(() => createApiApp({
+    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    env: {
+      VERCEL_ENV: "preview",
+      VERCEL_BRANCH_URL: "spinda-preview.example.vercel.app",
+    },
+  }), /RATE_LIMIT_HASH_SECRET é obrigatória/);
+});
+
 test("Vercel preview origin enables secure cookies and same-origin writes", async () => {
   const app = createApiApp({
     pool: { query: async () => ({ rows: [], rowCount: 1 }) },
@@ -127,6 +186,7 @@ test("Vercel preview origin enables secure cookies and same-origin writes", asyn
       VERCEL_URL: "spinda-deploy-123.example.vercel.app",
       VERCEL_BRANCH_URL: "spinda-pr-30.example.vercel.app",
       VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+      RATE_LIMIT_HASH_SECRET: "local-test-rate-secret",
     },
   });
   const response = await app.handle(new Request("https://spinda-pr-30.example.vercel.app/api/auth/logout", {
@@ -149,6 +209,7 @@ test("Vercel production origin uses the stable project domain", async () => {
       VERCEL_BRANCH_URL: "spinda-main.example.vercel.app",
       VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
       FRIEND_CODE_ENCRYPTION_KEY: "a".repeat(64),
+      RATE_LIMIT_HASH_SECRET: "local-test-rate-secret",
     },
   });
   const response = await app.handle(new Request("https://spinda-stop.example.com/api/auth/logout", {
@@ -169,6 +230,7 @@ test("Vercel production context enforces production encryption settings", () => 
       VERCEL_ENV: "production",
       VERCEL_URL: "spinda-deploy-123.example.vercel.app",
       VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
+      RATE_LIMIT_HASH_SECRET: "local-test-rate-secret",
     },
   }), /FRIEND_CODE_ENCRYPTION_KEY é obrigatória em produção/);
 
@@ -180,6 +242,7 @@ test("Vercel production context enforces production encryption settings", () => 
       VERCEL_URL: "spinda-deploy-123.example.vercel.app",
       VERCEL_PROJECT_PRODUCTION_URL: "spinda-stop.example.com",
       FRIEND_CODE_ENCRYPTION_KEY: "c".repeat(64),
+      RATE_LIMIT_HASH_SECRET: "local-test-rate-secret",
     },
   });
 

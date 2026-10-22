@@ -1,8 +1,25 @@
 import assert from "node:assert/strict";
 import { createApiApp } from "../src/server.js";
 
+const rateBuckets = new Map();
+const pool = {
+  async query(sql, values = []) {
+    if (sql.includes("INSERT INTO api_rate_limits")) {
+      const [bucketKey, bucketWindow, , maximumCount] = values;
+      const current = rateBuckets.get(bucketKey);
+      const hitCount = current?.bucketWindow === bucketWindow ? Math.min(current.hitCount + 1, maximumCount) : 1;
+      rateBuckets.set(bucketKey, { bucketWindow, hitCount });
+      return { rows: [{ hit_count: hitCount }], rowCount: 1 };
+    }
+    if (sql.includes("SELECT count(*)::int AS count FROM api_rate_limits")) {
+      return { rows: [{ count: rateBuckets.size }], rowCount: 1 };
+    }
+    return { rows: [{ ok: 1 }], rowCount: 1 };
+  },
+};
+
 const app = createApiApp({
-  pool: { query: async () => ({ rows: [{ ok: 1 }], rowCount: 1 }) },
+  pool,
   env: {
     APP_ENV: "test",
     APP_ORIGIN: "http://localhost:5173",

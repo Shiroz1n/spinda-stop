@@ -23,6 +23,7 @@ O compartilhamento de Pokémon também é opcional e separado da visibilidade da
 | `users` | ID interno, provedor, ID do GitHub, handle e flag de moderação | Provedor e ID externos únicos; sem e-mail |
 | `oauth_states` | Hash e expiração de cada `state` de OAuth | Uso único; nunca guardar o estado em claro |
 | `sessions` | Hash do token aleatório e expiração | Cookie `HttpOnly`; revogação no logout |
+| `api_rate_limits` | HMAC-SHA-256 de rota/endereço, janela, contador e expiração | Incremento atômico compartilhado; sem IP em claro; papel de runtime sem DDL |
 | `teams` | Dono, visibilidade, versão e JSON do rascunho | Privada por padrão; só o dono altera ou exclui |
 | `rooms` | Host, nome, estado e convite | Apenas hash do convite; expira em sete dias; duas pessoas nesta etapa |
 | `room_members` | Inscrição, check-in, código cifrado e snapshot de espécies/formas compartilhado | Chave composta por sala e usuário; código cifrado não sai da API; equipe privada só aparece por ação do dono |
@@ -72,16 +73,16 @@ As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita C
 - OAuth Authorization Code do GitHub, com `state` aleatório, salvo como hash e conferido contra cookie de curta duração. O escopo pedido é `read:user`; o token do provedor não é persistido.
 - Só o ID do GitHub e o handle público são guardados. O aplicativo não recebe senha de usuário, e-mail, senha do jogo ou credenciais da Nintendo.
 - Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
-- Convites expiram em sete dias e sua rotação invalida o anterior. Tentativas de login e convite têm limite básico por IP no processo.
-- Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e por rotina horária após a validade máxima de sete dias.
-- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero. Esta revisão não acessou banco, OAuth, chaves ou deployment de produção; o estado remoto precisa ser confirmado pelo operador.
+- Convites expiram em sete dias e sua rotação invalida o anterior. Login e entrada por convite compartilham um limite de 24 tentativas por rota/endereço em 15 minutos, armazenado de forma atômica no PostgreSQL; o identificador usa HMAC-SHA-256 com `RATE_LIMIT_HASH_SECRET` e não guarda o endereço em claro.
+- Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e pela limpeza horária local ou diária Vercel após a validade máxima de sete dias.
+- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero; Preview usa banco independente e credenciais de teste, sem acesso a Production.
 
-O processo local persistente executa limpeza horária de sessões, estados OAuth e códigos de amizade. Em Vercel, instâncias serverless não garantem a execução de timers; leituras ainda limpam o registro do evento acessado, mas a rotina geral requer um cron autenticado antes de uso público.
+O processo local persistente executa limpeza horária. `GET /api/cron/cleanup` fornece a mesma rotina para Vercel e exige `CRON_SECRET`; `vercel.json` agenda uma chamada diária às 06:00 UTC. Vercel só executa cron em Production, não no Preview. No plano Hobby a execução é diária, com precisão de até ±59 minutos; a plataforma não tenta novamente uma chamada que falhe. O Preview precisa ser limpo por chamada autenticada ou por um processo administrativo de teste.
 
-O rate limit é local ao processo e não basta para uma implantação com múltiplas instâncias. Antes de abrir cadastro em produção, configurar limite distribuído, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
+O limite de tentativas já é compartilhado por PostgreSQL, mas não substitui defesa contra abuso distribuído na borda. Antes de abrir cadastro em produção, confirmar as credenciais e o papel do banco, `CRON_SECRET`, OAuth, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
 
 ## Limites operacionais
 
 A versão atual registra um torneio de eliminação simples com quatro pessoas e três partidas no máximo. Não permite replay; a moderação pode confirmar um relato ou anulá-lo, e anular cancela o torneio. A seed depende de sorteio criptográfico, mas não é um serviço de aleatoriedade auditável externamente. Não há salas públicas, uploads de evidência, pareamento automático, espectador ou remoção de participante por moderador.
 
-Antes de abrir cadastro em produção, configurar limite distribuído, exportação e exclusão de conta, retenção de logs e resposta a incidentes. O projeto ainda não deve ser implantado publicamente até essa revisão operacional.
+Antes de abrir cadastro em produção, confirmar o limite e o cron com o banco remoto e configurar exportação e exclusão de conta, retenção de logs e resposta a incidentes. O projeto ainda não deve ser implantado publicamente até essa revisão operacional.
