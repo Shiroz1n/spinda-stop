@@ -2,6 +2,8 @@
 
 18/10/2026 · evidências de navegação interativa usadas para revisar o PR #28. As referências servem para comparar tarefas e hierarquia, não para reproduzir layout, texto, código ou estatísticas.
 
+Os binários de referência citados neste registro foram removidos do checkout em 22 out. 2026. As observações de origem/estado estão em [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md); capturas próprias reproduzíveis ficam nos artefatos de CI, não em `artifacts/` versionado.
+
 ## Matriz de decisão
 
 | Padrão observado | Problema concreto no Spinda Stop | Mudança implementada | Dados necessários |
@@ -162,7 +164,7 @@ Essas composições variam por tarefa, usando os tokens existentes e menos moldu
 
 ## Evidência consolidada da reformulação PR #30 — 21/10/2026
 
-A pesquisa desta rodada arquiva **69 capturas interativas de terceiros**, além das 15 imagens mobile do DataDex fornecidas pelo usuário. Elas mostram estados distintos de catálogo, ficha/forma, filtros, time, edição de set, quatro golpes, habilidade/item/Nature/campo, modos de cálculo, Speed, Usage, Matchups e rental/importação. A lista completa de arquivos e, para cada ferramenta, URL, viewport, ação, estado observado e decisão aplicada fica no [manifesto de capturas ao vivo](../artifacts/reformulation/references/lived-sites/README.md). Essa evidência atualiza as contagens e lacunas relatadas nas anotações anteriores desta página.
+A pesquisa desta rodada cobriu **69 estados interativos de terceiros** em cinco ferramentas, além das 15 telas mobile do DataDex fornecidas pelo usuário. Elas mostram estados distintos de catálogo, ficha/forma, filtros, time, edição de set, quatro golpes, habilidade/item/Nature/campo, modos de cálculo, Speed, Usage, Matchups e rental/importação. Os binários de referência foram removidos do checkout; URL, viewport, ação, estado observado e decisão aplicada estão no [registro de pesquisa](VISUAL_RESEARCH.md). Essa evidência atualiza as contagens e lacunas relatadas nas anotações anteriores desta página.
 
 | Grupo | Amostra arquivada e ação executada | Padrão observado e decisão aplicada |
 |---|---|---|
@@ -177,4 +179,4 @@ As capturas ao vivo foram feitas em desktop (raster de aproximadamente 1348–13
 
 Durante a navegação inspecionei a árvore acessível, HTML/estilos computados visíveis e comportamento JavaScript pela interação. Microcopy e affordances aproveitadas em linguagem própria: escolha de golpe pelo nome em vez de digitação exata; quatro slots claramente numerados; estado “ativo no cálculo”; ação de busca; distinção entre opção disponível e limitação; e erros com recuperação. PokéAPI registra aprendibilidade geral por jogo/versão; `@smogon/calc` oferece seu próprio catálogo/modelo; nenhum desses fatos prova disponibilidade em Pokémon Champions ou legalidade num regulamento específico. Onde o motor não reconhece entrada, a UI mantém a escolha e expõe o limite sem fabricar dano nem bloquear cálculos que o motor suporta.
 
-As capturas produzidas pelo Spinda Stop, a comparação antes/depois e a sequência dos quatro golpes ficam em `artifacts/reformulation/`; o modo rápido e o gate completo estão descritos em [VISUAL_REVIEW.md](VISUAL_REVIEW.md). A aprovação visual foi feita nas imagens e na interação; zero violações axe, por si só, não aprovam composição.
+As capturas produzidas pelo Spinda Stop e a comparação antes/depois ficam nos artefatos do Visual Review e no histórico da PR #30, não no checkout. Os quatro golpes continuam cobertos por interação do Visual Review e asserções de navegador. O modo rápido e o gate completo estão descritos em [VISUAL_REVIEW.md](VISUAL_REVIEW.md). A aprovação visual exige inspeção das capturas e interação; zero violações axe, por si só, não aprovam composição.

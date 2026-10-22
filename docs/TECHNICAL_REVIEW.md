@@ -1,5 +1,7 @@
 # Revisão técnica do monorepo
 
+> Este catálogo registra a revisão anterior à PR #32. Seus números e o estado Vercel abaixo são históricos; para o estado atual do Preview, configurações pendentes e limpeza desta continuação, consulte [SECURITY_AUDIT.md](SECURITY_AUDIT.md). A pesquisa visual em texto está em [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md).
+
 ## Escopo e conclusão
 
 Revisão iniciada em 21 out. 2026 na branch `chore/repository-maintenance-review`, baseada no `main` após o merge da reformulação (#30), commit `bf89fc5b6d0e4e93b8dcbf2b14e1b833e24da56f`. A PR de manutenção deve conter esta página e permanecer aberta. A PR #30 já foi mesclada conforme autorização; nenhum merge ou deploy manual foi feito para esta revisão.
@@ -25,17 +27,19 @@ O inventário cobriu `apps/web`, `apps/api`, `packages`, `scripts`, workflows, c
 
 ## Imagens e outros binários
 
-Todos os 155 binários rastreados antes da limpeza eram imagens documentais em `artifacts/reformulation/`; fontes de ícone, sprites do produto e dados são dependências ou URLs fixadas, não cópias locais. A busca por hashes não encontrou duplicatas byte a byte. A pasta de referências mantém 69 estados de cinco sites e 15 imagens DataDex fornecidas pelo usuário, com URLs, viewports, ações e limites no manifesto. São material documental, não assets incorporados no app nem declaração de direito de redistribuição.
+Na revisão anterior havia 155 imagens documentais em `artifacts/reformulation/`; fontes de ícone, sprites do produto e dados são dependências ou URLs fixadas, não cópias locais. A revisão retirou 63 PNGs de saída do Visual Review e quatro PNGs de golpes redundantes. Depois do merge da PR #32 ainda restavam 88 imagens (86 JPEG e 2 PNG), 12.875.038 bytes, sem uso no bundle. Esta continuação removeu as 88 imagens restantes e moveu o registro textual da pesquisa para [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md). Nenhuma captura é necessária ao runtime.
 
 | Grupo removido | Quantidade e bytes | Destino da informação | Função/cobertura preservada |
 |---|---:|---|---|
-| `artifacts/reformulation/before/` | 27 PNG; incluídos no total `before/`+`after/` de 6.347.417 bytes | Links 1440/390/320/720 px para o commit histórico `bf89fc5`; capturas de revisão também no artefato GitHub Actions da PR #30. | Comparação visual antes/depois. Não se confunde o artefato temporário (retém até 4 nov. 2026) com o histórico Git. |
-| `artifacts/reformulation/after/` | 36 PNG; incluídos no total `before/`+`after/` acima | Mesmo destino histórico e artefato do Visual Review completo. | 9 rotas nas quatro larguras; screenshots CI não ficam no checkout de manutenção. |
-| `calculator-selection/desktop-calculator-move-{1..4}-*.png` | 4 PNG; 662.207 bytes | `four-moves-sequence.jpg` e asserções de seleção no Playwright. | Quatro golpes/atualizações de dano; as capturas exclusivas de teclado e mobile continuam versionadas. |
-| Markdown | Nenhum removido. | Os documentos de origem continuam como fonte de verdade; esta página concentra o catálogo da auditoria. | Decisões, dados, licenças e procedimentos preservados. |
-| Testes e mocks | Nenhum removido. | Suítes existentes; foram acrescentadas duas verificações de runtime Elysia. | Contrato de API, domínio, cálculo, sprites e integração PostgreSQL preservados. |
+| `before/` e `after/` do Visual Review | 63 PNG; 6.347.417 bytes | Artefatos de Actions e histórico da PR #30. | Capturas reproduzíveis para 9 rotas nas quatro larguras. |
+| Quatro capturas individuais de golpes | 4 PNG; 662.207 bytes | Sequência composta e asserções do teste de navegador. | Seleção dos quatro golpes e atualização de dano. |
+| Referências ao vivo | 69 JPEG | Observações, URLs, ações, estados e decisões em `VISUAL_RESEARCH.md`; binários acessíveis no commit histórico `bf89fc5`. | Cinco ferramentas, exclusivamente desktop durante a pesquisa. |
+| DataDex e contact sheet | 16 JPEG | Decisões DataDex em `VISUAL_RESEARCH.md`. | 15 telas fornecidas e uma montagem visual; binários removidos do HEAD. |
+| Evidências próprias da calculadora | 1 JPEG + 2 PNG | Asserções de interação do Visual Review no navegador. | Quatro golpes, seleção por teclado e estado mobile; binários removidos do HEAD. |
+| Markdown e testes | Nenhum documento ou teste excluído nesta continuação. O manifesto foi movido de `artifacts/` para `docs/`. | `VISUAL_RESEARCH.md`, `VISUAL_REVIEW.md` e testes existentes. | Observações, fluxos e limitações continuam legíveis sem os binários. |
+| Testes e mocks | Nenhum removido nesta continuação. | Suítes existentes e teste do Visual Review em `apps/web/test/visual-review.mjs`. | Contrato de API, domínio, cálculo, sprites e integração PostgreSQL preservados. |
 
-Os 63 PNGs `before/` e `after/` somavam 6.347.417 bytes; os quatro PNGs por golpe, 662.207 bytes. Total de imagens removidas: **7.009.624 bytes**. A pasta tinha 19.899.041 bytes antes da edição; o tamanho final inclui a ampliação deste README e é registrado na própria [página do pacote de evidências](../artifacts/reformulation/README.md). Essa redução afeta o HEAD, não o histórico Git. Sprites externos continuam fixados por revisão e IDs de forma; testes verificam as 49 Megas mapeadas, formas especiais, fallback sem substituição silenciosa e URLs de tipos/itens. Origem/direitos continuam em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+As 88 imagens restantes somavam **12.875.038 bytes** e foram removidas nesta continuação. Junto dos 7.009.624 bytes removidos na revisão anterior, o HEAD deixa de rastrear capturas de pesquisa e review. Isso não apaga objetos do histórico Git. O `.gitignore` agora ignora a pasta inteira `artifacts/`; os workflows seguem salvando suas capturas como artefatos do Actions. Sprites externos continuam fixados por revisão e IDs de forma; testes verificam as 49 Megas mapeadas, formas especiais, fallback sem substituição silenciosa e URLs de tipos/itens. Origem/direitos continuam em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Bun, Elysia e PostgreSQL
 
@@ -43,7 +47,7 @@ Os 63 PNGs `before/` e `after/` somavam 6.347.417 bytes; os quatro PNGs por golp
 - Elysia continua usando os mesmos métodos/caminhos e o corpo das rotas comunitárias; a suíte compara erros, status, cookies e headers pelo Fetch. CI usa Bun 1.4.3 e PostgreSQL 16 efêmero. O teste local atual cobre o adaptador, mas não executa Bun nem PostgreSQL porque esses binários/serviços e `DATABASE_URL` não estão disponíveis neste ambiente.
 - `apps/api/src/db.js` configura `pg.Pool` com limite 8, timeout de conexão e timeout de inatividade. `migrate.js` usa advisory lock, registra versão, transação por migração e encerra pool. Operações de domínio usam transações e parâmetros `$n`; interpolação identificada em `clearExpiredTournamentFriendCodes` escolhe apenas fragmento SQL constante. Não encontrei uma suspeita reproduzível de SQL injection.
 - `community-api.integration.test.js` usa PostgreSQL real e cobre dono/acesso cruzado, salas, convites, torneio, moderação, OAuth e origem de escrita. CI de PR #30 passou essa suíte; CI da PR #31 passou novamente com PostgreSQL 16 efêmero, Bun smoke test e `api:migrate` no commit `a9083ad` (workflow [CI #210](https://github.com/Shiroz1n/spinda-stop/actions/runs/39606640070)).
-- A configuração Vercel seleciona Bun `1.x`; as duas funções de entrada reexportam o mesmo app. O conector Vercel retornou `403` por acesso ausente ao time do projeto e a listagem por repositório não retornou projeto. Assim, URL, commit e ambiente de um deployment posterior a `bf89fc5` permanecem **não verificados**. O deployment antigo do relatório da PR #30 apontava para o SHA `d5ef83f`, anterior ao merge. Nenhum deploy foi iniciado manualmente.
+- Na revisão anterior, o conector Vercel retornou `403`, então a URL do deployment pós-merge não foi verificada naquele momento. Em 22 out. 2026 o projeto `spinda-stop` e seu deployment Preview foram confirmados; detalhes e resposta `/api` estão em [SECURITY_AUDIT.md](SECURITY_AUDIT.md). O `outputDirectory: apps/web/dist` foi adicionado à configuração versionada nesta continuação; não houve deploy.
 
 ## Segurança
 
@@ -61,7 +65,7 @@ Nenhuma inspeção justifica declarar o sistema livre de invasões. Acesso Verce
 ## Performance
 
 - Não houve alteração em caminho de render ou cache sem métrica que mostrasse problema. Build confirma carregamento lazy das rotas; chunks de Pokédex e calculadora permanecem grandes em tamanho bruto, mas em 58,16 KB e 126,02 KB gzip. O warning do chunk de calculadora foi mantido como oportunidade de medição, não tratado como ganho garantido.
-- A única redução medida é o checkout de imagens de revisão: 7.009.624 bytes removidos no HEAD. Não é redução do histórico Git nem uma medição de tempo de download de produção.
+- A redução medida no HEAD é de 7.009.624 bytes na revisão anterior e 12.875.038 bytes nesta continuação. Não é redução do histórico Git nem uma medição de tempo de download de produção.
 - Pool por instância e cache de Usage permanecem documentados; não foi feita medição de inicialização, memória ou latência da nova stack. Sem números reproduzíveis, nenhum ganho Bun/Elysia é alegado.
 
 ## Testes, mocks e fluxos
@@ -75,7 +79,7 @@ Nenhuma inspeção justifica declarar o sistema livre de invasões. Acesso Verce
 
 ## Documentação e textos
 
-- Corrigidos estados obsoletos da PR #30 e referências a screenshots no checkout em `docs/NEXT_VISUAL_REDESIGN.md`, `docs/VISUAL_REDESIGN_REVIEW.md`, `docs/SPINDA_STOP_DESIGN_SYSTEM.md`, `docs/VISUAL_REVIEW.md` e `artifacts/reformulation/README.md`.
+- Corrigidos estados obsoletos da PR #30 e referências a capturas em `docs/NEXT_VISUAL_REDESIGN.md`, `docs/VISUAL_REDESIGN_REVIEW.md`, `docs/SPINDA_STOP_DESIGN_SYSTEM.md`, `docs/SECOND_VISUAL_RESEARCH.md`, `docs/THIRD_PARTY_LICENSES.md` e `docs/VISUAL_RESEARCH.md`.
 - `docs/ARCHITECTURE.md`, `docs/SECURITY.md` e `DEVELOPMENT.md` agora descrevem a origem confiável do IP, a prioridade `VERCEL_ENV` e o alcance da rota de teste.
 - `README.md` aponta para este catálogo. Nenhum documento de dados, mecânica, sprite, fonte/licença ou arquitetura foi apagado; os demais mantêm propósito ou decisão própria.
 - As mensagens visíveis de fonte, período, dados gerais, motor de cálculo e legalidade não verificada foram mantidas. Não foi identificada alteração editorial que justificasse mudar esses limites ou as ações existentes.

@@ -1,6 +1,6 @@
 # Inventário das oportunidades de produto
 
-Revisão em 20/10/2026 para a reformulação após a integração do PR #28. O inventário cruza o ZIP atual de pesquisa (incluindo 15 imagens DataDex), os fluxos já explorados e os documentos de dados, regras e cálculo. “Verificado” descreve a fonte e a semântica do dado indicado; não significa legalidade em Pokémon Champions.
+Revisão em 20/10/2026 para a reformulação após a integração do PR #28. O inventário cruzou o ZIP de pesquisa (incluindo 15 imagens DataDex), os fluxos já explorados e os documentos de dados, regras e cálculo. As imagens foram removidas do checkout em 22/10/2026; o resumo textual está em [VISUAL_RESEARCH.md](VISUAL_RESEARCH.md). “Verificado” descreve a fonte e a semântica do dado indicado; não significa legalidade em Pokémon Champions.
 
 ## Oportunidades e classificação
 

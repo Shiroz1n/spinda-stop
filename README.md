@@ -58,8 +58,9 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 - [Como executar o oráculo independente da calculadora](DEVELOPMENT.md#oráculo-opcional-da-calculadora)
 - [Licenças de dependências](docs/THIRD_PARTY_LICENSES.md)
 - [Segurança e privacidade](docs/SECURITY.md)
-- [Catálogo da auditoria de segurança e organização](docs/SECURITY_AUDIT.md)
-- [Catálogo da revisão técnica](docs/TECHNICAL_REVIEW.md)
+- [Auditoria atual de segurança, Preview e itens pendentes](docs/SECURITY_AUDIT.md)
+- [Revisão técnica anterior à PR #32](docs/TECHNICAL_REVIEW.md)
+- [Registro textual da pesquisa visual](docs/VISUAL_RESEARCH.md)
 - [Próximas etapas](docs/ROADMAP.md)
 - [Contas, salas, privacidade e torneios](docs/COMMUNITY_MODEL.md)
 

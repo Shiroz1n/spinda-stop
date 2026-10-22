@@ -1,9 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
+  "outputDirectory": "apps/web/dist",
   "git": {
     "deploymentEnabled": {
-      "feat/visual-pass-two": false
+      "feat/visual-pass-two": false,
+      "chore/repository-audit-*": false
     }
   },
   "headers": [
