@@ -1,5 +1,9 @@
 # Auditoria de segurança e organização
 
+> **Relatório histórico:** descreve o modelo PostgreSQL e as verificações executadas na revisão original. A migração atual para SQLite local removeu essa configuração e seus scripts; a arquitetura vigente está em [Segurança](SECURITY.md), [SQLite local](SQLITE_LOCAL.md) e [ADR 0003](DECISIONS/0003-sqlite-local.md). Os resultados abaixo não são verificações SQLite desta branch.
+
+> **Assets:** o inventário de 88 imagens nesta revisão é histórico. Este follow-up as remove do HEAD e conserva os metadados de pesquisa em [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md); a tabela de inventário abaixo não deve ser lida como estado atual dos binários.
+
 Escopo: `main` em `093446582ac72c77180d2e9e405553920e0ecb2a` (pós-merge da PR #31), revisado na branch `security/repo-audit-2026-10`. O branch remoto antigo `chore/repository-maintenance-review` já está contido nesse merge; não havia PR aberta. A API já estava portada para Bun + Elysia antes desta auditoria; esta mudança reduz privilégios e reforça verificações ao redor dessa implementação. A revisão não acessou banco ou dados de produção.
 
 ## Inventário e catálogo

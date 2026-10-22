@@ -1,111 +1,67 @@
-CREATE TABLE IF NOT EXISTS users (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider text NOT NULL CHECK (provider IN ('github', 'test')),
-  provider_subject text NOT NULL,
-  handle text NOT NULL CHECK (length(handle) BETWEEN 1 AND 39),
-  is_moderator boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  disabled_at timestamptz,
+CREATE TABLE users (
+  id TEXT PRIMARY KEY CHECK (length(id) = 36 AND substr(id, 9, 1) = '-' AND substr(id, 14, 1) = '-' AND substr(id, 19, 1) = '-' AND substr(id, 24, 1) = '-' AND length(replace(id, '-', '')) = 32 AND lower(replace(id, '-', '')) NOT GLOB '*[^0-9a-f]*'),
+  provider TEXT NOT NULL CHECK (provider IN ('github', 'test')),
+  provider_subject TEXT NOT NULL,
+  handle TEXT NOT NULL CHECK (length(handle) BETWEEN 1 AND 39),
+  is_moderator INTEGER NOT NULL DEFAULT 0 CHECK (is_moderator IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  disabled_at TEXT,
   UNIQUE (provider, provider_subject)
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
-  token_hash char(64) PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+CREATE TABLE sessions (
+  token_hash TEXT PRIMARY KEY CHECK (length(token_hash) = 64),
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
+CREATE INDEX sessions_user_id_idx ON sessions(user_id);
 
-CREATE TABLE IF NOT EXISTS oauth_states (
-  token_hash char(64) PRIMARY KEY,
-  expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+CREATE TABLE oauth_states (
+  token_hash TEXT PRIMARY KEY CHECK (length(token_hash) = 64),
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
-CREATE TABLE IF NOT EXISTS teams (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name varchar(48) NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 48),
-  visibility text NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
-  data_json jsonb NOT NULL,
-  schema_version integer NOT NULL CHECK (schema_version = 1),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+CREATE TABLE teams (
+  id TEXT PRIMARY KEY CHECK (length(id) = 36 AND substr(id, 9, 1) = '-' AND substr(id, 14, 1) = '-' AND substr(id, 19, 1) = '-' AND substr(id, 24, 1) = '-' AND length(replace(id, '-', '')) = 32 AND lower(replace(id, '-', '')) NOT GLOB '*[^0-9a-f]*'),
+  owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 48),
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
+  data_json TEXT NOT NULL CHECK (json_valid(data_json)),
+  schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-CREATE INDEX IF NOT EXISTS teams_owner_updated_idx ON teams(owner_id, updated_at DESC);
-CREATE INDEX IF NOT EXISTS teams_public_updated_idx ON teams(updated_at DESC) WHERE visibility = 'public';
+CREATE INDEX teams_owner_updated_idx ON teams(owner_id, updated_at DESC);
+CREATE INDEX teams_public_updated_idx ON teams(updated_at DESC) WHERE visibility = 'public';
 
-CREATE TABLE IF NOT EXISTS rooms (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  host_id uuid NOT NULL REFERENCES users(id),
-  name varchar(48) NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 48),
-  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'locked', 'in_progress', 'completed', 'cancelled')),
-  capacity smallint NOT NULL DEFAULT 2 CHECK (capacity = 2),
-  invite_hash char(64) NOT NULL UNIQUE,
-  invite_expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  locked_at timestamptz,
-  finished_at timestamptz
+CREATE TABLE rooms (
+  id TEXT PRIMARY KEY CHECK (length(id) = 36 AND substr(id, 9, 1) = '-' AND substr(id, 14, 1) = '-' AND substr(id, 19, 1) = '-' AND substr(id, 24, 1) = '-' AND length(replace(id, '-', '')) = 32 AND lower(replace(id, '-', '')) NOT GLOB '*[^0-9a-f]*'),
+  host_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 48),
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'locked', 'in_progress', 'completed', 'cancelled')),
+  capacity INTEGER NOT NULL DEFAULT 2 CHECK (capacity = 2),
+  invite_hash TEXT NOT NULL UNIQUE CHECK (length(invite_hash) = 64),
+  invite_expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  locked_at TEXT,
+  finished_at TEXT
 );
-CREATE INDEX IF NOT EXISTS rooms_host_created_idx ON rooms(host_id, created_at DESC);
+CREATE INDEX rooms_host_created_idx ON rooms(host_id, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS room_members (
-  room_id uuid NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status text NOT NULL DEFAULT 'registered' CHECK (status IN ('registered', 'checked_in', 'left', 'removed')),
-  checked_in_at timestamptz,
-  friend_code_ciphertext bytea,
-  friend_code_nonce bytea,
-  friend_code_tag bytea,
-  friend_code_created_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
+CREATE TABLE room_members (
+  room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'registered' CHECK (status IN ('registered', 'checked_in', 'left', 'removed')),
+  checked_in_at TEXT,
+  friend_code_ciphertext BLOB,
+  friend_code_nonce BLOB,
+  friend_code_tag BLOB,
+  friend_code_created_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   PRIMARY KEY (room_id, user_id),
   CHECK ((friend_code_ciphertext IS NULL AND friend_code_nonce IS NULL AND friend_code_tag IS NULL AND friend_code_created_at IS NULL)
       OR (friend_code_ciphertext IS NOT NULL AND friend_code_nonce IS NOT NULL AND friend_code_tag IS NOT NULL AND friend_code_created_at IS NOT NULL))
 );
-CREATE INDEX IF NOT EXISTS room_members_user_idx ON room_members(user_id, created_at DESC);
-
-CREATE TABLE IF NOT EXISTS matches (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_id uuid NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-  round_number smallint NOT NULL DEFAULT 1 CHECK (round_number > 0),
-  player_a_id uuid NOT NULL REFERENCES users(id),
-  player_b_id uuid NOT NULL REFERENCES users(id),
-  status text NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'awaiting_confirmation', 'confirmed', 'disputed', 'void')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  resolved_at timestamptz,
-  CHECK (player_a_id <> player_b_id),
-  UNIQUE (room_id, round_number, player_a_id, player_b_id)
-);
-
-CREATE TABLE IF NOT EXISTS match_reports (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id uuid NOT NULL UNIQUE REFERENCES matches(id) ON DELETE CASCADE,
-  reporter_id uuid NOT NULL REFERENCES users(id),
-  winner_id uuid NOT NULL REFERENCES users(id),
-  note varchar(250) NOT NULL DEFAULT '',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS disputes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  match_id uuid NOT NULL UNIQUE REFERENCES matches(id) ON DELETE CASCADE,
-  opened_by uuid NOT NULL REFERENCES users(id),
-  reason varchar(500) NOT NULL CHECK (length(btrim(reason)) BETWEEN 1 AND 500),
-  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'confirmed', 'void')),
-  resolution varchar(500),
-  moderator_id uuid REFERENCES users(id),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  resolved_at timestamptz
-);
-
-CREATE TABLE IF NOT EXISTS moderation_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id uuid NOT NULL REFERENCES users(id),
-  room_id uuid NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-  target_user_id uuid REFERENCES users(id),
-  action text NOT NULL,
-  reason varchar(500) NOT NULL CHECK (length(btrim(reason)) BETWEEN 1 AND 500),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+CREATE INDEX room_members_user_idx ON room_members(user_id, created_at DESC);

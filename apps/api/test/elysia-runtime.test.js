@@ -4,10 +4,12 @@ import { test } from "node:test";
 import { Elysia } from "elysia";
 import rootApi from "../../../api/index.js";
 import catchAllApi from "../../../api/[...path].js";
+import vercelRouter from "../../../api/router.js";
+import { createDatabase } from "../src/db.js";
 import { createApiApp, createRateLimiter } from "../src/server.js";
 
 function createApi(options = {}) {
-  const pool = {
+  const database = {
     calls: [],
     async query(sql) {
       this.calls.push(sql);
@@ -15,7 +17,7 @@ function createApi(options = {}) {
     },
   };
   const app = createApiApp({
-    pool,
+    database,
     env: {
       APP_ENV: "test",
       APP_ORIGIN: "http://localhost:5173",
@@ -25,17 +27,29 @@ function createApi(options = {}) {
     },
     ...options,
   });
-  return { app, pool };
+  return { app, database };
 }
 
 test("Elysia serves the health route through Fetch requests", async () => {
-  const { app, pool } = createApi();
+  const { app, database } = createApi();
   const response = await app.handle(new Request("http://api.test/api/health"));
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.equal(pool.calls.length, 1);
+  assert.equal(database.calls.length, 2);
+});
+
+test("health reports a local database without migrations as unavailable", async () => {
+  const database = createDatabase(":memory:");
+  const app = createApiApp({ database, env: { APP_ENV: "test", APP_ORIGIN: "http://localhost:5173" } });
+  try {
+    const response = await app.handle(new Request("http://api.test/api/health"));
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.code, "storage_not_ready");
+  } finally {
+    await database.close();
+  }
 });
 
 test("Elysia preserves API errors and body-size limits", async () => {
@@ -120,7 +134,7 @@ test("Vercel deployment context disables the test-session endpoint", async () =>
 
 test("Vercel preview origin enables secure cookies and same-origin writes", async () => {
   const app = createApiApp({
-    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    database: { query: async () => ({ rows: [], rowCount: 1 }) },
     env: {
       APP_ENV: "preview",
       VERCEL_ENV: "preview",
@@ -141,7 +155,7 @@ test("Vercel preview origin enables secure cookies and same-origin writes", asyn
 
 test("Vercel production origin uses the stable project domain", async () => {
   const app = createApiApp({
-    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    database: { query: async () => ({ rows: [], rowCount: 1 }) },
     env: {
       APP_ENV: "production",
       VERCEL_ENV: "production",
@@ -163,7 +177,7 @@ test("Vercel production origin uses the stable project domain", async () => {
 
 test("Vercel production context enforces production encryption settings", () => {
   assert.throws(() => createApiApp({
-    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    database: { query: async () => ({ rows: [], rowCount: 1 }) },
     env: {
       APP_ENV: "development",
       VERCEL_ENV: "production",
@@ -173,7 +187,7 @@ test("Vercel production context enforces production encryption settings", () => 
   }), /FRIEND_CODE_ENCRYPTION_KEY é obrigatória em produção/);
 
   const app = createApiApp({
-    pool: { query: async () => ({ rows: [], rowCount: 1 }) },
+    database: { query: async () => ({ rows: [], rowCount: 1 }) },
     env: {
       APP_ENV: "development",
       VERCEL_ENV: "production",
@@ -195,9 +209,51 @@ test("Vercel API entrypoints export the same Elysia app", () => {
   assert.equal(catchAllApi, rootApi);
 });
 
+test("Vercel API routes report the persistent-storage limit without opening a local database", async () => {
+  const prior = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = "preview";
+  try {
+    const response = await rootApi.handle(new Request("https://preview.example/api/health"));
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      error: {
+        code: "persistent_storage_required",
+        message: "Os recursos comunitários aguardam uma hospedagem com armazenamento persistente.",
+      },
+    });
+  } finally {
+    if (prior === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = prior;
+  }
+});
+
+test("Vercel rewrite sends nested API paths to Elysia instead of the SPA fallback", async () => {
+  const prior = process.env.VERCEL_ENV;
+  const priorVercel = process.env.VERCEL;
+  process.env.VERCEL_ENV = "preview";
+  delete process.env.VERCEL;
+  try {
+    const response = await vercelRouter.fetch(new Request("https://preview.example/api/router?__spinda_path=health"));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("content-type"), "application/json;charset=utf-8");
+    assert.equal((await response.json()).error.code, "persistent_storage_required");
+
+    const unsafe = await vercelRouter.fetch(new Request("https://preview.example/api/router?__spinda_path=..%2Fhealth"));
+    assert.equal(unsafe.status, 404);
+  } finally {
+    if (prior === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = prior;
+    if (priorVercel === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = priorVercel;
+  }
+});
+
 test("Vercel config selects its supported Bun runtime family", async () => {
   const config = JSON.parse(await readFile(new URL("../../../vercel.json", import.meta.url), "utf8"));
   assert.equal(config.bunVersion, "1.x");
+  assert.equal(config.outputDirectory, "apps/web/dist");
+  assert.deepEqual(config.rewrites[0], { source: "/api/:path*", destination: "/api/router?__spinda_path=:path*" });
+  assert.deepEqual(config.rewrites[1], { source: "/(.*)", destination: "/" });
   const headers = new Map(config.headers.flatMap((entry) => entry.headers.map(({ key, value }) => [key, value])));
   assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
   assert.equal(headers.get("X-Frame-Options"), "DENY");

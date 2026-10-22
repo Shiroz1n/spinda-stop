@@ -10,6 +10,8 @@ O frontend usa React, Vite, JavaScript e Tailwind. O domínio fica em funções 
 
 O catálogo é gerado uma vez a partir da revisão fixa da PokéAPI `6fd69dfe90465ba96534f6816fc817737d1f97f6`. O JSON final fica em `packages/data/generated/` e é ignorado pelo Git.
 
+`npm run dev` e `npm run build` sincronizam o catálogo automaticamente. Para rodar `npm test` antes de iniciar o frontend ou gerar um build, rode primeiro `npm run data:sync`.
+
 ## Fluxo de trabalho
 
 ```sh
@@ -31,27 +33,25 @@ npm run visual:review:fast -- --pages=calculator,builder
 # ou VISUAL_REVIEW_PAGES=calculator,builder npm run visual:review:fast
 ```
 
-O modo rápido preserva screenshots, mede overflow e erros de aplicação, e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. O modo completo continua obrigatório antes de concluir uma PR: `npm run visual:review`. Ele mantém os cenários de todas as telas em 1440, 390, 320 e 720 px, axe e fluxos comunitários com PostgreSQL quando `DATABASE_URL` está configurada. A versão rápida não é equivalente ao gate completo. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
+O modo rápido preserva capturas, mede overflow e erros de aplicação e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. O modo completo continua obrigatório antes de concluir uma PR: `npm run visual:review`. Ele mantém os cenários de todas as telas em 1440, 390, 320 e 720 px, axe e fluxos comunitários com SQLite temporário quando `SPINDA_DB_PATH` está configurado. A versão rápida não é equivalente ao gate completo. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
 
 ## API comunitária
 
-Contas, salas e torneios usam Bun 1.4.3, Elysia 1.4.x, PostgreSQL 16 e OAuth do GitHub. Nenhum segredo ou banco de produção fica no repositório.
+Contas, salas e torneios usam Bun 1.4.3, Elysia 1.4.x e SQLite em arquivo. Não é necessário instalar PostgreSQL, Docker ou outro serviço de banco.
 
-1. Copie `.env.example` para `.env`. `DATABASE_URL` é a conta limitada de runtime; `DATABASE_MIGRATION_URL` é a conta local de migrações. Mantenha `POSTGRES_PASSWORD` alinhada com a URL de migração. Preencha `APP_ORIGIN`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` e, se quiser testar códigos de amizade, `FRIEND_CODE_ENCRYPTION_KEY`.
-2. Em um terminal, inicie o PostgreSQL local: `docker compose up -d db`.
-3. Aplique as migrações com `npm run api:migrate` e prepare o usuário de runtime local com `npm run api:db:prepare`. Esse comando só aceita `localhost`, loopback ou o serviço local `postgres`, e recusa execução em Vercel.
-4. Em um terminal, rode `npm run api:start`; em outro, rode `npm run dev`.
-5. Registre no OAuth App do GitHub o callback `http://127.0.0.1:5173/api/auth/github/callback`.
+1. Copie o modelo local: `cp .env.example .env`. `SPINDA_DB_PATH` controla o caminho; seu valor padrão é `.local/spinda-stop.sqlite`, absoluto em relação à raiz do repositório. O exemplo não contém credenciais reais.
+2. Gere o banco e aplique as migrações: `npm run api:migrate`.
+3. Inicie a API com `npm run api:start` em um terminal e o frontend com `npm run dev` em outro. O proxy Vite encaminha `/api` para Bun + Elysia em `127.0.0.1:8787`.
+4. Confira `http://127.0.0.1:5173/api/health` e `http://127.0.0.1:5173/api/auth/status`.
+5. Login GitHub interativo é opcional. Se for usar, configure seu OAuth App de desenvolvimento com callback `http://127.0.0.1:5173/api/auth/github/callback`. Para testar códigos de amizade, gere uma chave local de 32 bytes com `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'` e guarde-a somente em `.env`.
 
-Gere a chave de 32 bytes para códigos de amizade com `node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))'`. Mantenha a chave fora do Git e faça backup seguro; perder a chave torna os códigos ainda cifrados ilegíveis. O fluxo de teste automatizado usa um endpoint de sessão disponível somente com `APP_ENV=test` em execução local; `VERCEL_ENV` prevalece no deployment para impedir que ele seja habilitado em Preview ou Production.
+Para backup consistente do banco em uso, `npm run api:backup` usa `VACUUM INTO`; o arquivo padrão fica em `.local-backups/`. Para restaurar, sempre use um destino novo: `npm run api:restore -- .local-backups/arquivo.sqlite .local/restaurado.sqlite`. Pare a API e rode `npm run api:reset` para recriar somente o banco de desenvolvimento padrão. O reset recusa caminho customizado, execução em Vercel e sidecars ativos. Não copie apenas o `.sqlite` durante o uso do modo WAL. Veja [SQLite local](docs/SQLITE_LOCAL.md) para detalhes de integridade, recuperação e dados preservados.
 
-O servidor Bun atende `/api` por Elysia. A função `npm run api:runtime:smoke` exercita o listener HTTP real em Bun; `npm test` verifica os mesmos contratos de rota pelo Fetch do Elysia. No Vercel, `/api` e seus subcaminhos entram nas funções definidas em `api/`, usando `bunVersion` do `vercel.json`. Preview sem `DATABASE_URL` responde `503` com uma mensagem de serviço não configurado. Use um PostgreSQL separado para Preview; não aponte testes de PR ao banco de produção. OAuth em Preview exige credenciais e callback compatíveis com a origem daquele ambiente.
+O endpoint de sessão automatizado existe somente em `APP_ENV=test`; `VERCEL_ENV` prevalece sobre `APP_ENV`, e as rotas Vercel `/api/*` retornam `503 persistent_storage_required` antes de abrir um arquivo local. O filesystem de funções Vercel não é armazenamento persistente. Não configure o SQLite no `/tmp` ou no bundle. O frontend pode ser servido, mas equipes, salas e torneios não salvam nesse deployment. Nenhum banco hospedado ou deploy manual foi configurado; a integração do repositório cria Preview automaticamente ao abrir/atualizar uma PR, e esse Preview não representa um backend persistente.
 
-Em CI, `DATABASE_URL` aponta para um papel de runtime limitado e `DATABASE_MIGRATION_URL` para a instância PostgreSQL efêmera da migração. A suíte usa a URL de migração apenas para montar e limpar fixtures; a aplicação de teste conecta com a URL de runtime. Em Vercel, configure somente `DATABASE_URL` com um login sem DDL; não configure a URL de migração nem execute `api:db:prepare`. Provisionar o papel limitado em um banco remoto é uma operação do administrador do banco e não foi feita nesta revisão.
+Os testes de API usam bancos temporários com migrações reais; CI não depende de serviço externo de banco. `npm run api:runtime:smoke` exercita o listener HTTP real do Bun e as rotas de saúde/sessão/lista de equipes. O rate limit continua no processo e a limpeza depende de um processo local persistente; a hospedagem pública segue bloqueada até armazenamento persistente, rate limiting compartilhado e limpeza agendada confiável.
 
-A mudança para Elysia não conclui a preparação para abrir a API publicamente. O limite de tentativas continua local a cada instância e a limpeza horária do servidor persistente não é executada de forma confiável em funções serverless. Revise [Segurança](docs/SECURITY.md) e [Modelo comunitário](docs/COMMUNITY_MODEL.md) antes de habilitar esses fluxos em produção.
-
-Sem credenciais OAuth, Pokédex, builder local, Usage e calculadora continuam funcionando; contas ficam indisponíveis. Não configure a API de produção a partir deste guia sem revisar `docs/SECURITY.md` e `docs/COMMUNITY_MODEL.md`.
+Sem OAuth, Pokédex, builder local, Usage e calculadora continuam funcionando; os recursos de conta ficam indisponíveis. Leia [Segurança](docs/SECURITY.md) e [Modelo comunitário](docs/COMMUNITY_MODEL.md) antes de abrir esses fluxos ao público.
 
 ## Oráculo opcional da calculadora
 

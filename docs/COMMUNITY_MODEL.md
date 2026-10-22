@@ -16,7 +16,7 @@ O código de amizade é opcional. A pessoa o compartilha por ação própria, s�
 
 O compartilhamento de Pokémon também é opcional e separado da visibilidade da equipe salva. A pessoa escolhe uma equipe da própria conta dentro da sala ou torneio. Só os seis IDs de espécie e forma são copiados para o evento, e apenas integrantes ativos conseguem lê-los; golpes, itens, habilidades, naturezas, pontos e nome privado da equipe não saem do registro do dono. A pessoa pode substituir ou remover o compartilhamento. O snapshot é limpo quando o evento termina ou quando a pessoa deixa a inscrição.
 
-## Modelo PostgreSQL
+## Modelo SQLite local
 
 | Tabela | Responsabilidade | Proteção principal |
 |---|---|---|
@@ -33,9 +33,9 @@ O compartilhamento de Pokémon também é opcional e separado da visibilidade da
 | `disputes` | Motivo e decisão da contestação | Só moderador decide, com justificativa |
 | `moderation_events` | Histórico append-only de decisões | Ator, evento, alvo, ação e motivo registrados |
 
-As migrações SQL ficam em `apps/api/migrations/`. IDs são UUIDs; horários são `timestamptz` em UTC. Transições de sala, torneio e partida usam transações e bloqueios de linha. Um índice único impede mais de uma partida por rodada e vaga no chaveamento.
+As migrações SQL versionadas ficam em `apps/api/migrations/`. IDs são UUIDs gerados pela API e guardados como `TEXT`; horários são textos ISO-8601 UTC; JSON de equipe/snapshot é `TEXT` verificado por `json_valid`; códigos cifrados são `BLOB`; a flag booleana é `INTEGER` limitada a `0`/`1`. Foreign keys são habilitadas em cada conexão. Transições de sala, torneio e partida usam `BEGIN IMMEDIATE` e uma única conexão serializada por processo; isso preserva atomicidade sem bloqueios PostgreSQL por linha. Um índice único parcial impede mais de uma partida por rodada e vaga no chaveamento.
 
-Runtime e migrações usam credenciais PostgreSQL distintas: `DATABASE_URL` para a aplicação e `DATABASE_MIGRATION_URL` para alterações de schema controladas. O papel de runtime não deve ser dono das tabelas nem poder conceder papéis ou alterar `users.is_moderator`; a matriz de permissões executável para CI está em `scripts/prepare-runtime-db-role.mjs`. A configuração equivalente no banco de Preview/Production continua a cargo do operador e precisa ser verificada antes de uso público.
+SQLite não implementa usuários/GRANTs separados para a API e as migrações. O processo local roda como o usuário do sistema operacional e tem acesso de leitura, escrita e DDL ao arquivo; a pasta local usa `0700` e o arquivo `0600` quando suportado. A promoção de moderador não é exposta em rota pública, mas uma pessoa ou código com acesso ao arquivo pode alterar o banco. O comando de migração é separado de `api:start`; Vercel recusa `/api` com `503` porque o filesystem local de função não persiste. Os testes e CI usam arquivos temporários próprios, nunca banco hospedado.
 
 ## Estados e autorização
 
@@ -71,12 +71,12 @@ As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita C
 
 - OAuth Authorization Code do GitHub, com `state` aleatório, salvo como hash e conferido contra cookie de curta duração. O escopo pedido é `read:user`; o token do provedor não é persistido.
 - Só o ID do GitHub e o handle público são guardados. O aplicativo não recebe senha de usuário, e-mail, senha do jogo ou credenciais da Nintendo.
-- Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. PostgreSQL armazena somente SHA-256 do token.
+- Sessão aleatória com 30 dias, guardada no navegador em cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção. SQLite armazena somente SHA-256 do token.
 - Convites expiram em sete dias e sua rotação invalida o anterior. Tentativas de login e convite têm limite básico por IP no processo.
 - Códigos de amizade usam AES-256-GCM e chave configurada fora do banco. O ciphertext é apagado ao encerrar o evento e por rotina horária após a validade máxima de sete dias.
-- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; proxy do Vite encaminha `/api`. As funções Vercel de `/api` usam o runtime Bun. CI usa PostgreSQL 16 efêmero. Esta revisão não acessou banco, OAuth, chaves ou deployment de produção; o estado remoto precisa ser confirmado pelo operador.
+- Em desenvolvimento, Bun + Elysia ouve em `127.0.0.1`; o proxy Vite encaminha `/api` e usa `.local/spinda-stop.sqlite` por padrão. CI usa bancos SQLite efêmeros com migrações reais. Vercel continua sem API comunitária até haver decisão de armazenamento persistente.
 
-O processo local persistente executa limpeza horária de sessões, estados OAuth e códigos de amizade. Em Vercel, instâncias serverless não garantem a execução de timers; leituras ainda limpam o registro do evento acessado, mas a rotina geral requer um cron autenticado antes de uso público.
+O processo local persistente executa limpeza horária de sessões, estados OAuth e códigos de amizade. Em Vercel, instâncias serverless não garantem a execução de timers e a API está indisponível por falta de disco persistente; uma rotina geral ainda requer agendamento confiável antes de uso público.
 
 O rate limit é local ao processo e não basta para uma implantação com múltiplas instâncias. Antes de abrir cadastro em produção, configurar limite distribuído, exportação/exclusão de conta, retenção de logs e resposta a incidentes. O projeto não deve ser implantado publicamente até essa revisão operacional.
 

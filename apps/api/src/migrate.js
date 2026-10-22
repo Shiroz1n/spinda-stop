@@ -1,34 +1,50 @@
+import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPool } from "./db.js";
+import { createDatabase } from "./db.js";
 
 const directory = join(dirname(fileURLToPath(import.meta.url)), "../migrations");
-const pool = createPool(process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL);
-const client = await pool.connect();
 
-try {
-  await client.query("SELECT pg_advisory_lock(1397771329)");
-  await client.query("CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())");
-  const applied = new Set((await client.query("SELECT version FROM schema_migrations")).rows.map((row) => row.version));
+export async function migrateDatabase(database) {
+  await database.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    checksum TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )`);
+
+  const appliedRows = await database.query("SELECT version, checksum FROM schema_migrations");
+  const applied = new Map(appliedRows.rows.map(({ version, checksum }) => [version, checksum]));
   const migrations = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 
   for (const version of migrations) {
-    if (applied.has(version)) continue;
     const sql = await readFile(join(directory, version), "utf8");
-    await client.query("BEGIN");
-    try {
-      await client.query(sql);
-      await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [version]);
-      await client.query("COMMIT");
-      process.stdout.write(`Migração aplicada: ${version}\n`);
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
+    const checksum = createHash("sha256").update(sql).digest("hex");
+    if (applied.has(version)) {
+      if (applied.get(version) !== checksum) throw new Error(`A migração SQLite ${version} foi alterada depois de aplicada; crie uma nova versão de migração.`);
+      continue;
     }
+
+    await database.transaction(async (tx) => {
+      await tx.exec(sql);
+      await tx.query("INSERT INTO schema_migrations (version, checksum) VALUES (?1, ?2)", [version, checksum]);
+    });
+    process.stdout.write(`Migração SQLite aplicada: ${version}\n`);
   }
-} finally {
-  await client.query("SELECT pg_advisory_unlock(1397771329)").catch(() => {});
-  client.release();
-  await pool.end();
+
+  const violations = await database.query("PRAGMA foreign_key_check");
+  if (violations.rowCount) throw new Error("A verificação de integridade referencial do SQLite encontrou violações após as migrações.");
+  return migrations;
+}
+
+if (import.meta.main) {
+  const database = createDatabase();
+  try {
+    await migrateDatabase(database);
+  } catch (error) {
+    process.stderr.write(`Falha ao aplicar migrações SQLite (${error.name || "erro"}).\n`);
+    process.exitCode = 1;
+  } finally {
+    await database.close();
+  }
 }
