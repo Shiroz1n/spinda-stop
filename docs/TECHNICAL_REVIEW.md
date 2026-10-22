@@ -1,5 +1,9 @@
 # Revisão técnica do monorepo
 
+> **Relatório histórico:** este catálogo registra a revisão PostgreSQL/Bun + Elysia anterior. A migração para SQLite local substitui os detalhes de banco, jobs e resultados descritos aqui. Consulte [SQLite local](SQLITE_LOCAL.md), [Arquitetura](ARCHITECTURE.md) e [ADR 0003](DECISIONS/0003-sqlite-local.md) para o estado atual. Os testes citados abaixo não verificam esta migração.
+
+> **Atualização de assets neste follow-up:** a auditoria histórica registrou a decisão de manter as 69 referências interativas e 15 imagens DataDex. Como a PR #33 que carregava essa manutenção foi fechada sem merge, o `main` ainda continha 88 imagens em `artifacts/reformulation/`. Esta branch remove os 88 arquivos (86 JPEG e 2 PNG; 12.875.038 bytes no HEAD), move URL/viewport/ações/observações para [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md) e ignora toda a pasta `artifacts/`. A exclusão do HEAD não reescreve o histórico Git; tabelas e contagens de binários abaixo descrevem a revisão anterior.
+
 ## Escopo e conclusão
 
 Revisão iniciada em 21 out. 2026 na branch `chore/repository-maintenance-review`, baseada no `main` após o merge da reformulação (#30), commit `bf89fc5b6d0e4e93b8dcbf2b14e1b833e24da56f`. A PR de manutenção deve conter esta página e permanecer aberta. A PR #30 já foi mesclada conforme autorização; nenhum merge ou deploy manual foi feito para esta revisão.
@@ -35,7 +39,7 @@ Todos os 155 binários rastreados antes da limpeza eram imagens documentais em `
 | Markdown | Nenhum removido. | Os documentos de origem continuam como fonte de verdade; esta página concentra o catálogo da auditoria. | Decisões, dados, licenças e procedimentos preservados. |
 | Testes e mocks | Nenhum removido. | Suítes existentes; foram acrescentadas duas verificações de runtime Elysia. | Contrato de API, domínio, cálculo, sprites e integração PostgreSQL preservados. |
 
-Os 63 PNGs `before/` e `after/` somavam 6.347.417 bytes; os quatro PNGs por golpe, 662.207 bytes. Total de imagens removidas: **7.009.624 bytes**. A pasta tinha 19.899.041 bytes antes da edição; o tamanho final inclui a ampliação deste README e é registrado na própria [página do pacote de evidências](../artifacts/reformulation/README.md). Essa redução afeta o HEAD, não o histórico Git. Sprites externos continuam fixados por revisão e IDs de forma; testes verificam as 49 Megas mapeadas, formas especiais, fallback sem substituição silenciosa e URLs de tipos/itens. Origem/direitos continuam em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Os 63 PNGs `before/` e `after/` somavam 6.347.417 bytes; os quatro PNGs por golpe, 662.207 bytes. Total daquela edição: **7.009.624 bytes**. A [pesquisa visual](VISUAL_REFERENCE_RESEARCH.md) agora mantém apenas os metadados úteis; capturas reproduzíveis ficam no artefato do workflow e o histórico Git permanece intacto. Sprites externos continuam fixados por revisão e IDs de forma; testes verificam as 49 Megas mapeadas, formas especiais, fallback sem substituição silenciosa e URLs de tipos/itens. Origem/direitos continuam em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Bun, Elysia e PostgreSQL
 
@@ -61,7 +65,7 @@ Nenhuma inspeção justifica declarar o sistema livre de invasões. Acesso Verce
 ## Performance
 
 - Não houve alteração em caminho de render ou cache sem métrica que mostrasse problema. Build confirma carregamento lazy das rotas; chunks de Pokédex e calculadora permanecem grandes em tamanho bruto, mas em 58,16 KB e 126,02 KB gzip. O warning do chunk de calculadora foi mantido como oportunidade de medição, não tratado como ganho garantido.
-- A única redução medida é o checkout de imagens de revisão: 7.009.624 bytes removidos no HEAD. Não é redução do histórico Git nem uma medição de tempo de download de produção.
+- A única redução medida na revisão histórica foi o checkout de imagens de revisão: 7.009.624 bytes removidos no HEAD daquela branch. Este follow-up mede a remoção adicional de 12.875.038 bytes; nenhuma medida reduz o histórico Git nem comprova tempo de download de produção.
 - Pool por instância e cache de Usage permanecem documentados; não foi feita medição de inicialização, memória ou latência da nova stack. Sem números reproduzíveis, nenhum ganho Bun/Elysia é alegado.
 
 ## Testes, mocks e fluxos

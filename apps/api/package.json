@@ -7,7 +7,6 @@
     "migrate": "bun --env-file-if-exists=../../.env src/migrate.js"
   },
   "dependencies": {
-    "elysia": "^1.4.30",
-    "pg": "^8.23.1"
+    "elysia": "^1.4.30"
   }
 }

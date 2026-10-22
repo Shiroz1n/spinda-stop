@@ -106,7 +106,7 @@ const server = spawn(process.execPath, [
   join(root, "node_modules/vite/bin/vite.js"), "preview",
   "--host", "127.0.0.1", "--port", "4173", "--strictPort",
 ], { cwd: join(root, "apps/web"), stdio: "inherit" });
-const apiServer = !fastMode && process.env.DATABASE_URL ? spawn("bun", [
+const apiServer = !fastMode && process.env.SPINDA_DB_PATH ? spawn("bun", [
   "--env-file-if-exists=.env",
   join(root, "apps/api/src/server.js"),
 ], {
@@ -1654,7 +1654,7 @@ async function runViewport(viewportName, viewport) {
   await captureCommunityState(context, viewport, viewportName, "room");
   await captureCommunityState(context, viewport, viewportName, "tournament");
 
-  if (process.env.DATABASE_URL && viewportName === "desktop") {
+  if (process.env.SPINDA_DB_PATH && viewportName === "desktop") {
     const signIn = await context.request.post(`${baseUrl}/api/test/session`, {
       headers: { Origin: baseUrl },
       data: { handle: `visual-${viewportName}` },
@@ -1682,7 +1682,7 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("heading", { name: "Revisão visual" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
-      const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral PostgreSQL integration fixture");
+      const roomHierarchy = await inspectCommunityHierarchy(page, viewportName, "room-live-test-db", "ephemeral SQLite integration fixture");
       if (!roomHierarchy.inviteAfterGrid) failures.push(`${viewportName}/room: painel de convite aparece antes de participantes e resultado.`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "room-live-first-fold", { audit: true, fullPage: false });
@@ -1748,7 +1748,7 @@ async function runViewport(viewportName, viewport) {
       await page.getByRole("heading", { name: "Chave visual Doubles" }).waitFor({ state: "visible", timeout: 10_000 });
       await page.locator('[aria-label="Link de convite"]').waitFor({ state: "visible", timeout: 10_000 });
       await page.locator(".community-next-step").waitFor({ state: "visible", timeout: 10_000 });
-      const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral PostgreSQL integration fixture");
+      const tournamentHierarchy = await inspectCommunityHierarchy(page, viewportName, "tournament-live-test-db", "ephemeral SQLite integration fixture");
       if (!tournamentHierarchy.inviteAfterGrid) failures.push(`${viewportName}/tournament: painel de convite aparece antes de participantes e chaveamento.`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await safeCapture(page, viewportName, "tournament-live-first-fold", { audit: true, fullPage: false });
@@ -2151,11 +2151,11 @@ try {
     mode: fastMode ? "fast-development-subset" : "full-gate",
     scope: fastMode
       ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
-      : "All existing scenarios at four widths, with axe, community flows, and PostgreSQL when DATABASE_URL is set.",
+      : "All existing scenarios at four widths, with axe and community flows against SQLite when SPINDA_DB_PATH is set.",
     durationMs,
     selectedScreens: fastMode ? selectedQuickPages : "all",
     axeIncluded: !fastMode,
-    communityApiIncluded: !fastMode && Boolean(process.env.DATABASE_URL),
+    communityApiIncluded: !fastMode && Boolean(process.env.SPINDA_DB_PATH),
     viewports: viewports.map(([name, viewport]) => ({
       name,
       cssWidth: viewport.width,

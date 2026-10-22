@@ -1,6 +1,6 @@
 # Spinda Stop — design system e fluxos
 
-Estado: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`). A revisão técnica segue na PR de manutenção documentada em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md). A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões e auditoria visual estão em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e `artifacts/reformulation/`. As imagens comparativas geradas pelo CI estão nos artefatos de workflow e no histórico da PR #30, não no checkout atual. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Estado: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`). Esta PR migra o backend para SQLite local; a auditoria técnica anterior está em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md). A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões e auditoria visual estão em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Capturas do CI ficam fora do checkout nos artefatos do workflow. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
@@ -97,7 +97,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |
 | Salas e torneios | Estado operacional, pessoas/chave e próxima ação antes de configuração. | Erro/vazio mantém recuperação junto ao contexto; formulários não antecedem a tarefa. |
 
-O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e PostgreSQL.
+O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e fluxos comunitários com SQLite temporário.
 
 ## Oportunidades de produto
 

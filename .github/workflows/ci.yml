@@ -15,25 +15,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: spinda
-          POSTGRES_PASSWORD: stop
-          POSTGRES_DB: spinda_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U spinda -d spinda_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       APP_ENV: test
-      DATABASE_URL: postgresql://spinda_app:spinda-test@localhost:5432/spinda_test
-      DATABASE_MIGRATION_URL: postgresql://spinda:stop@localhost:5432/spinda_test
-      REQUIRE_RESTRICTED_DB_ROLE: "true"
+      SPINDA_DB_PATH: /tmp/spinda-community-ci.sqlite
       APP_ORIGIN: http://127.0.0.1:4173
       FRIEND_CODE_ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     steps:
@@ -50,8 +34,8 @@ jobs:
       - run: npm ci
       - run: npm run data:sync
       - run: npm run api:migrate
-      - run: npm run api:db:prepare
       - run: npm run api:runtime:smoke
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run web:bundle:check

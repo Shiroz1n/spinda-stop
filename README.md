@@ -26,20 +26,34 @@ Usage mostra a fonte e o período que cada API informa. “Current” e nomes de
 - Novos campos MetaRoll somente depois de confirmar a semântica e os termos de uso.
 - Ampliar torneios comunitários sem abrir mão de confirmação de resultados e controles de privacidade.
 
-As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. A API comunitária precisa de PostgreSQL e OAuth do GitHub configurados pelo operador.
+As partidas continuam acontecendo dentro do jogo. O site organiza participantes e relatos voluntários; não se conecta ao Pokémon Champions nem cria serviços oficiais. Localmente, a API comunitária usa um arquivo SQLite em disco. Login GitHub é opcional para desenvolvimento e depende de um OAuth App próprio.
 
 ## Rodar localmente
 
-Requer Node.js 22.12 ou mais recente para o site; Bun 1.4.3 é necessário para rodar a API comunitária.
+Requer Node.js 22.12 ou mais recente e Bun 1.4.3 para a API comunitária.
 
 ```sh
 npm ci
+npm run api:migrate
+```
+
+Em um terminal:
+
+```sh
+npm run api:start
+```
+
+Em outro terminal:
+
+```sh
 npm run dev
 ```
 
-Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da PokéAPI e guardado localmente. Depois de instalar, rode `npm run lint`, `npm test` e `npm run build` para conferir o projeto.
+O banco local fica em `.local/spinda-stop.sqlite` e é ignorado pelo Git. A migração não exige Docker nem servidor de banco. Veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária) para OAuth, backup, restauração e reset. A API em funções Vercel responde `503` até o projeto escolher uma hospedagem com armazenamento persistente; um deployment `Ready` do frontend não significa que as rotas comunitárias salvam dados.
 
-Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPMENT.md#api-comunitária). O fluxo exige PostgreSQL local e credenciais OAuth do GitHub; sem essas credenciais, a tela explica que o login está indisponível. A CI executa os testes de integração com PostgreSQL 16.
+Na primeira execução, o catálogo é gerado a partir de uma revisão fixa da PokéAPI e guardado localmente. `npm run dev` e `npm run build` sincronizam o catálogo; se for rodar `npm test` antes deles, use `npm run data:sync` uma vez. Depois rode `npm run lint`, `npm test` e `npm run build` para conferir o projeto.
+
+Os testes de integração criam bancos SQLite temporários e não dependem de banco externo. Para autenticação GitHub interativa, configure um OAuth App local; sem credenciais, contas ficam indisponíveis, mas o site e os fluxos de teste continuam locais.
 
 ## Documentação
 
@@ -48,11 +62,13 @@ Para testar contas, salas e torneios localmente, veja [Desenvolvimento](DEVELOPM
 - [Matriz de cobertura competitiva, campos observados e próximos PRs](docs/COMPETITIVE_COVERAGE.md)
 - [Regras e disponibilidade](docs/RULESETS.md)
 - [Arquitetura](docs/ARCHITECTURE.md)
+- [SQLite local: esquema, migrações, backup, recuperação e hospedagem](docs/SQLITE_LOCAL.md)
 - [Direção visual](docs/DESIGN.md)
 - [Guia geral para evitar padrões visuais genéricos](docs/UI_HUMANIZER.md)
 - [Design system do Spinda Stop e referências](docs/SPINDA_STOP_DESIGN_SYSTEM.md)
 - [Speed Tiers e fórmulas](docs/SPEED_TIERS.md)
 - [Registro da revisão visual](docs/VISUAL_REVIEW.md)
+- [Pesquisa visual e referências (metadados; imagens fora do checkout)](docs/VISUAL_REFERENCE_RESEARCH.md)
 - [Plano de validação da calculadora](docs/CALC_VALIDATION.md)
 - [Regras e limites da calculadora de dano](docs/DAMAGE_CALCULATOR.md)
 - [Como executar o oráculo independente da calculadora](DEVELOPMENT.md#oráculo-opcional-da-calculadora)

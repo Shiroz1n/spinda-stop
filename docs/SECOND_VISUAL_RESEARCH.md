@@ -46,7 +46,7 @@
 
 ### Rechecagem interativa antes de atualizar o PR
 
-Estas visitas foram repetidas no navegador Work nesta revisão. As imagens abaixo são capturas de referência locais; elas não são assets do Spinda Stop. A contagem/porcentagem dos concorrentes não foi copiada para a interface.
+Estas visitas foram repetidas no navegador Work nesta revisão. As imagens capturadas na sessão foram retiradas do HEAD; URL, ação e estado observado estão no registro desta página e em [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Elas nunca foram assets do Spinda Stop. A contagem/porcentagem dos concorrentes não foi copiada para a interface.
 
 | URL | Ação | Estado resultante | Captura |
 | --- | --- | --- | --- |
@@ -65,7 +65,7 @@ Estas visitas foram repetidas no navegador Work nesta revisão. As imagens abaix
 
 ### VGC Multi Calc — fluxos interativos em 19/10/2026
 
-Usei o Work Browser em desktop (1364×936) e interagi com os quatro fluxos abaixo. Os JPEGs são capturas reais da sessão, não assets do produto; `vgc-four-flows-work-20261019.jpg` reúne as quatro telas. Os números são estados temporários da referência e não foram copiados para os dados do Spinda Stop.
+Usei o Work Browser em desktop (1364×936) e interagi com os quatro fluxos abaixo. As capturas daquela sessão foram removidas do HEAD; os números são estados temporários da referência e não foram copiados para os dados do Spinda Stop.
 
 | URL | Ação | Resultado observado | Captura |
 | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ Tentei repetir os fluxos em mobile. O Work Browser não expôs controles de view
 
 O script `apps/web/test/visual-review.mjs` exporta 37 estados representativos por viewport quando cada fluxo está disponível: `desktop` (1440), `mobile` (390), `mobile-320` (320) e `reflow-720` (720 CSS px). O perfil de 720 px testa reflow; não é zoom real do navegador. O conjunto inclui conteúdo real, busca sem resultados, índices vazios, erros de fonte e conta, carregamento controlado de Usage, evolução/aprendibilidade, alterações de Nature/Speed, os três modos da calculadora e estados de salas/torneios. A captura `builder-speed-budget-nature` usa um rascunho local temporário e válido somente para verificar o limite restante; esses valores não são dados de Usage ou de telemetria. Algumas capturas dependem de fluxos condicionais (por exemplo, erro de salvamento de conta) e não aparecem em todos os viewports.
 
-Capturas mobile usam o viewport real em pontos de rolagem selecionados, com a navegação fixa na borda inferior. Desktop usa página completa só quando ajuda a avaliar a composição. As capturas de estados de sala/torneio usam fixtures no formato da API; o workflow também executa as transições completas contra PostgreSQL efêmero no desktop. O `inspection.json` registra observações, overflow, axe e falhas do roteiro. Para a Pokédex, o teste percorre os lotes carregados antes da captura para que sprites visíveis com `loading="lazy"` terminem de aparecer; o produto continua carregando a lista conforme a rolagem do usuário.
+Capturas mobile usam o viewport real em pontos de rolagem selecionados, com a navegação fixa na borda inferior. Desktop usa página completa só quando ajuda a avaliar a composição. As capturas de estados de sala/torneio usam fixtures no formato da API; o workflow executava as transições completas contra PostgreSQL efêmero no desktop no estado desta pesquisa. O workflow atual usa SQLite efêmero. O `inspection.json` registra observações, overflow, axe e falhas do roteiro. Para a Pokédex, o teste percorre os lotes carregados antes da captura para que sprites visíveis com `loading="lazy"` terminem de aparecer; o produto continua carregando a lista conforme a rolagem do usuário.
 
 ### Revisão manual do artefato #80
 
@@ -162,7 +162,7 @@ Essas composições variam por tarefa, usando os tokens existentes e menos moldu
 
 ## Evidência consolidada da reformulação PR #30 — 21/10/2026
 
-A pesquisa desta rodada arquiva **69 capturas interativas de terceiros**, além das 15 imagens mobile do DataDex fornecidas pelo usuário. Elas mostram estados distintos de catálogo, ficha/forma, filtros, time, edição de set, quatro golpes, habilidade/item/Nature/campo, modos de cálculo, Speed, Usage, Matchups e rental/importação. A lista completa de arquivos e, para cada ferramenta, URL, viewport, ação, estado observado e decisão aplicada fica no [manifesto de capturas ao vivo](../artifacts/reformulation/references/lived-sites/README.md). Essa evidência atualiza as contagens e lacunas relatadas nas anotações anteriores desta página.
+A pesquisa desta rodada registrou **69 estados interativos de terceiros**, além da inspeção das 15 imagens mobile DataDex fornecidas pelo usuário. Os JPEGs foram removidos do HEAD; URL, viewport, ação, estado observado e decisão aplicada estão no [registro da pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). A documentação preserva as contagens e lacunas relatadas nas anotações anteriores desta página.
 
 | Grupo | Amostra arquivada e ação executada | Padrão observado e decisão aplicada |
 |---|---|---|
@@ -177,4 +177,4 @@ As capturas ao vivo foram feitas em desktop (raster de aproximadamente 1348–13
 
 Durante a navegação inspecionei a árvore acessível, HTML/estilos computados visíveis e comportamento JavaScript pela interação. Microcopy e affordances aproveitadas em linguagem própria: escolha de golpe pelo nome em vez de digitação exata; quatro slots claramente numerados; estado “ativo no cálculo”; ação de busca; distinção entre opção disponível e limitação; e erros com recuperação. PokéAPI registra aprendibilidade geral por jogo/versão; `@smogon/calc` oferece seu próprio catálogo/modelo; nenhum desses fatos prova disponibilidade em Pokémon Champions ou legalidade num regulamento específico. Onde o motor não reconhece entrada, a UI mantém a escolha e expõe o limite sem fabricar dano nem bloquear cálculos que o motor suporta.
 
-As capturas produzidas pelo Spinda Stop, a comparação antes/depois e a sequência dos quatro golpes ficam em `artifacts/reformulation/`; o modo rápido e o gate completo estão descritos em [VISUAL_REVIEW.md](VISUAL_REVIEW.md). A aprovação visual foi feita nas imagens e na interação; zero violações axe, por si só, não aprovam composição.
+Capturas produzidas pelo Spinda Stop e a comparação antes/depois ficam nos artefatos do GitHub Actions ou no histórico do merge da PR #30, fora do checkout atual. O modo rápido e o gate completo estão descritos em [VISUAL_REVIEW.md](VISUAL_REVIEW.md); o gate completo continua a selecionar cada golpe e gerar imagens reproduzíveis. A aprovação visual exige inspeção da composição; zero violações axe, por si só, não a comprova.

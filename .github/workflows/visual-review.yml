@@ -15,24 +15,9 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: spinda
-          POSTGRES_PASSWORD: stop
-          POSTGRES_DB: spinda_visual
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U spinda -d spinda_visual"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       APP_ENV: test
-      DATABASE_URL: postgresql://spinda_app:spinda-test@localhost:5432/spinda_visual
-      DATABASE_MIGRATION_URL: postgresql://spinda:stop@localhost:5432/spinda_visual
+      SPINDA_DB_PATH: /tmp/spinda-visual-review.sqlite
       APP_ORIGIN: http://127.0.0.1:4173
       FRIEND_CODE_ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
     steps:
@@ -49,7 +34,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate
-      - run: npm run api:db:prepare
       - name: Fast review of community screens
         run: npm run visual:review:fast -- --pages=rooms,tournaments
       - run: npm run visual:review
