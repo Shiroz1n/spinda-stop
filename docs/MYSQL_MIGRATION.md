@@ -27,7 +27,7 @@ As tabelas usam InnoDB. A migração divide DDL idempotente em statements, calcu
 
 ## Uso do banco e estado da operação
 
-- A aplicação usa `DATABASE_URL` com usuário de runtime; migrações usam `DATABASE_MIGRATION_URL`, exclusivamente fora das funções públicas. O helper `mysql2/promise` exige TLS validado para hosts remotos, limita cada instância Vercel a duas conexões e inicializa a sessão em UTC.
+- A aplicação usa `DATABASE_URL` com usuário de runtime; migrações usam `DATABASE_MIGRATION_URL`, exclusivamente fora das funções públicas. O helper `mysql2/promise` exige TLS validado para hosts remotos, limita cada instância Vercel a duas conexões e inicializa a sessão em UTC/`READ COMMITTED` para preservar a semântica das transações PostgreSQL e evitar snapshots antigos após bloqueios.
 - `scripts/prepare-runtime-mysql-role.mjs` é restrito a MySQL local/efêmero e concede permissões de dados por tabela/coluna, sem DDL, privilégios globais, acesso a `schema_migrations` ou capacidade de alterar `users.is_moderator`. Ele não é uma rotina de provisionamento remoto.
 - CI e Visual Review usam MySQL 8.4 efêmero; a aplicação integra via usuário limitado e fixtures/migrações via usuário administrativo. Nenhuma base de produção é usada.
 - No projeto Vercel `spinda-stop` (escopo `alaninhuma-s-projects`), a consulta da configuração retornou zero integrações/connector de banco e nenhum `DATABASE_URL`. A PR #33 tinha deployment Preview READY no SHA `1ace1a795dfbea969d5c4f880fa286b4aaf4fe90`; esse código ainda espera PostgreSQL e não pode servir de evidência da conversão. Os ambientes consultáveis não mostram uma URL de banco anterior, mas isso não prova que não existam dados em outra conta/provedor; não foi possível consultar contas externas.

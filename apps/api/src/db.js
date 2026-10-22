@@ -81,6 +81,9 @@ function clientFor(connection) {
 async function initializeConnection(connection) {
   if (connection.__spindaUtcReady) return;
   await connection.query("SET time_zone = '+00:00'");
+  // Match PostgreSQL's default transaction semantics for workflows that combine
+  // a locking read with later reads in the same transaction.
+  await connection.query("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED");
   connection.__spindaUtcReady = true;
 }
 
