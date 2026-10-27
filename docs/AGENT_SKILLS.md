@@ -44,7 +44,7 @@ Não simplifique removendo validação de entrada, segurança, acessibilidade, t
 - `ponytail-review` examina o diff em busca de complexidade desnecessária.
 - `ponytail-audit` examina o repositório inteiro para encontrar candidatos a corte ou simplificação.
 - Essas skills produzem achados; não aplicam mudanças. Um relatório de audit, sozinho, não autoriza apagar código: só faça os cortes verificados que o usuário pediu ou aprovou. A estimativa de linhas removíveis é informativa, não uma meta.
-- A versão de Ponytail disponível neste ambiente foca em complexidade e explicitamente não cobre bugs, segurança ou performance. Confira o `SKILL.md` da versão ativa; não trate o audit como revisão geral nem substitua revisões técnicas específicas.
+- A cópia de Ponytail consultada para este guia foca em complexidade e deixa bugs, segurança e performance fora do escopo. Confira o `SKILL.md` ativo em cada ambiente; não trate `ponytail-audit` como revisão geral nem substitua revisões técnicas específicas.
 
 ### Confirme cada candidato antes de remover
 
