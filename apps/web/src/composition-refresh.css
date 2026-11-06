@@ -1,51 +1,12 @@
 /* A composition pass built around the real task on each screen. */
 
-.site-header { min-height: 72px; border-bottom: 2px solid #bd1d2c; background: #111111; color: #ffffff; }
-.site-header .brand, .site-header .nav-link { color: #ffffff; }
 .brand-mark { image-rendering: pixelated; }
-.site-header .nav-link { border-radius: 2px; }
-.site-header .nav-link.is-active { background: #f7dadd; color: #111111; }
-.site-header .nav-link:hover { background: #303030; color: #ffffff; }
-.site-header .button { border-color: #f7dadd; background: #f7dadd; color: #111111; }
-.mobile-primary-nav { border-top: 2px solid #bd1d2c; background: #111111; }
-.mobile-nav-link, .mobile-more-nav > summary { color: #f2f0eb; }
-.mobile-nav-link.is-active { border-radius: 2px; background: #f7dadd; color: #111111; }
-.mobile-more-menu { border: 1px solid #111111; border-radius: 0; box-shadow: 0 8px 18px rgb(0 0 0 / 16%); }
-.page-wrap { width: min(100% - 64px, 1450px); padding-block: 36px 64px; }
 .button { border-radius: 2px; }
 .button-primary { border-color: #a61020; background: #a61020; color: #ffffff; }
 .button-primary:hover:not(:disabled) { background: #9f3e32; }
 .button-outline { border-color: #759081; background: transparent; }
 .panel-frame { border-radius: 0; box-shadow: none; }
 .page-label { letter-spacing: 0.1em; }
-
-/* Home becomes a starting point with a mascot, search, and distinct routes. */
-.home-page { max-width: 1260px; padding-top: 44px; }
-.home-hero { position: relative; min-height: 440px; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr); align-items: stretch; gap: 20px; padding: 42px 48px 34px; overflow: hidden; border: 0; background: #111111; color: #ffffff; }
-.home-hero::after { position: absolute; right: 12%; bottom: -74px; width: 360px; height: 140px; border: 2px solid rgb(240 215 127 / 42%); border-radius: 50%; content: ""; transform: rotate(-12deg); }
-.hero-copy { position: relative; z-index: 1; align-self: center; }
-.hero-copy h1 { max-width: 9ch; color: #ffffff; font-size: clamp(3.3rem, 6.6vw, 6rem); line-height: 0.97; }
-.home-kicker { color: #f7dadd; }
-.hero-intro { max-width: 43ch; color: #e8e6e0; font-size: 1.12rem; }
-.home-search > label { color: #e8e6e0; }
-.home-search input { border: 2px solid #e5011a; border-radius: 2px; }
-.home-search .button { border: 2px solid #e5011a; border-radius: 2px; background: #e5011a; color: #111111; }
-.hero-actions { margin-top: 14px; }
-.hero-actions .button-outline { border-color: #a8c08e; background: transparent; color: #ffffff; }
-.hero-actions .button-outline:hover { background: #303030; color: #ffffff; }
-.home-note { color: #e8e6e0; }
-.home-signature { z-index: 1; align-self: center; justify-items: center; }
-.home-signature-art { width: min(100%, 300px); height: 300px; background: radial-gradient(circle at 50% 55%, #f2f0eb 0 47%, #bd1d2c 47.5% 52%, #111111 52.5% 100%); image-rendering: pixelated; }
-.home-signature-art .pokemon-art { --sprite-size: 255px !important; }
-.home-signature strong { color: #ffffff; font-family: "Press Start 2P", monospace; font-size: 0.82rem; line-height: 1.6; }
-.home-signature small { color: #e8e6e0; }
-.home-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 24px; border-top: 2px solid #111111; border-bottom: 2px solid #111111; }
-.home-action, .home-action:first-child { min-height: 92px; grid-template-columns: 30px minmax(0, 1fr) 18px; padding: 13px 14px; border-left: 1px solid #bbb9b3; }
-.home-action:first-child { border-left: 0; }
-.home-action:hover { background: #f7dadd; }
-.action-index { color: #a61020; font-family: "Press Start 2P", monospace; font-size: 0.58rem; }
-.action-copy strong { font-size: 1rem; }
-.action-copy small { max-width: 19ch; color: var(--muted); font-size: 0.74rem; }
 
 /* Dex: larger sprite tiles carry the scan; controls stay in a narrow rail. */
 .dex-page { max-width: 1460px; }
@@ -228,7 +189,7 @@
 .damage-workbench-toolbar > div { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .damage-workbench-toolbar .damage-toggle { min-height: 32px; font-size: 0.71rem; }
 .damage-workbench-toolbar .button { min-height: 32px; }
-.damage-result { min-width: 0; margin: 0; padding: 14px 0; border: 0; border-bottom: 2px solid #111111; border-radius: 0; background: transparent; }
+.damage-result { min-width: 0; margin: 0; padding: 14px 0; border: 1px solid var(--ink); border-radius: 0; background: #fff; box-shadow: none; }
 .damage-result-empty { min-height: 180px; display: grid; align-content: center; }
 .damage-result-heading { grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
 .damage-result-copy h2 { margin-bottom: 3px; font-size: clamp(1.15rem, 2vw, 1.75rem); overflow-wrap: anywhere; }
@@ -259,7 +220,7 @@
 .damage-active-indicator { padding: 3px 5px; background: #f7dadd; font-size: 0.57rem; font-weight: 850; }
 .damage-move-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 9px; }
 .damage-move-slot { min-width: 0; min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) 23px; border: 1px solid #bbb9b3; background: #f2f0eb; }
-.damage-move-slot.is-active { border: 2px solid #111111; background: #f7dadd; box-shadow: 2px 2px 0 #9ab284; }
+.damage-move-slot.is-active { border: 2px solid #111111; background: var(--selection); box-shadow: none; }
 .damage-move-slot-select { min-width: 0; display: grid; grid-template-columns: 21px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; gap: 0 4px; padding: 5px 4px; border: 0; background: transparent; text-align: left; }
 .damage-move-slot-select > span:first-child { grid-row: 1 / span 2; align-self: center; color: #a61020; font-family: "Press Start 2P", monospace; font-size: 0.56rem; }
 .damage-move-slot-select strong { overflow: hidden; font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -568,12 +529,12 @@ a { color: var(--blue-dark); text-underline-offset: 0.2em; }
   padding-inline: 10px;
   font-size: 1rem;
 }
-.site-header .nav-link.is-active { border-bottom-color: #e5011a; background: rgb(229 1 26 / 20%); color: #fff; }
-.site-header .button { min-height: 44px; border-color: #e5011a; background: #bd1d2c; color: #fff; }
+.site-header .nav-link.is-active { border-bottom-color: var(--signal-red-strong); background: color-mix(in srgb, var(--signal-red) 20%, transparent); color: #fff; }
+.site-header .button { min-height: 44px; border-color: var(--signal-red-strong); background: var(--signal-red); color: #fff; }
 .site-header .button:active { background: #a61020; }
 .mobile-primary-nav { border-top: 2px solid var(--signal-red); background: #111; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
 .mobile-nav-link, .mobile-more-nav > summary { min-height: 48px; color: #f2f0eb; font-size: 1rem; }
-.mobile-nav-link.is-active { border-radius: 0; background: rgb(229 1 26 / 20%); color: #fff; }
+.mobile-nav-link.is-active { border-radius: 0; background: color-mix(in srgb, var(--signal-red) 20%, transparent); color: #fff; }
 .mobile-more-menu { border: 1px solid #bbb9b3; border-radius: 0; background: #fff; box-shadow: 0 8px 18px rgb(0 0 0 / 16%); }
 
 .site-footer { min-height: 60px; border-top: 1px solid var(--line); background: var(--surface-quiet); color: var(--ink-soft); font-size: 1rem; }
@@ -660,7 +621,6 @@ input, select, textarea { font-size: 1rem; }
   background: transparent;
   color: var(--ink);
 }
-.home-hero::after { display: none; }
 .hero-copy { padding: 0; }
 .hero-copy h1 { max-width: 18ch; margin-bottom: 14px; color: var(--ink); font-size: clamp(1.5rem, 2.7vw, 2.2rem); line-height: 1.65; }
 .hero-intro { max-width: 56ch; margin-bottom: 20px; color: var(--ink-soft); font-size: 1rem; }
@@ -729,7 +689,7 @@ input, select, textarea { font-size: 1rem; }
 .detail-types .type-tag { min-height: 30px; font-size: 0.82rem; }
 .detail-section-nav { border-bottom: 2px solid var(--ink); background: var(--paper); }
 .detail-section-nav a { min-height: 44px; border-radius: 0; background: transparent; }
-.detail-section-nav a[aria-current="page"], .detail-section-nav a.is-active { border-bottom: 2px solid var(--signal-red); background: rgb(229 1 26 / 10%); }
+.detail-section-nav a[aria-current="page"], .detail-section-nav a.is-active { border-bottom: 2px solid var(--signal-red); background: color-mix(in srgb, var(--signal-red) 20%, #fff); }
 .detail-grid { gap: 22px; }
 .detail-panel { border: 0; border-top: 1px solid var(--ink); border-radius: 0; background: transparent; box-shadow: none; }
 .stat-row { font-variant-numeric: tabular-nums; }
@@ -775,7 +735,7 @@ input, select, textarea { font-size: 1rem; }
 .slot-copy b { font-size: 1rem; }
 .moves-heading, .builder-speed-panel { border-color: var(--ink); }
 .move-field { min-height: 52px; border-bottom: 1px solid var(--line); }
-.move-field > span { border-radius: 0; background: rgb(229 1 26 / 15%); color: var(--signal-red-strong); }
+.move-field > span { border-radius: 0; background: color-mix(in srgb, var(--signal-red) 20%, #fff); color: var(--signal-red-strong); }
 
 /* Calculator: inputs remain editable; selected move and result read first. */
 .damage-target-mode { border-block-color: var(--line); }
@@ -789,14 +749,14 @@ input, select, textarea { font-size: 1rem; }
 .damage-side-settings > summary, .damage-advanced > summary { min-height: 44px; color: var(--blue-dark); }
 .damage-calculated-stats { border-color: var(--line); background: var(--surface-quiet); font-variant-numeric: tabular-nums; }
 .damage-workbench-center { min-width: 0; }
-.damage-result { border: 1px solid var(--ink); border-radius: 0; background: #fff; box-shadow: none; }
+
 .damage-result-heading { border-bottom-color: var(--line); }
-.damage-result-range { border: 1px solid var(--signal-red-strong); border-radius: 0; background: rgb(229 1 26 / 10%); color: var(--ink); }
+.damage-result-range { border: 1px solid var(--signal-red-strong); border-radius: 0; background: color-mix(in srgb, var(--signal-red) 20%, #fff); color: var(--ink); }
 .damage-result-range strong, .damage-percent { color: var(--signal-red-strong); font-variant-numeric: tabular-nums; }
 .damage-move-picker, .damage-field-deck, .damage-move-panel, .damage-comparison-empty { border: 1px solid var(--line); border-radius: 0; background: #fff; box-shadow: none; }
 .damage-move-picker-heading, .damage-field-deck-heading { border-bottom-color: var(--ink); }
 .damage-move-slot { min-height: 48px; border-radius: 0; }
-.damage-move-slot.is-selected, .damage-move-slot-select[aria-pressed="true"] { border-color: var(--signal-red-strong); background: color-mix(in srgb, var(--signal-red) 12%, #fff); }
+.damage-move-slot.is-active, .damage-move-slot-select[aria-pressed="true"] { border-color: var(--signal-red-strong); background: color-mix(in srgb, var(--signal-red) 20%, #fff); box-shadow: none; }
 .damage-move-slot-select { min-height: 48px; }
 .damage-move-slot-select strong { font-size: 1rem; }
 .damage-field-strip select, .damage-field-strip .damage-toggle { min-height: 44px; border-radius: 0; }
@@ -825,8 +785,8 @@ input, select, textarea { font-size: 1rem; }
 @media (hover: hover) and (pointer: fine) {
   .site-header .nav-link:hover { background: #303030; color: #fff; }
   .site-header .button:hover:not(:disabled), .home-search .button:hover:not(:disabled), .button-primary:hover:not(:disabled) { background: #8f1220; color: #fff; }
-  .button-outline:hover:not(:disabled) { border-color: var(--signal-red-strong); background: rgb(229 1 26 / 8%); color: var(--ink); }
-  .home-action:hover { background: rgb(229 1 26 / 8%); }
+  .button-outline:hover:not(:disabled) { border-color: var(--signal-red-strong); background: color-mix(in srgb, var(--signal-red) 8%, #fff); color: var(--ink); }
+  .home-action:hover { background: color-mix(in srgb, var(--signal-red) 8%, #fff); }
   .pokemon-card-link:hover .pokemon-card-title { color: var(--signal-red-strong); text-decoration: underline; }
   .usage-species-link:hover, .usage-species-button:hover { background: var(--surface-quiet); }
 }
@@ -1002,6 +962,7 @@ input, select, textarea { font-size: 1rem; }
 .app-shell .damage-team-move-heading > div > span, .app-shell .damage-team-move-range,
 .app-shell .damage-team-move-status, .app-shell .damage-team-percent-row,
 .app-shell .damage-team-move-details > summary, .app-shell .damage-item-context { font-size: 1rem; }
+.app-shell .damage-toggle { min-height: 44px; font-size: 1rem; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .app-shell .damage-heading > .button { max-width: none; font-size: 1rem; }
 
 /* Coarse pointers get pressed feedback; hover paint is for mouse and trackpad. */
