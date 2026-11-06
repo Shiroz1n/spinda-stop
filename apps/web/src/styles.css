@@ -2543,7 +2543,7 @@ a { color: var(--blue-dark); }
 .usage-detail-heading { gap: 10px; padding: 9px; background: var(--surface-alt); }
 .usage-detail-art { width: 88px; height: 88px; border: 0; background: linear-gradient(180deg, var(--sky) 0 65%, var(--grass) 65%); }
 .usage-detail-heading h2 { margin-bottom: 3px; font-size: 1.35rem; }
-.usage-selected-rank { margin-top: 4px; padding: 3px 6px; border-left: 3px solid var(--coral); background: var(--surface-alt); }
+.usage-selected-rank { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 4px; padding: 3px 6px; border-left: 3px solid var(--coral); background: var(--surface-alt); }
 .usage-category-tabs { gap: 3px; overflow-x: auto; border-bottom: 1px solid var(--line); }
 .usage-category-tab { flex: 0 0 auto; min-height: 40px; padding-inline: 9px; border: 0; border-bottom: 3px solid transparent; background: transparent; font-size: 0.78rem; }
 .usage-category-tab.is-active, .metaroll-view-switch button.is-active { border-color: var(--blue-dark); border-bottom-color: var(--coral); background: var(--surface-alt); color: var(--ink); box-shadow: none; }
