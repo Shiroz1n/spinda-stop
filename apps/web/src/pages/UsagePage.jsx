@@ -145,19 +145,19 @@ function MetaRollComparison({ selectedPokemon, usage, category, indexData, index
   const entry = findUsagePokemonByReference(indexData?.entries || [], selectedPokemon.name);
   const [detailState, setDetailState] = useState({ key: "", status: "idle" });
   const [retry, setRetry] = useState(0);
-  const requestKey = `${indexData?.season || "current"}|${entry?.id || ""}|${retry}`;
+  const requestKey = `${indexData?.season || "current"}|${indexData?.capturedAt || ""}|${indexData?.appFetchedAt || ""}|${entry?.id || ""}|${retry}`;
 
   useEffect(() => {
     if (indexStatus !== "success" || !entry) return undefined;
     let active = true;
     setDetailState({ key: requestKey, status: "loading" });
-    provider.loadPokemonUsage({ id: entry.id, season: indexData.season || undefined, force: retry > 0 }).then((result) => {
+    provider.loadPokemonUsage({ id: entry.id, force: retry > 0 }).then((result) => {
       if (active) setDetailState({ key: requestKey, status: "success", result });
     }).catch(() => {
       if (active) setDetailState({ key: requestKey, status: "error" });
     });
     return () => { active = false; };
-  }, [entry?.id, indexData?.season, indexStatus, provider, requestKey, retry]);
+  }, [entry?.id, indexData?.capturedAt, indexData?.appFetchedAt, indexStatus, provider, requestKey, retry]);
 
   const detail = detailState.key === requestKey ? detailState : { status: entry ? "loading" : "idle" };
   const metaEntry = detail.result?.entry;
