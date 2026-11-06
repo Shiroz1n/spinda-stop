@@ -484,6 +484,9 @@ async function runViewport(viewportName, viewport) {
   }
   const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art img", viewport.height);
   observations.push({ viewport: viewportName, name: "pokedex-loaded-batch-sprites", ...dexSpriteState });
+  if (dexSpriteState.total === 0 || dexSpriteState.loaded !== dexSpriteState.total || dexSpriteState.failed > 0) {
+    failures.push(`${viewportName}: há sprites ausentes ou ainda não carregados na lista visível da Pokédex (${dexSpriteState.loaded}/${dexSpriteState.total}; ${dexSpriteState.failed} falhas).`);
+  }
   await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
@@ -1127,31 +1130,31 @@ async function runViewport(viewportName, viewport) {
   observations.push({ viewport: viewportName, name: "usage-index-loading-copy", text: loadingUsageCopy });
   await safeCapture(loadingUsagePage, viewportName, "usage-index-loading", { audit: true, fullPage: false });
   releaseUsageIndex();
-  await loadingUsagePage.locator(".usage-provenance").waitFor({ state: "visible", timeout: 10_000 });
+  await loadingUsagePage.locator(".usage-source-comparison").waitFor({ state: "visible", timeout: 10_000 });
   await loadingUsagePage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   await waitForUsage(page);
   if (await page.locator(".usage-index-note").count()) {
-    await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
+    await waitForEither(page, ".usage-source-comparison, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
   const usageComposition = await page.evaluate(() => {
     const heading = document.querySelector(".usage-heading");
     const title = heading?.querySelector("h1");
-    const switcher = heading?.querySelector(".usage-source-switch");
+    const comparisonAction = heading?.querySelector("button");
     const species = document.querySelector(".usage-detail-heading");
     const categoriesNav = document.querySelector(".usage-detail-panel > .usage-category-tabs");
     return {
       headingTop: heading ? Math.round(heading.getBoundingClientRect().top) : null,
-      sourceSwitcherInHeading: Boolean(heading && switcher && switcher.parentElement === heading),
-      headingBeforeControls: Boolean(title && switcher && (title.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      comparisonActionInHeading: Boolean(heading && comparisonAction && comparisonAction.parentElement === heading),
+      headingBeforeControls: Boolean(title && comparisonAction && (title.compareDocumentPosition(comparisonAction) & Node.DOCUMENT_POSITION_FOLLOWING)),
       speciesBeforeCategories: Boolean(species && categoriesNav && (species.compareDocumentPosition(categoriesNav) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
   observations.push({ viewport: viewportName, name: "usage-heading-and-ranking-hierarchy", ...usageComposition });
-  if (!usageComposition.sourceSwitcherInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
-    failures.push(`${viewportName}: a fonte deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles de categorias.`);
+  if (!usageComposition.comparisonActionInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
+    failures.push(`${viewportName}: a comparação deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles da ficha.`);
   }
   if (viewport.width <= 760 && usageComposition.headingTop > 160) {
     failures.push(`${viewportName}: o título de Usage deve aparecer sem um vão alto abaixo da navegação.`);
@@ -1189,7 +1192,7 @@ async function runViewport(viewportName, viewport) {
         const nameRange = document.createRange();
         if (name) nameRange.selectNodeContents(name);
         const artRect = rect(".usage-species-art");
-        const positionRect = rect(".usage-position");
+        const positionRect = rect(".usage-position-pair");
         const typeList = button.querySelector(".usage-species-name .type-list");
         const typeListRect = typeList?.getBoundingClientRect();
         const typeTagsFit = !typeList || Array.from(typeList.children).every((tag) => {
@@ -1260,25 +1263,27 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-history", { fullPage: false });
   }
 
-  const metaRollButton = page.getByRole("button", { name: "MetaRoll", exact: true });
-  if (await metaRollButton.count()) {
-    await metaRollButton.press("Enter");
-    const activeSource = page.locator(".usage-source-switch button.is-active");
-    await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeout: 10_000 });
-    const keyboardSource = await metaRollButton.evaluate((button) => ({
-      focused: document.activeElement === button,
-      pressed: button.getAttribute("aria-pressed"),
-      outlineWidth: getComputedStyle(button).outlineWidth,
-      outlineStyle: getComputedStyle(button).outlineStyle,
-    }));
-    observations.push({ viewport: viewportName, name: "keyboard-source-switch", ...keyboardSource });
-    if (!keyboardSource.focused || keyboardSource.pressed !== "true" || keyboardSource.outlineWidth === "0px" || keyboardSource.outlineStyle === "none") {
-      failures.push(`${viewportName}: a troca de fonte por teclado não deixou estado e foco visíveis.`);
+  const usageComparison = page.locator(".usage-source-comparison");
+  if (await usageComparison.count()) {
+    const detailLink = usageComparison.getByRole("button", { name: "Histórico, matchups e outros dados MetaRoll" });
+    const keyboardLink = await detailLink.evaluate((button) => {
+      button.focus();
+      return {
+        focused: document.activeElement === button,
+        outlineWidth: getComputedStyle(button).outlineWidth,
+        outlineStyle: getComputedStyle(button).outlineStyle,
+      };
+    });
+    observations.push({ viewport: viewportName, name: "keyboard-meta-roll-details", ...keyboardLink });
+    if (!keyboardLink.focused || keyboardLink.outlineWidth === "0px" || keyboardLink.outlineStyle === "none") {
+      failures.push(`${viewportName}: o atalho para detalhes MetaRoll não deixou o foco por teclado visível.`);
     }
-    await page.getByRole("button", { name: "Battle Data", exact: true }).press("Enter");
-    await page.locator(".usage-source-switch button.is-active").filter({ hasText: "Battle Data" }).waitFor({ state: "visible", timeout: 10_000 });
+    await detailLink.press("Enter");
+    await page.locator(".metaroll-layout").waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByRole("button", { name: "Voltar à comparação" }).press("Enter");
+    await page.locator(".usage-source-comparison").waitFor({ state: "visible", timeout: 15_000 });
   } else {
-    failures.push(`${viewportName}: o seletor de fonte não está disponível no Usage de Battle Data.`);
+    failures.push(`${viewportName}: a ficha Usage não juntou as capturas de Battle Data e MetaRoll.`);
   }
 
   await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Tauros-Paldea-Aqua`, { waitUntil: "domcontentloaded" });
@@ -2127,12 +2132,14 @@ try {
   });
   const fullViewports = [
     ["desktop", { width: 1440, height: 960 }],
+    ["tablet-900", { width: 900, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
     ["mobile-320", { width: 320, height: 760 }],
     ["reflow-720", { width: 720, height: 960 }],
   ];
   const quickViewports = [
     ["desktop", { width: 1440, height: 960 }],
+    ["tablet-900", { width: 900, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
   ];
   const viewports = fastMode ? quickViewports : fullViewports;

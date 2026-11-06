@@ -200,7 +200,7 @@ function MatchupMoveCard({ title, rows, outcomeLabel }) {
   );
 }
 
-export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) {
+export function MetaRollUsagePage({ initialPokemonName = "", initialView = "species", initialSection = "summary", onPokemonSelect }) {
   const [indexData, setIndexData] = useState(null);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [season, setSeason] = useState("");
@@ -222,8 +222,8 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
   const [megaRetry, setMegaRetry] = useState(0);
   const megaForceKey = useRef("");
   const [selectedUsageDate, setSelectedUsageDate] = useState("");
-  const [activeProfileSection, setActiveProfileSection] = useState("summary");
-  const [view, setView] = useState("species");
+  const [activeProfileSection, setActiveProfileSection] = useState(() => profileTabs.some(([key]) => key === initialSection) ? initialSection : "summary");
+  const [view, setView] = useState(initialView);
   const entryRequestKey = `${season || "current"}|${selectedId || ""}|${entryRetry}`;
   const megaRequestKey = `${season || "current"}|${selectedId || ""}|${megaRetry}`;
   const currentEntryState = entryState.key === entryRequestKey
@@ -399,7 +399,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", onPokemonSelect }) 
         </div>
         <details className="usage-source-details">
           <summary>Sobre os dados</summary>
-          <p>Esta tela mantém os dados da MetaRoll separados de Pokémon Champions Battle Data.</p>
+          <p>Esta ficha detalhada preserva os campos e a captura MetaRoll. Use a comparação de Usage para consultar as duas fontes lado a lado.</p>
           <a className="usage-source-guide" href={metaRollSource.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
         </details>
       </div>

@@ -33,8 +33,8 @@ test("sprite lookup keeps Mega and regional forms separate from base species", (
 
 test("an alternate form without its own sprite ID has no base-form fallback", () => {
   assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "mega-x" }), null);
-  assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, spriteId: 10034, formId: "mega-x" }), `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/10034.gif`);
-  assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, formId: "default" }), `${POKEAPI_SPRITES_BASE}/pokemon/versions/generation-v/black-white/6.png`);
+  assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, spriteId: 10034, formId: "mega-x" }), `${POKEAPI_SPRITES_BASE}/pokemon/other/home/10034.png`);
+  assert.equal(resolvePokemonSpriteUrl({ speciesId: 6, spriteId: 6, formId: "default" }), `${POKEAPI_SPRITES_BASE}/pokemon/other/home/6.png`);
 });
 
 test("all 49 catalogued Legends: Z-A Megas map to exact pinned PokeAPI HOME assets", () => {
@@ -63,9 +63,10 @@ test("Mega Raichu X and Y use their exact pinned PokeAPI HOME sprites", () => {
   );
 });
 
-test("base forms after the Black and White roster use their own Showdown sprite IDs", () => {
+test("base forms and alternate forms use static HOME sprites by exact PokeAPI ID", () => {
   const url = resolvePokemonSpriteUrl({ speciesId: 1000, spriteId: 1000, formId: "default" });
-  assert.match(url, /pokemon\/other\/showdown\/1000\.gif$/);
+  assert.match(url, /pokemon\/other\/home\/1000\.png$/);
+  assert.match(resolvePokemonSpriteUrl({ speciesId: 26, spriteId: 10100, formId: "alola" }), /pokemon\/other\/home\/10100\.png$/);
 });
 
 test("a descriptive form name wins when a provider ID collapses it to the base species", () => {

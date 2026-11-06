@@ -13,12 +13,12 @@ A interface usa cores de arena, molduras em degraus e sprites de Pokémon carreg
 - Comparar um atacante contra vários alvos com o mesmo set defensivo; cada dano aparece separadamente.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
 - Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar salas de duas pessoas ou torneios privados de quatro, com convite, check-in e resultados confirmados manualmente.
-- Explorar Usage de Doubles por espécie, com filtros e fichas de Pokémon Champions Battle Data ou MetaRoll em telas separadas; a MetaRoll também publica matchups e ladder de jogadores.
+- Explorar Usage de Doubles por espécie, comparando as posições e distribuições publicadas por Pokémon Champions Battle Data e MetaRoll na mesma ficha; a MetaRoll também publica matchups, históricos e ladder de jogadores.
 - Conferir cenários representativos da calculadora contra os rolls do simulador Pokémon Showdown fixado; essa checagem valida concordância entre implementações, não uma partida real no jogo.
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
-Usage mostra a fonte e o período que cada API informa. “Current” e nomes de temporada são rótulos da fonte, não regulamentos oficiais. Os percentuais da Battle Data não têm denominador conhecido; MetaRoll define distribuições como parcela das aparições do Pokémon. Nenhuma tela combina números das duas fontes.
+Usage mostra a fonte e o período que cada API informa. “Current” e nomes de temporada são rótulos da fonte, não regulamentos oficiais. Os percentuais da Battle Data não têm denominador conhecido; MetaRoll define distribuições como parcela das aparições do Pokémon. As posições e percentuais continuam separados por fonte, sem média ou amostra combinada.
 
 ## Próximas partes
 

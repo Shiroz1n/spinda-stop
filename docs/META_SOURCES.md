@@ -1,12 +1,12 @@
 # APIs de dados competitivos
 
-Revisão feita em 18/10/2026. Usage começa em Doubles e permite consultar Battle Data ou MetaRoll, uma fonte por vez. Percentuais ficam ligados à sua captura: não somar, tirar média nem tratar respostas diferentes como uma única amostra.
+Revisão feita em 18/10/2026. Usage começa em Doubles e compara Battle Data com MetaRoll na ficha da mesma espécie. Adaptadores, períodos, capturas e atribuições continuam separados. Percentuais não devem ser somados, receber média ou ser tratados como uma única amostra.
 
 Para o inventário campo a campo das respostas consultadas, o que já aparece no Spinda Stop e a sequência de PRs proposta, veja [Matriz de cobertura competitiva](COMPETITIVE_COVERAGE.md).
 
 ## Decisão
 
-Pokémon Champions Battle Data e MetaRoll têm adaptadores separados. A tela de Usage deixa escolher uma fonte; cada ficha conserva a captura, temporada e atribuição daquela fonte. Nada passa por uma API pública do Spinda Stop.
+Pokémon Champions Battle Data e MetaRoll têm adaptadores separados. A tela de Usage compara suas posições e distribuições lado a lado; cada coluna conserva a captura, temporada, período e atribuição daquela fonte. Históricos, matchups, formas Mega e ladder continuam acessíveis na ficha detalhada MetaRoll. Nada passa por uma API pública do Spinda Stop.
 
 ## Pokémon Champions Battle Data
 

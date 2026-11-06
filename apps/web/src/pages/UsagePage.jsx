@@ -18,6 +18,14 @@ const categories = [
   { id: "stat_points", label: "Stat Points" },
   { id: "teammate", label: "Parceiros" },
 ];
+const metaRollCategoryByBattleData = Object.freeze({
+  move: "moves",
+  held_item: "items",
+  ability: "abilities",
+  stat_alignment: "natures",
+  stat_points: "spreads",
+  teammate: "teammates",
+});
 
 const categoryFilters = [
   { id: "move", key: "moves", label: "Golpe" },
@@ -114,7 +122,7 @@ function CategoryRows({ rows, category }) {
   if (rows.length === 0) {
     return (
       <div className="usage-empty usage-empty-compact">
-        <p>Esta resposta não trouxe linhas para “{category.label}”.</p>
+        <p>A fonte não publicou linhas para “{category.label}” nesta captura.</p>
       </div>
     );
   }
@@ -132,24 +140,89 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry, onCategoryChange }) {
+function MetaRollComparison({ selectedPokemon, usage, category, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
+  const provider = usageProviders.metaroll;
+  const entry = findUsagePokemonByReference(indexData?.entries || [], selectedPokemon.name);
+  const [detailState, setDetailState] = useState({ key: "", status: "idle" });
+  const [retry, setRetry] = useState(0);
+  const requestKey = `${indexData?.season || "current"}|${entry?.id || ""}|${retry}`;
+
+  useEffect(() => {
+    if (indexStatus !== "success" || !entry) return undefined;
+    let active = true;
+    setDetailState({ key: requestKey, status: "loading" });
+    provider.loadPokemonUsage({ id: entry.id, season: indexData.season || undefined, force: retry > 0 }).then((result) => {
+      if (active) setDetailState({ key: requestKey, status: "success", result });
+    }).catch(() => {
+      if (active) setDetailState({ key: requestKey, status: "error" });
+    });
+    return () => { active = false; };
+  }, [entry?.id, indexData?.season, indexStatus, provider, requestKey, retry]);
+
+  const detail = detailState.key === requestKey ? detailState : { status: entry ? "loading" : "idle" };
+  const metaEntry = detail.result?.entry;
+  const visibleCategories = category.id === "profile"
+    ? categories.filter((item) => item.id !== "profile")
+    : [category];
+  const battleRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
+  const metaRows = (item) => metaEntry?.distributions?.[metaRollCategoryByBattleData[item.id]] || [];
+
+  return (
+    <section className="usage-source-comparison" aria-label="Comparação das capturas competitivas">
+      <div className="usage-comparison-heading">
+        <h3>Comparação de capturas</h3>
+        <button className="text-button" type="button" onClick={onOpenDetails}>Histórico, matchups e outros dados MetaRoll</button>
+      </div>
+      <p className="usage-comparison-note">Battle Data não informa o denominador. MetaRoll descreve cada percentual como parcela das aparições daquela espécie, mas não publica o tamanho dessa amostra. As capturas continuam separadas; não são taxas de vitória nem uma média entre fontes.</p>
+      <div className="usage-comparison-captures">
+        <span><strong>Battle Data</strong> · Temporada {usage?.season || "não informada"} · {formatSnapshotDate(usage?.date)} · consultado {formatTimestamp(usage?.appFetchedAt)}</span>
+        {indexStatus === "success" && indexData ? (
+          <span><a href={provider.source.url} target="_blank" rel="noreferrer">{provider.source.attribution}</a> · Temporada {detail.result?.season || indexData.season || "não informada"} · captura {formatTimestamp(detail.result?.capturedAt || indexData.capturedAt)} · consultado {formatTimestamp(detail.result?.appFetchedAt || indexData.appFetchedAt)}</span>
+        ) : null}
+      </div>
+      {indexStatus === "loading" ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando a captura MetaRoll…</p> : null}
+      {indexStatus === "error" ? <div className="usage-error" role="alert"><p>MetaRoll não respondeu. Os dados do Battle Data continuam disponíveis.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar MetaRoll de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
+      {indexStatus === "success" && !entry ? <p className="usage-empty usage-empty-compact">MetaRoll não listou {selectedPokemon.name} nesta captura.</p> : null}
+      {entry && (detail.status === "loading" || detail.status === "idle") ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando a ficha MetaRoll de {selectedPokemon.name}…</p> : null}
+      {entry && detail.status === "error" ? <div className="usage-error" role="alert"><p>Não foi possível carregar a ficha MetaRoll desta espécie.</p><button className="button button-outline button-small" type="button" onClick={() => setRetry((current) => current + 1)}>Tentar de novo</button></div> : null}
+      {metaEntry ? (
+        <>
+          <div className="usage-comparison-ranks"><span>Battle Data <strong>{Number.isFinite(selectedPokemon.position) ? `#${selectedPokemon.position}` : "sem posição"}</strong></span><span>MetaRoll <strong>{Number.isFinite(metaEntry.rank) ? `#${metaEntry.rank}` : "sem posição"}</strong></span></div>
+          <div className="usage-comparison-grid">
+            {visibleCategories.map((item) => {
+              const leftRows = battleRows(item);
+              const rightRows = metaRows(item);
+              return (
+                <section className="usage-comparison-category" key={item.id}>
+                  <div className="usage-category-heading"><h4>{item.label}</h4>{category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{leftRows.length} / {rightRows.length} linhas</span>}</div>
+                  <div className="usage-comparison-sources">
+                    <div><h5>Battle Data</h5><CategoryRows rows={category.id === "profile" ? leftRows.slice(0, 3) : leftRows} category={item} /></div>
+                    <div><h5>MetaRoll</h5><CategoryRows rows={category.id === "profile" ? rightRows.slice(0, 3) : rightRows} category={item} /></div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
         <div className="usage-empty">
           <p className="page-label">Doubles</p>
           <h2>Escolha uma espécie</h2>
-          <p>Use a busca ou os filtros ao lado para abrir as linhas publicadas pela fonte.</p>
+          <p>Use a busca ou os filtros ao lado para comparar as capturas publicadas pelas fontes.</p>
         </div>
       </section>
     );
   }
 
-  const visibleCategories = categories.filter((item) => item.id !== "profile");
-  const rows = usage && category.id !== "profile"
-    ? usage.rows.filter((row) => row.category === category.id)
-    : [];
-  const profileRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
+  const metaRollSelected = findUsagePokemonByReference(metaRollIndex?.entries || [], selectedPokemon.name);
 
   return (
     <section className="usage-detail-panel" aria-label={"Uso de " + selectedPokemon.name}>
@@ -161,7 +234,7 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
           <div className="type-list usage-type-list">
             {selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}
           </div>
-          {Number.isFinite(selectedPokemon.position) ? <p className="usage-selected-rank"><span>Posição na fonte</span><strong>#{selectedPokemon.position}</strong></p> : null}
+          <p className="usage-selected-rank"><span>Posições publicadas</span><strong>Battle Data {Number.isFinite(selectedPokemon.position) ? `#${selectedPokemon.position}` : "—"} · MetaRoll {Number.isFinite(metaRollSelected?.rank) ? `#${metaRollSelected.rank}` : "—"}</strong></p>
         </div>
         <span className="usage-format-stamp">Doubles</span>
       </div>
@@ -201,55 +274,23 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
 
       {usage ? (
         <>
-          <div className="usage-provenance usage-provenance-inline" aria-label="Fonte e período dos dados">
-            <a className="usage-provenance-source" href={source.url} target="_blank" rel="noreferrer">
-              {source.attribution}
-            </a>
-            <span><strong>Temporada {usage.season || "não informada"}</strong> · {formatSnapshotDate(usage.date)}</span>
-            <span>Consultado {formatTimestamp(usage.appFetchedAt)}</span>
-            <details className="usage-source-help">
-              <summary>Sobre esta captura</summary>
-              {usage.sourceFile ? <p>Arquivo de origem: <code>{usage.sourceFile}</code></p> : null}
-              <p>Temporada é o rótulo devolvido pela fonte. A amostra e o denominador não foram publicados; percentuais de distribuição não são taxa de partidas.</p>
-            </details>
-          </div>
-
-          {category.id === "profile" ? (
-            <div className="usage-profile-sections">
-              {visibleCategories.map((item) => {
-                const itemRows = profileRows(item);
-                return (
-                  <section className="usage-profile-section" key={item.id}>
-                    <div className="usage-category-heading">
-                      <div>
-                        <h3>{item.label}</h3>
-                      </div>
-                      <div className="usage-profile-actions"><span>{itemRows.length} linhas</span><button className="text-button" type="button" onClick={() => onCategoryChange(item.id)}>Ver tudo</button></div>
-                    </div>
-                    <CategoryRows rows={itemRows.slice(0, 2)} category={item} />
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <div className="usage-category-heading">
-                <div>
-                  <p className="page-label">Distribuição publicada</p>
-                  <h3>{category.label}</h3>
-                </div>
-                <span>{rows.length} linhas</span>
-              </div>
-              <CategoryRows rows={rows} category={category} />
-            </>
-          )}
+          <MetaRollComparison
+            selectedPokemon={selectedPokemon}
+            usage={usage}
+            category={category}
+            indexData={metaRollIndex}
+            indexStatus={metaRollIndexStatus}
+            indexError={metaRollIndexError}
+            onRetryIndex={onRetryMetaRoll}
+            onOpenDetails={onOpenMetaRoll}
+          />
         </>
       ) : null}
     </section>
   );
 }
 
-function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
@@ -264,7 +305,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [abilityFilter, setAbilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("position");
   const [selectedId, setSelectedId] = useState(null);
-  const [categoryId, setCategoryId] = useState("move");
+  const [categoryId, setCategoryId] = useState("profile");
   const [periodMode, setPeriodMode] = useState("current");
   const [historySeason, setHistorySeason] = useState("all");
   const [historyDays, setHistoryDays] = useState(7);
@@ -366,6 +407,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   }, [provider, selectedId, periodMode, historySeason, historyDays, usageRetry]);
 
   const selectedPokemon = indexData?.pokemon.find((entry) => entry.showdownId === selectedId) || null;
+  const metaRollByPokemonId = new Map((indexData?.pokemon || []).map((pokemon) => [
+    pokemon.showdownId,
+    findUsagePokemonByReference(metaRollIndex?.entries || [], pokemon.name),
+  ]));
+  const metaRollSelected = metaRollByPokemonId.get(selectedPokemon?.showdownId) || null;
   const requestedPokemon = initialPokemonName
     ? findUsagePokemonByReference(indexData?.pokemon || [], initialPokemonName)
     : null;
@@ -388,6 +434,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
     })
     .sort((left, right) => {
       if (sortBy === "name") return left.name.localeCompare(right.name, "pt-BR");
+      if (sortBy === "metaRoll") {
+        const leftRank = metaRollByPokemonId.get(left.showdownId)?.rank ?? Number.POSITIVE_INFINITY;
+        const rightRank = metaRollByPokemonId.get(right.showdownId)?.rank ?? Number.POSITIVE_INFINITY;
+        if (leftRank !== rightRank) return leftRank - rightRank;
+      }
       const leftPosition = left.position ?? Number.POSITIVE_INFINITY;
       const rightPosition = right.position ?? Number.POSITIVE_INFINITY;
       if (leftPosition !== rightPosition) return leftPosition - rightPosition;
@@ -409,12 +460,13 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
           <a href={provider.source.url} target="_blank" rel="noreferrer">
             {provider.source.attribution}
           </a>
-          <span>Doubles</span>
+          <span>Doubles · posições e distribuições comparadas por captura</span>
         </div>
         <details className="usage-source-details">
-          <summary>Sobre os dados</summary>
-          <p>Esta tela mostra apenas esta fonte. Não combina percentuais com MetaRoll nem expõe uma API própria.</p>
+          <summary>Sobre as fontes</summary>
+          <p>As capturas aparecem juntas para a mesma espécie, com posição, temporada e período próprios. Percentuais de fontes diferentes não são somados nem transformados em média.</p>
           <a className="usage-source-guide" href={provider.source.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
+          <a className="usage-source-guide" href={usageProviders.metaroll.source.guideUrl} target="_blank" rel="noreferrer">Documentação MetaRoll ↗</a>
         </details>
       </div>
 
@@ -579,7 +631,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               <label className="usage-filter-field">
                 <span>Ordenar</span>
                 <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                  <option value="position">Posição na fonte</option>
+                  <option value="position">Posição Battle Data</option>
+                  <option value="metaRoll">Posição MetaRoll</option>
                   <option value="name">Nome A–Z</option>
                 </select>
               </label>
@@ -597,7 +650,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
 
             <div className="usage-list-caption">
               <span>Nome</span>
-              <span>Posição na fonte</span>
+              <span>Posições · BD / MR</span>
             </div>
 
             {filteredPokemon.length > 0 ? (
@@ -626,8 +679,9 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                           {entry.types.map((type) => <TypeTag key={type} type={type} />)}
                         </span>
                       </span>
-                      <span className="usage-position">
-                        {entry.position === null ? "—" : entry.position}
+                      <span className="usage-position-pair" aria-label={`Battle Data ${Number.isFinite(entry.position) ? `posição ${entry.position}` : "sem posição"}; MetaRoll ${Number.isFinite(metaRollByPokemonId.get(entry.showdownId)?.rank) ? `posição ${metaRollByPokemonId.get(entry.showdownId).rank}` : "sem posição"}`}>
+                        <span><small>BD</small>{Number.isFinite(entry.position) ? `#${entry.position}` : "—"}</span>
+                        <span><small>MR</small>{Number.isFinite(metaRollByPokemonId.get(entry.showdownId)?.rank) ? `#${metaRollByPokemonId.get(entry.showdownId).rank}` : "—"}</span>
                       </span>
                     </button>
                   </li>
@@ -663,12 +717,16 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               </div>
             ) : null}
             <UsagePanel
-              source={provider.source}
               selectedPokemon={selectedPokemon}
               usage={displayedUsage}
               category={activeCategory}
               status={usageStatus}
               error={usageError}
+              metaRollIndex={metaRollIndex}
+              metaRollIndexStatus={metaRollIndexStatus}
+              metaRollIndexError={metaRollIndexError}
+              onRetryMetaRoll={onRetryMetaRoll}
+              onOpenMetaRoll={(section) => onOpenMetaRoll(selectedPokemon?.name, section)}
               onRetry={() => {
                 refreshUsage(true);
               }}
@@ -685,38 +743,69 @@ export function UsagePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sourceId = searchParams.get("source") === "metaroll" ? "metaroll" : "pokemon-champions-battle-data";
   const initialPokemonName = searchParams.get("pokemon") || "";
-  const selectSource = (nextSource) => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("source", nextSource);
-    setSearchParams(nextParams, { replace: true });
-  };
+  const [metaRollIndex, setMetaRollIndex] = useState(null);
+  const [metaRollIndexStatus, setMetaRollIndexStatus] = useState("loading");
+  const [metaRollIndexError, setMetaRollIndexError] = useState("");
+  const [metaRollIndexRetry, setMetaRollIndexRetry] = useState(0);
+  const metaRollIndexForceKey = useRef("");
+  const metaRollProvider = usageProviders.metaroll;
+
+  function refreshMetaRollIndex() {
+    const nextRetry = metaRollIndexRetry + 1;
+    metaRollIndexForceKey.current = `index|${nextRetry}`;
+    setMetaRollIndex(null);
+    setMetaRollIndexStatus("loading");
+    setMetaRollIndexError("");
+    setMetaRollIndexRetry(nextRetry);
+  }
+
+  useEffect(() => {
+    if (sourceId === "metaroll") return undefined;
+    let active = true;
+    const requestKey = `index|${metaRollIndexRetry}`;
+    const force = metaRollIndexForceKey.current === requestKey;
+    if (force) metaRollIndexForceKey.current = "";
+    metaRollProvider.loadIndex({ force }).then((result) => {
+      if (!active) return;
+      setMetaRollIndex(result);
+      setMetaRollIndexStatus("success");
+    }).catch(() => {
+      if (!active) return;
+      setMetaRollIndexStatus("error");
+      setMetaRollIndexError("A fonte não respondeu. Tente novamente mais tarde.");
+    });
+    return () => { active = false; };
+  }, [metaRollIndexRetry, metaRollProvider, sourceId]);
+
+  useCacheRevalidation(metaRollIndex?.cacheExpiresAt, refreshMetaRollIndex, sourceId !== "metaroll" && Boolean(metaRollIndex));
+
   const selectPokemon = (pokemonName) => {
     if (!pokemonName) return;
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("pokemon", pokemonName);
     setSearchParams(nextParams, { replace: true });
   };
-
-  const sourceSwitcher = (
-    <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
-      <button
-        aria-pressed={sourceId === "pokemon-champions-battle-data"}
-        className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
-        type="button"
-        onClick={() => selectSource("pokemon-champions-battle-data")}
-      >
-        Battle Data
-      </button>
-      <button
-        aria-pressed={sourceId === "metaroll"}
-        className={sourceId === "metaroll" ? "is-active" : ""}
-        type="button"
-        onClick={() => selectSource("metaroll")}
-      >
-        MetaRoll
-      </button>
-    </div>
-  );
+  const openMetaRoll = (pokemonName = initialPokemonName, section = "summary") => {
+    const sectionByCategory = { move: "moves", held_item: "items", ability: "abilities", stat_alignment: "natures", stat_points: "spreads", teammate: "teammates" };
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("source", "metaroll");
+    if (pokemonName) nextParams.set("pokemon", pokemonName);
+    nextParams.set("section", sectionByCategory[section] || section);
+    setSearchParams(nextParams, { replace: true });
+  };
+  const openMetaRollLadder = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("source", "metaroll");
+    nextParams.set("view", "trainers");
+    setSearchParams(nextParams, { replace: true });
+  };
+  const returnToComparison = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("source");
+    nextParams.delete("view");
+    nextParams.delete("section");
+    setSearchParams(nextParams, { replace: true });
+  };
 
   return (
     <section className={"page-wrap usage-page" + (sourceId === "metaroll" ? " metaroll-page" : "")}>
@@ -724,13 +813,15 @@ export function UsagePage() {
         <div>
           <p className="page-label">Pesquisa de Doubles</p>
           <h1>{sourceId === "metaroll" ? "Usage · MetaRoll" : "Usage"}</h1>
-          <p className="page-intro">{sourceId === "metaroll" ? "Ranking e distribuições da captura selecionada." : "Ranking, ficha e distribuições da fonte selecionada."}</p>
+          <p className="page-intro">{sourceId === "metaroll" ? "Detalhes completos da captura, com histórico, matchups e dados exclusivos da MetaRoll." : "Compare posições e distribuições das duas fontes para a mesma espécie, mantendo o período de cada captura."}</p>
         </div>
-        {sourceSwitcher}
+        {sourceId === "metaroll"
+          ? <button className="button button-outline" type="button" onClick={returnToComparison}>Voltar à comparação</button>
+          : <button className="button button-outline" type="button" onClick={openMetaRollLadder}>Ladder de jogadores</button>}
       </div>
       {sourceId === "metaroll"
-        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
-        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
+        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} initialView={searchParams.get("view") === "trainers" ? "trainers" : "species"} initialSection={searchParams.get("section") || "summary"} onPokemonSelect={selectPokemon} />
+        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} metaRollIndex={metaRollIndex} metaRollIndexStatus={metaRollIndexStatus} metaRollIndexError={metaRollIndexError} onRetryMetaRoll={refreshMetaRollIndex} onOpenMetaRoll={openMetaRoll} />}
     </section>
   );
 }
