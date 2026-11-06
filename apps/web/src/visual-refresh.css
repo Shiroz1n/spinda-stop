@@ -11,12 +11,12 @@ html { scroll-padding-top: 88px; }
 body { background: var(--paper); color: var(--ink); }
 button, input, select, textarea { font: inherit; }
 a { color: var(--blue-dark); }
-a:hover { color: var(--coral-dark); }
+@media (hover: hover) and (pointer: fine) { a:hover { color: var(--coral-dark); } }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .site-footer { border-top: 1px solid var(--line); background: var(--surface-alt); color: var(--muted); }
 .site-footer a { color: var(--blue-dark); font-weight: 750; text-decoration: underline; text-underline-offset: 0.18em; }
 .site-footer a[href$="pokeapi.co/"] { color: var(--blue-dark); }
-.site-footer a:hover { color: var(--coral-dark); }
+@media (hover: hover) and (pointer: fine) { .site-footer a:hover { color: var(--coral-dark); } }
 
 .site-header {
   position: sticky;

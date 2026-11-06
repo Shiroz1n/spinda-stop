@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #f5f1e3;
-  --color-surface: #fffdf4;
-  --color-ink: #173e35;
-  --color-blue: #2c6b70;
-  --color-coral: #c24f3c;
-  --color-green: #39764b;
-  --color-gold: #9a6a12;
+  --color-paper: #f2f0eb;
+  --color-surface: #ffffff;
+  --color-ink: #111111;
+  --color-blue: #1d4e91;
+  --color-coral: #bd1d2c;
+  --color-green: #315e46;
+  --color-gold: #815b12;
 }
 
 :root {
@@ -15,27 +15,27 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   color-scheme: light;
-  --paper: #f5f1e3;
-  --paper-shadow: #d7d1bc;
-  --surface: #fffdf4;
-  --surface-alt: #e4ebd9;
-  --field: #fffef8;
-  --sky: #c8e0d9;
-  --grass: #a7c88a;
-  --selection: #f0d77f;
-  --ink: #173e35;
-  --muted: #465b4d;
-  --line: #bdc8b6;
-  --blue: #2c6b70;
-  --blue-dark: #174b4e;
-  --coral: #c24f3c;
-  --coral-dark: #82382f;
-  --green: #39764b;
-  --gold: #9a6a12;
-  --fire-ink: #82382f;
-  --focus: #005d9b;
-  --radius: 4px;
-  --pixel-edge: 2px 3px 0 #cbd2bf;
+  --paper: #f2f0eb;
+  --paper-shadow: #d7d4cd;
+  --surface: #ffffff;
+  --surface-alt: #e8e6e0;
+  --field: #ffffff;
+  --sky: #dce4ed;
+  --grass: #dce7dd;
+  --selection: #f7dadd;
+  --ink: #111111;
+  --muted: #484a4b;
+  --line: #bbb9b3;
+  --blue: #1d4e91;
+  --blue-dark: #173b6b;
+  --coral: #bd1d2c;
+  --coral-dark: #a61020;
+  --green: #315e46;
+  --gold: #815b12;
+  --fire-ink: #a61020;
+  --focus: #005fcc;
+  --radius: 2px;
+  --pixel-edge: none;
   color: var(--ink);
   background: var(--paper);
 }
@@ -58,7 +58,7 @@ button, select { color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 a { color: var(--blue-dark); text-underline-offset: 0.2em; }
-a:hover { color: #193a60; }
+@media (hover: hover) and (pointer: fine) { a:hover { color: #193a60; } }
 ::selection { color: var(--surface); background: var(--blue-dark); }
 input { caret-color: var(--blue-dark); }
 
@@ -134,8 +134,8 @@ p { max-width: 72ch; }
 .button:hover:not(:disabled) { transform: translateY(-1px); }
 .button:active:not(:disabled) { transform: translateY(1px); }
 .button:disabled { border-color: #98988c; background: #e3e0d4; color: #656b70; }
-.button-primary { border-color: var(--blue-dark); background: var(--blue); color: #fffdf4; }
-.button-primary:hover:not(:disabled) { background: var(--blue-dark); color: #fffdf4; }
+.button-primary { border-color: var(--blue-dark); background: var(--blue); color: #ffffff; }
+.button-primary:hover:not(:disabled) { background: var(--blue-dark); color: #ffffff; }
 .button-outline { border-color: var(--ink); background: var(--surface); color: var(--ink); }
 .button-outline:hover:not(:disabled) { background: #f4dfc5; color: var(--fire-ink); }
 .button-quiet { border-color: transparent; background: transparent; color: var(--blue-dark); }
@@ -558,7 +558,7 @@ h1, h2, h3 { color: var(--ink); }
 h1 { font-size: clamp(2.15rem, 4vw, 3.4rem); letter-spacing: -0.04em; }
 h2 { font-size: clamp(1.22rem, 2vw, 1.55rem); letter-spacing: -0.025em; }
 a { color: var(--blue-dark); }
-a:hover { color: var(--coral-dark); }
+@media (hover: hover) and (pointer: fine) { a:hover { color: var(--coral-dark); } }
 :focus-visible { outline: 3px solid #b93f31; outline-offset: 3px; }
 
 .site-header {
@@ -2378,7 +2378,7 @@ select,
   .slot-types .type-tag img { width: 10px; height: 10px; }
 }
 
-/* Consolidated visual system: GBA color cues with compact, readable product surfaces. */
+/* Consolidated visual system: warm paper, ink, red signal, and readable product surfaces. */
 body { background: var(--paper); color: var(--ink); }
 h1, .page-heading-row h1 { max-width: 100%; margin-bottom: 7px; font-size: clamp(1.8rem, 3vw, 2.55rem); line-height: 1.14; letter-spacing: -0.035em; }
 h2 { font-size: clamp(1.08rem, 1.8vw, 1.4rem); }
@@ -2387,7 +2387,7 @@ h2 { font-size: clamp(1.08rem, 1.8vw, 1.4rem); }
 .page-label { margin-bottom: 5px; color: var(--coral-dark); font-size: 0.69rem; letter-spacing: 0.055em; }
 .page-intro { font-size: 0.94rem; }
 a { color: var(--blue-dark); }
-a:hover { color: var(--coral-dark); }
+@media (hover: hover) and (pointer: fine) { a:hover { color: var(--coral-dark); } }
 
 .site-header { border-bottom: 3px solid var(--ink); background: var(--blue-dark); box-shadow: inset 0 -4px var(--gold); }
 .brand, .brand:hover { color: var(--surface); }

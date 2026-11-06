@@ -1,6 +1,8 @@
-# Spinda Stop — design system e fluxos
+# Spinda Stop — pesquisa visual e execução da PR #30 (histórico)
 
-Estado: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`). Esta PR migra o backend para SQLite local; a auditoria técnica anterior está em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md). A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões e auditoria visual estão em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Capturas do CI ficam fora do checkout nos artefatos do workflow. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Esta página preserva a investigação e as decisões da implementação anterior. A linguagem vigente foi atualizada para **O Espécime Bitmap** em [../DESIGN.md](../DESIGN.md). O norte FireRed/GBA, as medidas de composição e os valores apresentados a seguir são um registro histórico da PR #30, não tokens ou composição atuais.
+
+Estado no registro original: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`); a PR seguinte migrou o backend para SQLite local. A auditoria técnica está em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md), a linha de base em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md), e as decisões/revisões históricas em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Capturas do CI ficam fora do checkout nos artefatos do workflow. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
