@@ -1238,13 +1238,13 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-empty", { fullPage: false });
     await usageSearch.fill("Garchomp");
     await page.locator(".usage-more-filters > summary").click();
-    const sourceFilters = [
+    const usageFilters = [
       ['.usage-filters .usage-filter-field:has-text("Tipo") select', "Dragon"],
-      ['.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select', "Earthquake"],
-      ['.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select', "Garchompite Z"],
-      ['.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select', "Sand Veil"],
+      ['.usage-filters .usage-filter-field:has-text("Golpe nos índices publicados") select', "Earthquake"],
+      ['.usage-filters .usage-filter-field:has-text("Item nos índices publicados") select', "Garchompite Z"],
+      ['.usage-filters .usage-filter-field:has-text("Habilidade nos índices publicados") select', "Sand Veil"],
     ];
-    for (const [selector, label] of sourceFilters) {
+    for (const [selector, label] of usageFilters) {
       const filter = page.locator(selector);
       const optionExists = await filter.evaluate((select, optionLabel) =>
         Array.from(select.options).some((option) => option.label === optionLabel), label);
@@ -1260,9 +1260,9 @@ async function runViewport(viewportName, viewport) {
       const filterSelectors = [
         ".usage-browser-panel input[type=search]",
         '.usage-filters .usage-filter-field:has-text("Tipo") select',
-        '.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select',
-        '.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select',
-        '.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select',
+        '.usage-filters .usage-filter-field:has-text("Golpe nos índices publicados") select',
+        '.usage-filters .usage-filter-field:has-text("Item nos índices publicados") select',
+        '.usage-filters .usage-filter-field:has-text("Habilidade nos índices publicados") select',
       ];
       const beforeRefresh = await Promise.all(filterSelectors.map((selector) => page.locator(selector).inputValue()));
       await page.locator(".usage-index-note button").click();
