@@ -60,7 +60,7 @@ const representativeCaptures = new Set([
   "usage-index-loading",
   "usage-empty",
   "usage-battle-data-error",
-  "usage-metaroll-empty",
+  "usage-metaroll-species",
   "usage-metaroll-error",
   "usage-metaroll-mega-error",
   "usage-ladder",
@@ -1330,19 +1330,16 @@ async function runViewport(viewportName, viewport) {
     failures.push(`${viewportName}: a ficha Usage não juntou as capturas de Battle Data e MetaRoll.`);
   }
 
-  await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Tauros-Paldea-Aqua`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   const metaRollLoaded = await waitForEither(page, ".metaroll-capture-note, .usage-index-error");
   if (await page.locator(".metaroll-capture-note").count()) {
     await waitForEither(page, ".metaroll-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-metaroll", { audit: true, fullPage: false });
-  if (await page.locator(".metaroll-layout .usage-more-filters > summary").count()) {
-    await page.locator(".metaroll-layout .usage-more-filters > summary").click();
-    const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
-    if (await profileTabs.count()) {
-      await profileTabs.nth(1).click();
-      await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
-    }
+  const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
+  if (await profileTabs.count()) {
+    await profileTabs.nth(1).click();
+    await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
   }
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
     const teammateCard = page.locator(".metaroll-profile-summary .metaroll-card").filter({ hasText: "Parceiros" }).first();
@@ -1359,9 +1356,6 @@ async function runViewport(viewportName, viewport) {
         if (identityWidth < 80) failures.push(`${viewportName}: o nome do parceiro perde espaço no cartão estreito do MetaRoll.`);
       }
     }
-    const metaRollSearch = page.locator(".metaroll-layout input[type=search]");
-    await metaRollSearch.fill("Garchomp");
-    await page.locator(".metaroll-layout .usage-species-button").filter({ hasText: "Garchomp" }).first().click();
     await waitForEither(page, ".metaroll-mega-list, .metaroll-mega-card .usage-error, .metaroll-mega-card .metaroll-empty", 35_000);
     if (await page.locator(".metaroll-mega-list").count()) {
       const megaText = await page.locator(".metaroll-mega-list").innerText();
@@ -1376,9 +1370,8 @@ async function runViewport(viewportName, viewport) {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
     await page.getByRole("button", { name: "Espécies" }).click();
-    await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");
-    await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
-    await safeCapture(page, viewportName, "usage-metaroll-empty", { fullPage: false });
+    await waitForEither(page, ".metaroll-capture-note, .usage-error", 35_000);
+    await safeCapture(page, viewportName, "usage-metaroll-species", { audit: true, fullPage: false });
   }
 
   const errorPage = await context.newPage();
