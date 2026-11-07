@@ -1253,9 +1253,9 @@ async function runViewport(viewportName, viewport) {
       selected: document.querySelector(".usage-results-column")?.getBoundingClientRect().top,
       search: document.querySelector(".usage-browser-panel")?.getBoundingClientRect().top,
     }));
-    observations.push({ viewport: viewportName, name: "usage-mobile-results-before-search", ...mobileUsageOrder });
-    if (mobileUsageOrder.selected === undefined || mobileUsageOrder.search === undefined || mobileUsageOrder.selected >= mobileUsageOrder.search) {
-      failures.push(`${viewportName}: Usage deve mostrar a ficha e o ranking selecionado antes da busca no mobile.`);
+    observations.push({ viewport: viewportName, name: "usage-mobile-search-before-detail", ...mobileUsageOrder });
+    if (mobileUsageOrder.selected === undefined || mobileUsageOrder.search === undefined || mobileUsageOrder.search >= mobileUsageOrder.selected) {
+      failures.push(`${viewportName}: Usage deve mostrar a busca e o catálogo antes da ficha no mobile.`);
     }
   }
   if (await page.locator(".usage-index-note").count()) {
@@ -1997,6 +1997,8 @@ async function runFastViewport(viewportName, viewport) {
               ? { rooms: [] }
               : pathname === "/api/tournaments"
                 ? { tournaments: [] }
+                : pathname === "/api/public/vgc-tournaments"
+                  ? { tournaments: [{ id: "visual-fixture-1", name: "VGC Doubles Regulation M-C Weekly Cup", date: "2026-11-07T13:00:00.000Z", url: "https://play.limitlesstcg.com/tournament/visual-fixture", scheduleStatus: "today" }] }
                 : { error: "API comunitária fora do escopo da revisão rápida." };
       await route.fulfill({
         status: pathname === "/api/me" ? 401 : 200,
@@ -2048,6 +2050,68 @@ async function runFastViewport(viewportName, viewport) {
       observations.push({ mode: "mobile", viewport: viewportName, name: "home-mobile-priority-order", tops: homeOrder });
       if (homeOrder.some((top) => top < 0) || homeOrder.some((top, index) => index > 0 && top < homeOrder[index - 1])) {
         failures.push(viewportName + "/home: a home mobile deve ordenar introdução, regulação, Usage, Ladder e comunidade.");
+      }
+
+      await page.locator(".home-vgc-list > li").first().waitFor({ state: "visible", timeout: 5_000 });
+      const tournamentLayout = await page.evaluate(() => {
+        const row = document.querySelector(".home-vgc-list > li");
+        const date = row?.querySelector(".home-vgc-date")?.getBoundingClientRect();
+        const name = row?.querySelector(".home-vgc-name")?.getBoundingClientRect();
+        const action = row?.querySelector("a")?.getBoundingClientRect();
+        const bounds = row?.getBoundingClientRect();
+        return {
+          dateWidth: date?.width ?? 0,
+          dateHeight: date?.height ?? 0,
+          actionHeight: action?.height ?? 0,
+          contained: Boolean(bounds && date && name && action
+            && date.left >= bounds.left - 1 && date.right <= bounds.right + 1
+            && name.left >= bounds.left - 1 && name.right <= bounds.right + 1
+            && action.left >= bounds.left - 1 && action.right <= bounds.right + 1),
+          areas: row ? getComputedStyle(row).gridTemplateAreas : "",
+        };
+      });
+      observations.push({ mode: "mobile", viewport: viewportName, name: "home-tournament-row-layout", ...tournamentLayout });
+      if (!tournamentLayout.contained || tournamentLayout.dateWidth < 120 || tournamentLayout.dateHeight > 2 * 24 || tournamentLayout.actionHeight < 44) {
+        failures.push(viewportName + "/home: a linha de torneio precisa manter data, nome e ação dentro do item sem comprimir a data.");
+      }
+    }
+
+    if (mobileOnly && screen === "usage") {
+      await page.locator(".usage-browser-panel input[type=search]").waitFor({ state: "visible", timeout: 10_000 });
+      const usageLayout = await page.evaluate(() => {
+        const browser = document.querySelector(".usage-browser-panel")?.getBoundingClientRect();
+        const search = document.querySelector(".usage-browser-panel input[type=search]")?.getBoundingClientRect();
+        const detail = document.querySelector(".usage-results-column")?.getBoundingClientRect();
+        return { browserTop: browser?.top, searchBottom: search?.bottom, detailTop: detail?.top, viewportHeight: innerHeight };
+      });
+      observations.push({ mode: "mobile", viewport: viewportName, name: "usage-discovery-before-detail", ...usageLayout });
+      if (usageLayout.browserTop === undefined || usageLayout.detailTop === undefined
+        || usageLayout.browserTop >= usageLayout.detailTop || usageLayout.searchBottom > usageLayout.viewportHeight) {
+        failures.push(viewportName + "/usage: busca e catálogo devem aparecer antes da ficha e dentro da primeira tela mobile.");
+      }
+    }
+
+    if (mobileOnly && screen === "builder") {
+      const builderLayout = await page.evaluate(() => {
+        const heading = document.querySelector(".builder-heading");
+        const title = heading?.querySelector("h1")?.getBoundingClientRect();
+        const speed = heading?.querySelector(".builder-speed-jump")?.getBoundingClientRect();
+        const toolbar = document.querySelector(".builder-action-toolbar");
+        const controls = [...(toolbar?.querySelectorAll("button") || [])].map((button) => {
+          const rect = button.getBoundingClientRect();
+          const parent = toolbar.getBoundingClientRect();
+          return rect.height >= 44 && rect.left >= parent.left - 1 && rect.right <= parent.right + 1;
+        });
+        return {
+          titleAndActionSeparate: Boolean(title && speed && (title.right <= speed.left + 1 || title.bottom <= speed.top + 1 || speed.bottom <= title.top + 1)),
+          controlsFit: controls.length === 6 && controls.every(Boolean),
+          titleWidth: title?.width ?? 0,
+          speedLeft: speed?.left ?? 0,
+        };
+      });
+      observations.push({ mode: "mobile", viewport: viewportName, name: "builder-heading-and-actions", ...builderLayout });
+      if (!builderLayout.titleAndActionSeparate || !builderLayout.controlsFit || builderLayout.titleWidth < 90) {
+        failures.push(viewportName + "/builder: título, Comparar Speed e ações devem ter áreas independentes e confortáveis ao toque.");
       }
     }
 
