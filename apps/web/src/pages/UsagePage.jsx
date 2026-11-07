@@ -338,6 +338,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
     [indexData, metaRollIndex],
   );
   const selectedPokemon = catalog.find((entry) => entry.key === selectedId) || null;
+  const selectedPokemonKey = selectedPokemon?.key;
+  const selectedShowdownId = selectedPokemon?.showdownId;
 
   function refreshIndex(force = false) {
     const nextRetry = indexRetry + 1;
@@ -404,18 +406,18 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   }, [catalog]);
 
   useEffect(() => {
-    if (!selectedPokemon?.showdownId) {
+    if (!selectedShowdownId) {
       setUsage(null);
-      setUsageStatus(selectedPokemon ? "success" : "idle");
+      setUsageStatus(selectedPokemonKey ? "success" : "idle");
       setUsageError("");
       return undefined;
     }
 
     let active = true;
-    const requestKey = [periodMode, historySeason, historyDays, selectedPokemon.key, usageRetry].join("|");
+    const requestKey = [periodMode, historySeason, historyDays, selectedPokemonKey, usageRetry].join("|");
     const force = usageForceKey.current === requestKey;
     if (force) usageForceKey.current = "";
-    const request = { showdownId: selectedPokemon.showdownId, force };
+    const request = { showdownId: selectedShowdownId, force };
     if (periodMode === "history") {
       request.days = historyDays;
       if (historySeason !== "all") request.season = historySeason;
@@ -435,7 +437,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
     });
 
     return () => { active = false; };
-  }, [provider, selectedPokemon?.key, selectedPokemon?.showdownId, periodMode, historySeason, historyDays, usageRetry]);
+  }, [provider, selectedPokemonKey, selectedShowdownId, periodMode, historySeason, historyDays, usageRetry]);
 
   const requestedPokemon = initialPokemonName
     ? findUsagePokemonByReference(catalog, initialPokemonName)
