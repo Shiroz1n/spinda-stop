@@ -107,13 +107,13 @@ function HomeCommunity() {
 }
 
 function UsagePreview({ state }) {
-  const entries = state.data?.slice().sort((left, right) => (left.displayRank ?? Number.MAX_SAFE_INTEGER) - (right.displayRank ?? Number.MAX_SAFE_INTEGER)).slice(0, 15) || [];
+  const entries = state.data?.slice().sort((left, right) => (left.displayRank ?? Number.MAX_SAFE_INTEGER) - (right.displayRank ?? Number.MAX_SAFE_INTEGER)).slice(0, 6) || [];
   return (
     <section className="home-preview home-usage-preview" aria-labelledby="home-usage-title">
       <div className="home-section-heading"><div><p className="page-label">Doubles</p><h2 id="home-usage-title">Usage</h2></div><Link to="/usage">Ver tudo ↗</Link></div>
       {state.status === "loading" ? <p className="home-data-state" role="status">Carregando o meta…</p> : null}
       {state.status === "error" ? <p className="home-data-state" role="status">Usage não respondeu. <Link to="/usage">Abrir captura</Link></p> : null}
-      {state.status === "ready" && entries.length ? <ol className="home-preview-list" aria-label="Pokémon melhor posicionados na captura selecionada" tabIndex={entries.length >= 7 ? 0 : undefined}>{entries.map((entry) => {
+      {state.status === "ready" && entries.length ? <ol className="home-preview-list" aria-label="Pokémon melhor posicionados na captura selecionada">{entries.map((entry) => {
         const pokemon = pokemonByName.get(normalized(entry.showdownId || entry.metaRollId)) || pokemonByName.get(normalized(entry.name));
         return <li key={entry.key}><span className="home-preview-rank">{entry.displayRank ?? "—"}</span>{pokemon ? <PokemonSprite pokemon={pokemon} name={entry.name} size={44} decorative /> : <span className="home-avatar" aria-hidden="true">{initials(entry.name)}</span>}<span className="home-preview-copy"><strong>{entry.name}</strong><small>{entry.displayRank ? `Posição ${entry.displayRank}` : "posição não publicada"}</small></span></li>;
       })}</ol> : null}
@@ -124,13 +124,13 @@ function UsagePreview({ state }) {
 }
 
 function LadderPreview({ state }) {
-  const entries = state.data?.entries.slice().sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)).slice(0, 50) || [];
+  const entries = state.data?.entries.slice().sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)).slice(0, 6) || [];
   return (
     <section className="home-preview home-ladder-preview" aria-labelledby="home-ladder-title">
       <div className="home-section-heading"><div><p className="page-label">Doubles</p><h2 id="home-ladder-title">Ladder</h2></div><Link to="/usage?source=metaroll&view=trainers">Ver tudo ↗</Link></div>
       {state.status === "loading" ? <p className="home-data-state" role="status">Carregando jogadores…</p> : null}
       {state.status === "error" ? <p className="home-data-state" role="status">A Ladder não respondeu. <Link to="/usage?source=metaroll&view=trainers">Abrir ladder</Link></p> : null}
-      {state.status === "ready" && entries.length ? <ol className="home-preview-list home-ladder-list" aria-label="Jogadores melhor posicionados na Ladder" tabIndex={entries.length >= 7 ? 0 : undefined}>{entries.map((person) => <li key={person.id}><span className="home-preview-rank">{person.rank ?? "—"}</span><span className="home-avatar" aria-hidden="true">{initials(person.name)}</span><span className="home-preview-copy"><strong>{person.name || "Nome não informado"}</strong><small>{person.rating === null ? "rating não informado" : `Rating ${person.rating.toLocaleString("pt-BR")}`}</small></span></li>)}</ol> : null}
+      {state.status === "ready" && entries.length ? <ol className="home-preview-list home-ladder-list" aria-label="Jogadores melhor posicionados na Ladder">{entries.map((person) => <li key={person.id}><span className="home-preview-rank">{person.rank ?? "—"}</span><span className="home-avatar" aria-hidden="true">{initials(person.name)}</span><span className="home-preview-copy"><strong>{person.name || "Nome não informado"}</strong><small>{person.rating === null ? "rating não informado" : `Rating ${person.rating.toLocaleString("pt-BR")}`}</small></span></li>)}</ol> : null}
       {state.status === "ready" && !entries.length ? <p className="home-data-state">A captura não publicou jogadores.</p> : null}
       {state.data?.season ? <small className="home-preview-meta">Temporada {state.data.season} · posição publicada</small> : null}
     </section>

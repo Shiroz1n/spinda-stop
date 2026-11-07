@@ -1318,7 +1318,7 @@ input, select, textarea { font-size: 1rem; }
 .app-shell .home-dashboard .home-data-credit { grid-area: credit; }
 .app-shell .home-dashboard .home-hero { min-height: 100%; grid-template-columns: minmax(0, 1fr) 148px; align-items: center; gap: 18px; padding: 24px; border: 1px solid var(--line); border-left: 4px solid var(--signal-red); background: var(--surface); }
 .home-dashboard .hero-copy { min-width: 0; }
-.home-dashboard .hero-copy h1 { max-width: 13ch; margin-block: 5px 12px; font-size: clamp(2rem, 3vw, 3.2rem); line-height: 1.12; }
+.home-dashboard .hero-copy h1 { max-width: 20ch; margin-block: 5px 12px; font-size: clamp(1.8rem, 2.25vw, 2.25rem); line-height: 1.25; }
 .home-dashboard .hero-intro { margin-bottom: 18px; }
 .home-dashboard .home-search { max-width: 620px; }
 .home-dashboard .home-search > label { font-size: 1rem; }
@@ -1342,7 +1342,6 @@ input, select, textarea { font-size: 1rem; }
 .home-section-heading .page-label { margin-bottom: 3px; }
 .home-section-heading > a, .home-community-links a { min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
 .home-preview-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.home-usage-preview .home-preview-list, .home-ladder-preview .home-preview-list { max-height: 390px; overflow-y: auto; overscroll-behavior: contain; }
 .home-preview-list li { min-height: 54px; display: grid; grid-template-columns: 28px 42px minmax(0, 1fr); align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
 .home-preview-list .pokemon-art { --sprite-size: 42px !important; }
 .home-preview-rank { color: var(--signal-red-strong); font-variant-numeric: tabular-nums; font-weight: 800; text-align: center; }
