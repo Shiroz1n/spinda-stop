@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
-import { createPokemonSpriteLookup } from "../data/pokemonSprites.js";
+import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
