@@ -1352,6 +1352,7 @@ input, select, textarea { font-size: 1rem; }
 .home-avatar { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-alt); color: var(--ink); font-size: 1rem; font-weight: 800; }
 .home-preview-meta { margin-top: auto; padding-top: 10px; }
 .home-data-state { margin: 4px 0; color: var(--muted); }
+.home-data-state a { text-decoration: underline; text-underline-offset: 0.18em; }
 .home-community, .home-regulation { padding: 20px 22px; }
 .home-community { background: color-mix(in srgb, var(--surface) 82%, var(--grass)); }
 .home-community-links { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -1437,7 +1438,7 @@ input, select, textarea { font-size: 1rem; }
 .team-analysis-relation li > span:last-child { color: var(--muted); font-size: 1rem; text-align: right; }
 .team-analysis-relation.is-weakness h3 { color: var(--coral-dark); }
 .team-analysis-relation.is-resistance h3 { color: var(--blue-dark); }
-.team-analysis-relation.is-immunity h3 { color: color-mix(in srgb, var(--grass) 70%, var(--ink)); }
+.team-analysis-relation.is-immunity h3 { color: var(--green); }
 .team-analysis-empty { margin: 6px 0 0; color: var(--muted); }
 .app-shell .metaroll-player-identity { grid-template-columns: 32px 40px minmax(0, 1fr); align-items: center; gap: 8px !important; }
 .metaroll-player-avatar { width: 40px; height: 40px; display: grid !important; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-alt); color: var(--ink); font-size: 1rem !important; font-weight: 800; }
