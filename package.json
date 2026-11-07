@@ -17,6 +17,7 @@
     "preview": "npm run preview --workspace @spinda-stop/web",
     "visual:review": "npm run build && node apps/web/test/visual-review.mjs",
     "visual:review:fast": "npm run build && node apps/web/test/visual-review.mjs --fast",
+    "visual:review:mobile": "node apps/web/test/visual-review.mjs --mobile-only",
     "lint": "eslint .",
     "test": "bun test apps/api/test/*.test.js && node --test packages/domain/test/*.test.js packages/data/test/*.test.js apps/web/test/*.test.js",
     "validate:damage-oracle": "node scripts/validate-damage-oracle.mjs",

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { addPokemonToDraft, createEmptyTeam, parseTeam, serializeTeam, setTeamMember } from "@spinda-stop/domain";
+import { addPokemonToDraft, createEmptyTeam, exportShowdownTeam, importShowdownTeam, parseTeam, serializeTeam, setTeamMember } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
@@ -9,8 +9,13 @@ import { NaturePicker } from "../components/NaturePicker.jsx";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
+import { BuilderMetaPanel } from "../components/BuilderMetaPanel.jsx";
+import { PublicTournamentTeams } from "../components/PublicTournamentTeams.jsx";
+import { applyBuilderMetaOption } from "../data/builderMeta.js";
 import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
+import { getPokepasteRawUrl } from "../data/pokepaste.js";
 import { getNature, getNatureSpeedClass } from "../data/natures.js";
+import { calculateTeamAnalysis } from "../data/teamAnalysis.js";
 import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, compareSpeedOrder, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, resolveSpeedPreviewNature, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
@@ -42,13 +47,25 @@ function pokemonWithDetails(slug) {
   return summary ? { ...summary, ...detailData.pokemonBySlug[slug] } : null;
 }
 
-function createInitialDraft(pokemonSlug) {
+function createInitialDraft(pokemonSlug, metaOption) {
   const saved = readSavedTeam();
   const team = saved.team;
   const pokemon = pokemonWithDetails(pokemonSlug);
   if (!pokemon) return { team, selectedSlot: 0, message: saved.message, preserveStored: saved.preserveStored };
 
   const result = addPokemonToDraft(team, pokemon);
+  let nextTeam = result.team;
+  let metaMessage = "";
+  if (metaOption && result.status !== "full") {
+    const applied = applyBuilderMetaOption(nextTeam.members[result.selectedSlot], metaOption.category, metaOption.row);
+    if (applied.ok && applied.changed) {
+      const members = [...nextTeam.members];
+      members[result.selectedSlot] = applied.member;
+      nextTeam = { ...nextTeam, members };
+      metaMessage = applied.message;
+    } else if (!applied.ok) metaMessage = applied.error;
+    else metaMessage = applied.message;
+  }
   const slotLabel = result.selectedSlot + 1;
   const messages = {
     added: `${pokemon.name} adicionado à posição ${slotLabel}.`,
@@ -57,9 +74,9 @@ function createInitialDraft(pokemonSlug) {
   };
 
   return {
-    team: result.team,
+    team: nextTeam,
     selectedSlot: result.selectedSlot,
-    message: [saved.message, messages[result.status]].filter(Boolean).join(" "),
+    message: [saved.message, messages[result.status], metaMessage].filter(Boolean).join(" "),
     preserveStored: saved.preserveStored,
   };
 }
@@ -68,8 +85,13 @@ export function BuilderPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const importRef = useRef(null);
-  const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug));
+  const accountDetailsRef = useRef(null);
+  const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug, location.state?.metaOption));
   const [team, setTeam] = useState(initialDraft.team);
+  const [showdownInput, setShowdownInput] = useState("");
+  const [showdownExport, setShowdownExport] = useState("");
+  const [pokepasteUrl, setPokepasteUrl] = useState("");
+  const [builderTab, setBuilderTab] = useState("team");
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
   const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
   const [speedTargetSlug, setSpeedTargetSlug] = useState("");
@@ -83,10 +105,10 @@ export function BuilderPage() {
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
-  const selectedPokemon = useMemo(
-    () => selectedMember ? pokemonWithDetails(selectedMember.pokemonId) : null,
-    [selectedMember],
-  );
+  const teamAnalysis = useMemo(() => calculateTeamAnalysis(team, dexData.pokemon, moveData.moves), [team]);
+  const selectedPokemonId = selectedMember?.pokemonId;
+  const selectedPokemon = useMemo(() => selectedPokemonId ? pokemonWithDetails(selectedPokemonId) : null, [selectedPokemonId]);
+  const teamReferencePokemon = useMemo(() => selectedPokemon || pokemonWithDetails(team.members.find(Boolean)?.pokemonId), [selectedPokemon, team.members]);
   const selectedComputedStats = useMemo(() => {
     if (!selectedPokemon || !selectedMember) return null;
     try {
@@ -154,8 +176,8 @@ export function BuilderPage() {
   }
 
   useEffect(() => {
-    if (location.state?.pokemonSlug) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state?.pokemonSlug, navigate]);
+    if (location.state?.pokemonSlug || location.state?.metaOption) navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, navigate]);
 
   useEffect(() => {
     if (initialDraft.preserveStored) return;
@@ -178,6 +200,18 @@ export function BuilderPage() {
     const members = [...team.members];
     members[selectedSlot] = { ...members[selectedSlot], ...update };
     commitTeam({ ...team, members });
+  }
+
+  function applyMetaOption(category, row) {
+    const applied = applyBuilderMetaOption(selectedMember, category, row);
+    if (!applied.ok || !applied.changed) {
+      setMessage(applied.error || applied.message);
+      return;
+    }
+    const members = [...team.members];
+    members[selectedSlot] = applied.member;
+    const saved = commitTeam({ ...team, members });
+    setMessage(saved ? applied.message : `${applied.message} Não foi possível salvar neste navegador.`);
   }
 
   function chooseForSlot(slot) {
@@ -252,6 +286,115 @@ export function BuilderPage() {
     const saved = commitTeam(result.value);
     setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
     setMessage(saved ? "Equipe importada e salva neste navegador." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+  }
+
+  function importShowdownText(text, options = {}) {
+    const result = importShowdownTeam(text, dexData.pokemon, options);
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+    const consequences = [
+      team.members.some(Boolean) ? "A importação substituirá as seis posições e as configurações atuais do rascunho." : "A equipe será salva neste navegador.",
+      ...(result.warnings.length ? [`Avisos:\n${result.warnings.join("\n")}`] : []),
+    ].join("\n\n");
+    if ((team.members.some(Boolean) || result.warnings.length) && !window.confirm(consequences)) return;
+    const saved = commitTeam(result.value);
+    setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
+    setSpeedPreviews({});
+    setShowdownInput("");
+    setBuilderTab("team");
+    setMessage(saved ? "Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+  }
+
+  function importShowdownPaste() {
+    importShowdownText(showdownInput);
+  }
+
+  async function importPokepasteUrl() {
+    const url = getPokepasteRawUrl(pokepasteUrl);
+    if (!url) {
+      setMessage("Informe um link válido de pokepast.es.");
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit", signal: controller.signal });
+      if (!response.ok) throw new Error("unavailable");
+      const text = await response.text();
+      if (text.length > 128 * 1024) throw new Error("too_large");
+      setShowdownInput(text);
+      importShowdownText(text);
+    } catch {
+      setMessage("Não foi possível ler esse Poképaste. Confira o link ou cole o texto exportado.");
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  function applyPublicSet(member, sourceTeam) {
+    const slot = selectedMember?.pokemonId === member.pokemonId
+      ? selectedSlot
+      : team.members.findIndex((entry) => entry?.pokemonId === member.pokemonId);
+    if (slot < 0) return;
+    if (!window.confirm(`Este set substituirá habilidade, item, Nature, Stat Points, nível e golpes de ${pokemonWithDetails(member.pokemonId)?.name || "este Pokémon"} na posição ${slot + 1}. Deseja continuar?`)) return;
+    const members = [...team.members];
+    members[slot] = { ...members[slot], ...member };
+    commitTeam({ ...team, members });
+    setSelectedSlot(slot);
+    setBuilderTab("team");
+    setMessage(`Set de ${sourceTeam.event || "equipe pública"} aplicado à posição ${slot + 1}. Revise antes de usar.`);
+  }
+
+  async function copyShowdownPaste() {
+    const text = exportShowdownTeam(team, dexData.pokemon);
+    if (!text) {
+      setMessage("Adicione ao menos um Pokémon para preparar o texto da equipe.");
+      return;
+    }
+    setShowdownExport(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage("Texto Showdown copiado. Você pode colá-lo em uma nova Poképaste.");
+    } catch {
+      setMessage("Texto preparado abaixo. A cópia automática não está disponível neste navegador.");
+    }
+  }
+
+  async function shareTeam() {
+    const text = exportShowdownTeam(team, dexData.pokemon);
+    if (!text) {
+      setMessage("Adicione um Pokémon antes de compartilhar a equipe.");
+      return;
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: team.name, text });
+        setMessage("Equipe compartilhada.");
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      setMessage("Texto da equipe copiado para compartilhar.");
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      setMessage("Não foi possível compartilhar a equipe neste navegador.");
+    }
+  }
+
+  function clearTeam() {
+    if ((filledSlots > 0 || team.name !== "Meu time") && !window.confirm("Limpar as seis posições e começar uma equipe nova?")) return;
+    commitTeam(createEmptyTeam());
+    setSelectedSlot(0);
+    setSpeedPreviews({});
+    setDamageOpponentSlot(-1);
+    setMessage("Equipe nova pronta.");
+  }
+
+  function showAccountTeams() {
+    if (!accountDetailsRef.current) return;
+    accountDetailsRef.current.open = true;
+    accountDetailsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function updateMove(index, value) {
@@ -375,7 +518,21 @@ export function BuilderPage() {
         </div>
       </div>
 
+      <nav className="builder-action-toolbar" aria-label="Ações da equipe">
+        <button className="button builder-action-share" type="button" onClick={shareTeam}>Compartilhar</button>
+        <button className="button button-outline" type="button" onClick={() => { commitTeam(team); setMessage("Rascunho salvo neste navegador."); }}>Salvar</button>
+        <button className="button button-outline" type="button" onClick={showAccountTeams}>Minhas equipes / carregar</button>
+        <button className="button button-outline" type="button" onClick={() => setBuilderTab("paste")}>Importar</button>
+        <button className="button button-outline" type="button" onClick={() => { setBuilderTab("paste"); void copyShowdownPaste(); }}>Exportar</button>
+        <button className="button button-quiet" type="button" onClick={clearTeam}>Nova equipe / limpar</button>
+      </nav>
+
       <section className="builder-workspace">
+        <div className="builder-center-column">
+        <div className="builder-workbench-tabs" role="group" aria-label="Área de trabalho da equipe">
+          {[["team", "Equipe"], ["meta", "Meta"], ["paste", "Poképaste"]].map(([key, label]) => <button type="button" key={key} aria-pressed={builderTab === key} onClick={() => setBuilderTab(key)}>{label}</button>)}
+        </div>
+
         <div className="slot-column">
           <div className="section-heading"><h2>Integrantes</h2><span>Duplas</span></div>
           <div className="team-slots" role="group" aria-label="Seis posições da equipe">
@@ -398,10 +555,9 @@ export function BuilderPage() {
               );
             })}
           </div>
-          <p className="slot-hint">Selecione uma posição para editar ou escolha uma espécie para preenchê-la.</p>
         </div>
 
-        <div className="editor-column">
+        {builderTab === "team" && <div className="editor-column">
           {!selectedMember || !selectedPokemon ? (
             <section className="empty-editor panel-frame">
               <span className="empty-editor-label">Posição vazia</span>
@@ -454,7 +610,7 @@ export function BuilderPage() {
                 </div>
 
                 <NaturePicker id="member-nature" label="Nature do set" value={selectedMember.nature || "Serious"} onChange={(nature) => updateMember({ nature })} className="field-wide" />
-                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os Stat Points">
+                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os pontos investidos">
                   {[["hp", "HP"], ["atk", "Atk"], ["def", "Def"], ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"]].map(([key, label]) => <div key={key} data-stat={key}><dt>{label}</dt><dd>{selectedComputedStats[key]}</dd></div>)}
                 </dl> : <p className="builder-nature-stats-note field-wide" role="status">Os stats deste set não podem ser calculados até a distribuição e a Nature serem válidas.</p>}
 
@@ -469,11 +625,11 @@ export function BuilderPage() {
                     <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
                   </label>
                 ))}
-                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p></details>
+                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>Golpes gerais; legalidade não verificada.</p></details>
 
                 <details className="points-section field-wide">
-                  <summary>Conferir Stat Points <span>{pointTotal} distribuídos</span></summary>
-                  <p className="form-hint">Limite usado pelo formato comunitário: 32 SP por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} SP.`}</p>
+                  <summary>Conferir pontos investidos <span>{pointTotal} distribuídos</span></summary>
+                  <p className="form-hint">Até 32 SP por atributo e 66 no set; legalidade não verificada. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `Excede o limite em ${Math.abs(pointRemaining)} SP.`}</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>
@@ -486,7 +642,37 @@ export function BuilderPage() {
               </div>
             </section>
           )}
+        </div>}
+
+        {builderTab === "meta" && (selectedPokemon
+          ? <BuilderMetaPanel key={selectedPokemon.slug} pokemon={selectedPokemon} member={selectedMember} onApplyOption={applyMetaOption} />
+          : <section className="builder-meta-empty"><h2>Meta da equipe</h2><p>Adicione um Pokémon para consultar suas distribuições.</p></section>)}
+
+        {builderTab === "paste" && <section className="builder-paste-panel" aria-labelledby="builder-paste-title">
+          <div className="builder-paste-heading"><div><p className="page-label">Showdown · Poképaste</p><h2 id="builder-paste-title">Importar ou exportar equipe</h2></div><Link to="/usage">Consultar meta ↗</Link></div>
+          <div className="builder-showdown-tools">
+            <section aria-labelledby="builder-showdown-import-title">
+              <h3 id="builder-showdown-import-title">Importar texto</h3>
+              <label className="builder-paste-label" htmlFor="builder-pokepaste-url">Link do Poképaste</label>
+              <div className="builder-pokepaste-url"><input id="builder-pokepaste-url" className="text-input" type="url" inputMode="url" autoComplete="url" value={pokepasteUrl} onChange={(event) => setPokepasteUrl(event.target.value)} placeholder="https://pokepast.es/…" /><button className="button button-outline" type="button" onClick={importPokepasteUrl}>Importar link</button></div>
+              <label className="builder-paste-label" htmlFor="builder-showdown-input">Cole o texto exportado</label>
+              <textarea id="builder-showdown-input" className="text-input builder-paste-input" value={showdownInput} onChange={(event) => setShowdownInput(event.target.value)} placeholder={"Garchomp @ Life Orb\nAbility: Rough Skin\nJolly Nature\n- Earthquake"} />
+              <button className="button button-primary" type="button" onClick={importShowdownPaste}>Importar texto</button>
+            </section>
+            <section aria-labelledby="builder-showdown-export-title">
+              <h3 id="builder-showdown-export-title">Exportar equipe</h3>
+              <label className="builder-paste-label" htmlFor="builder-showdown-export">Texto Showdown</label>
+              <textarea id="builder-showdown-export" className="text-input builder-paste-input" value={showdownExport} readOnly placeholder="Prepare a equipe para copiar." />
+              <button className="button button-outline" type="button" onClick={copyShowdownPaste}>Preparar e copiar</button>
+              <details className="builder-format-details"><summary>Formato e limites</summary><p>Showdown guarda SP no campo EVs; legalidade não é verificada. <a href="https://github.com/smogon/pokemon-showdown/blob/master/sim/TEAMS.md" target="_blank" rel="noreferrer">Formato ↗</a></p></details>
+            </section>
+          </div>
+          <details className="builder-json-details"><summary>Importar ou exportar JSON</summary><div className="builder-actions builder-json-actions"><button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button><button className="button button-outline" type="button" onClick={exportTeam}>Exportar JSON</button><input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" /></div></details>
+        </section>}
         </div>
+        <TeamAnalysis analysis={teamAnalysis} />
+
+        {teamReferencePokemon ? <PublicTournamentTeams key={teamReferencePokemon.slug} pokemon={teamReferencePokemon} selectedPokemon={teamReferencePokemon} onImport={importShowdownText} onApplySet={applyPublicSet} /> : <aside className="builder-public-teams builder-public-empty"><p className="page-label">Arquivo público · M-C</p><h2>Equipes de torneio</h2><p>Adicione um Pokémon para encontrar equipes arquivadas com ele.</p></aside>}
       </section>
 
       <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
@@ -538,33 +724,62 @@ export function BuilderPage() {
               <div className="builder-speed-action"><span>{recommendationText} · {remainingText}</span>{favorableNatureText && <small className="builder-speed-favorable-note">{favorableNatureText}</small>}<button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
             </article>;
           })}
-        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>Esta prévia aceita até 32 SP em Speed e confere o orçamento de 66 SP do set antes de salvar. A referência é um formato comunitário e não confirma regras oficiais.</span></details></div>}
-        {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva · Trick Room muda ordem de atuação, não Speed bruta. <details><summary>Sobre o modelo</summary><span>Fórmula Champions no nível 50 conforme o modelo do @smogon/calc. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Aplicar uma natureza nova também pode alterar outros stats do set.</span></details></div>}
+        </div> : <div className="builder-speed-hint">Ajuste um alvo para comparar. Trick Room muda a ordem de ação.</div>}
       </section>
 
-      <details className="builder-tools-details">
-        <summary>Importar ou exportar equipe</summary>
-        <div className="builder-actions">
-          <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
-          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
-          <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
-        </div>
-      </details>
-
       <details className="builder-rules-details">
-        <summary>Limites deste rascunho</summary>
+        <summary>Sobre cálculo e validação</summary>
         <div className="rules-warning" role="note">
           <span className="warning-mark">Regras</span>
-          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de Stat Points.</p>
+          <p>Speed compara stats no nível 50 e Nature. Efeitos de campo, IVs e legalidade não são simulados.</p>
         </div>
       </details>
 
-      <TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} />
+      <details ref={accountDetailsRef} className="builder-account-details"><summary>Equipes da conta</summary><TeamAccountPanel onSave={saveTeamToAccount} onLoad={loadAccountTeam} /></details>
 
       <p className="form-message" role="status" aria-live="polite">{message}</p>
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
       <SpeciesPicker idPrefix="speed-target" open={speedTargetPickerOpen} pokemon={dexData.pokemon} onChoose={selectSpeedTarget} onClose={() => setSpeedTargetPickerOpen(false)} />
     </div>
+  );
+}
+
+function TeamAnalysis({ analysis }) {
+  function multiplierLabel(value) {
+    if (value === 0) return "0×";
+    if (value < 1) return ({ 0.5: "½×", 0.25: "¼×", 0.125: "⅛×" })[value] || `${value}×`;
+    return `${value}×`;
+  }
+
+  function relationGroup(title, items, kind) {
+    return (
+      <section className={`team-analysis-relation is-${kind}`}>
+        <h3>{title}</h3>
+        {items.length ? <ul>{items.map(({ type, counts }) => <li key={type}><TypeTag type={type} /><span>{counts.map(([multiplier, count]) => `${count} ${count === 1 ? "integrante" : "integrantes"} · ${multiplierLabel(multiplier)}`).join(" / ")}</span></li>)}</ul> : <p className="team-analysis-empty">Nenhum tipo nesta categoria.</p>}
+      </section>
+    );
+  }
+
+  return (
+    <aside className="builder-team-analysis" aria-labelledby="team-analysis-title">
+      <div className="team-analysis-heading"><div><p className="page-label">Visão da equipe</p><h2 id="team-analysis-title">Análise da equipe</h2></div></div>
+      <ul className="team-analysis-summary" aria-label="Resumo da equipe">
+        <li><strong>{analysis.filledSlots}/6</strong><span>Pokémon</span></li>
+        <li><strong>{analysis.attackTypes.length}</strong><span>Tipos de golpes equipados</span></li>
+        <li><strong>{analysis.coverage.filter(({ multiplier }) => multiplier > 1).length}/18</strong><span>Tipos cobertos a 2× ou mais</span></li>
+      </ul>
+      <section className="team-analysis-coverage" aria-labelledby="team-coverage-title">
+        <div><h3 id="team-coverage-title">Cobertura de tipos</h3><p>Golpes equipados · melhor multiplicador</p></div>
+        {analysis.attackTypes.length ? <ul className="team-analysis-type-grid">{analysis.coverage.map(({ type, multiplier }) => <li key={type} className={multiplier > 1 ? "is-effective" : ""}><TypeTag type={type} /><strong>{multiplier === null ? "—" : multiplierLabel(multiplier)}</strong></li>)}</ul> : <p className="team-analysis-empty">Adicione um golpe de dano.</p>}
+        {analysis.attackTypes.length ? <p className="team-analysis-note">Tipos sem cobertura super efetiva: {analysis.blindSpots.length ? analysis.blindSpots.map((type) => type.slice(0, 3).toUpperCase()).join(", ") : "nenhum contra tipos puros"}.</p> : null}
+      </section>
+      <div className="team-analysis-defenses">
+        {relationGroup("Fraquezas", analysis.weaknesses, "weakness")}
+        {relationGroup("Resistências", analysis.resistances, "resistance")}
+        {relationGroup("Imunidades", analysis.immunities, "immunity")}
+      </div>
+      <details className="team-analysis-help"><summary>Como é calculado</summary><p>Golpes usam o tipo puro do alvo; defesas combinam os tipos da equipe. Habilidades e itens não entram.</p></details>
+    </aside>
   );
 }
 

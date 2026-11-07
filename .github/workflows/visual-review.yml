@@ -34,14 +34,21 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate
-      - name: Fast review of community screens
-        run: npm run visual:review:fast -- --pages=rooms,tournaments
+        if: github.event_name == 'workflow_dispatch'
       - run: npm run visual:review
+        if: github.event_name == 'workflow_dispatch'
+      - run: npm run visual:review:mobile
+        if: github.event_name == 'workflow_dispatch'
+      - run: npm run visual:review:fast -- --pages=pokemon,usage,builder,speed
+        if: github.event_name == 'pull_request'
+      - run: npm run visual:review:mobile -- --pages=builder --narrow-only
+        if: github.event_name == 'pull_request'
       - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: visual-review-${{ github.sha }}
           path: |
             artifacts/visual-review/
+            artifacts/visual-review-mobile/
             artifacts/visual-review-fast/
           retention-days: 14

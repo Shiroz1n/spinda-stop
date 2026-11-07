@@ -89,6 +89,8 @@ function formAliases(entry) {
   const species = toId(entry.speciesSlug || entry.speciesName);
   if (!species || !form || form === "default") return aliases;
 
+  if (form === "male") aliases.push(species);
+  if (form === "female") aliases.push(`${species}f`, `${species}female`);
   if (form.startsWith("mega")) aliases.push(`${species}${form}`);
   if (form === "mega") aliases.push(`${species}mega`);
   const regionalForm = form.match(/^(alola|galar|hisui|paldea)(.*)$/);
@@ -142,18 +144,22 @@ export function resolvePokemonSpriteUrl(pokemon) {
   if (!pokemon || typeof pokemon !== "object") return null;
   const exactHomeFormAsset = POKEAPI_HOME_FORM_SPRITES[pokemon.slug];
   if (exactHomeFormAsset) return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${exactHomeFormAsset}`;
-  const isDefault = pokemon.formId === "default" || pokemon.isDefault === true;
   const spriteId = Number(pokemon.spriteId);
-
-  const speciesId = Number(pokemon.speciesId);
-  if (isDefault && Number.isInteger(speciesId) && speciesId > 0 && speciesId <= 649) {
-    return `${POKEAPI_SPRITES_BASE}/pokemon/versions/generation-v/black-white/${speciesId}.png`;
-  }
-
-  // The Black/White collection ends at National Dex 649. Later base species
-  // use their own PokeAPI ID in the Showdown collection instead of a broken URL.
   if (!Number.isInteger(spriteId) || spriteId < 1) return null;
-  return `${POKEAPI_SPRITES_BASE}/pokemon/other/showdown/${spriteId}.gif`;
+  return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${spriteId}.png`;
+}
+
+export function resolvePokemonSpriteFallbackUrl(pokemon) {
+  const spriteId = Number(pokemon?.spriteId);
+  return Number.isInteger(spriteId) && spriteId > 0
+    ? `${POKEAPI_SPRITES_BASE}/pokemon/other/official-artwork/${spriteId}.png`
+    : null;
+}
+
+export function resolvePokemonSpriteCandidate(primaryUrl, fallbackUrl, failure) {
+  if (!primaryUrl) return null;
+  if (failure?.primaryUrl !== primaryUrl) return primaryUrl;
+  return failure.fallbackFailed ? null : fallbackUrl || null;
 }
 
 export function typeIconUrl(type) {

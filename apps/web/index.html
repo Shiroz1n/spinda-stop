@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#16485e" />
+    <meta name="theme-color" content="#111111" />
     <meta name="description" content="Explore o catálogo, monte times e organize suas ideias para Pokémon Champions." />
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png" />
     <title>Spinda Stop | Pokédex, times e partidas</title>
+    <script>
+      try {
+        const savedTheme = localStorage.getItem("spinda-theme");
+        document.documentElement.dataset.theme = savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

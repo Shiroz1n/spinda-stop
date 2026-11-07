@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { communityRequest } from "../data/communityApi.js";
+
+function errorMessage(error) {
+  return error.code === "persistent_storage_required" ? "Salvar na conta indisponível neste preview." : error.message;
+}
 
 export function TeamAccountPanel({ onLoad, onSave }) {
   const [state, setState] = useState({ status: "loading" });
@@ -10,7 +14,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
   const [savedVisibility, setSavedVisibility] = useState({});
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       const [session, teamList] = await Promise.all([
         communityRequest("/me"),
@@ -23,11 +27,11 @@ export function TeamAccountPanel({ onLoad, onSave }) {
         ? { status: "ready", user: session.user, teams: teamList?.teams || [] }
         : { status: "signed-out" });
     } catch (error) {
-      setState({ status: "error", error: error.message });
+      setState({ status: "error", error: errorMessage(error) });
     }
-  }
+  }, []);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
 
   async function saveCopy() {
     setBusy(true);
@@ -35,7 +39,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
       await onSave(visibility);
       await refresh();
     } catch (error) {
-      setState((current) => ({ ...current, actionError: error.message }));
+      setState((current) => ({ ...current, actionError: errorMessage(error) }));
     } finally {
       setBusy(false);
     }
@@ -47,7 +51,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
       await communityRequest(`/teams/${id}`, { method: "DELETE" });
       await refresh();
     } catch (error) {
-      setState((current) => ({ ...current, actionError: error.message }));
+      setState((current) => ({ ...current, actionError: errorMessage(error) }));
     } finally {
       setBusy(false);
     }
@@ -59,7 +63,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
       await communityRequest(`/teams/${saved.id}`, { method: "PATCH", body: { visibility: savedVisibility[saved.id] || saved.visibility } });
       await refresh();
     } catch (error) {
-      setState((current) => ({ ...current, actionError: error.message }));
+      setState((current) => ({ ...current, actionError: errorMessage(error) }));
     } finally {
       setBusy(false);
     }
@@ -72,9 +76,9 @@ export function TeamAccountPanel({ onLoad, onSave }) {
         <span>Opcional</span>
       </div>
       {state.status === "loading" ? <p role="status">Verificando sua sessão…</p> : null}
-      {state.status === "error" ? <p className="community-inline-error" role="status">{state.error} O rascunho local continua disponível.</p> : null}
+      {state.status === "error" ? <p className="community-inline-error" role="status">{state.error}</p> : null}
       {state.status === "signed-out" ? (
-        <p className="community-muted">Entre em <Link to="/rooms">Salas</Link> para guardar uma cópia na conta. A equipe deste navegador continua local.</p>
+        <p className="community-muted">Entre em <Link to="/rooms">Salas</Link> para salvar uma cópia. O rascunho local permanece neste navegador.</p>
       ) : null}
       {state.status === "ready" ? (
         <>

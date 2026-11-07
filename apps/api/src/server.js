@@ -1,5 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { Elysia } from "elysia";
+import { createPublicCommunityTeamsHandler } from "./public-community-teams.js";
+import { createPublicVgcTournamentsHandler } from "./public-vgc-tournaments.js";
 import { createDatabase } from "./db.js";
 import {
   canCheckIn,
@@ -1207,7 +1209,12 @@ function createApiRequestHandler({ database, env = process.env, fetchImpl = fetc
 
 export function createApiApp(options = {}) {
   const handleRequest = createApiRequestHandler(options);
+  const handlePublicCommunityTeams = createPublicCommunityTeamsHandler(options.publicTeamsFetch);
+  const handlePublicVgcTournaments = createPublicVgcTournamentsHandler(options.publicVgcTournamentsFetch);
   return new Elysia({ name: "spinda-stop-community-api" })
+    .all("/api/public/teams", ({ request }) => handlePublicCommunityTeams(request))
+    .all("/api/public/teams/*", ({ request }) => handlePublicCommunityTeams(request))
+    .all("/api/public/vgc-tournaments", ({ request }) => handlePublicVgcTournaments(request))
     .all("/api", ({ request, server }) => handleRequest(request, server))
     .all("/api/*", ({ request, server }) => handleRequest(request, server));
 }
@@ -1340,7 +1347,12 @@ async function handleDeploymentRequest({ request, server }) {
   }
 }
 
+const handlePublicCommunityTeams = createPublicCommunityTeamsHandler();
+const handlePublicVgcTournaments = createPublicVgcTournamentsHandler();
 const deploymentApp = new Elysia({ name: "spinda-stop-community-api" })
+  .all("/api/public/teams", ({ request }) => handlePublicCommunityTeams(request))
+  .all("/api/public/teams/*", ({ request }) => handlePublicCommunityTeams(request))
+  .all("/api/public/vgc-tournaments", ({ request }) => handlePublicVgcTournaments(request))
   .all("/api", handleDeploymentRequest)
   .all("/api/*", handleDeploymentRequest);
 

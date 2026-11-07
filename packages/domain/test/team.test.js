@@ -4,7 +4,9 @@ import {
   addPokemonToDraft,
   createEmptyTeam,
   createTeamMember,
+  exportShowdownTeam,
   formatNationalNumber,
+  importShowdownTeam,
   parseTeam,
   searchPokemon,
   sortPokemon,
@@ -24,6 +26,10 @@ const catalog = [{
   generation: 1,
   abilities: [{ name: "Static" }],
 }];
+const showdownCatalog = [
+  ...catalog,
+  { ...catalog[0], slug: "raichu-alola", speciesId: 26, speciesSlug: "raichu", formId: "alola", name: "Alolan Raichu", speciesName: "Raichu" },
+];
 
 test("creates six empty slots and a team member with a separate form ID", () => {
   const team = createEmptyTeam();
@@ -141,6 +147,90 @@ test("returns useful errors for malformed, oversized, unknown, and wrong-version
   team.format = "doubles";
   team.members[0] = { ...createTeamMember(catalog[0]), pokemonId: "missing" };
   assert.match(parseTeam(JSON.stringify(team), catalog).error, /não encontrado/);
+});
+
+test("imports and exports Showdown paste with Champions points encoded as its documented EV field", () => {
+  const imported = importShowdownTeam(`Alolan Raichu @ Focus Sash\nAbility: Surge Surfer\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Thunderbolt\n- Protect`, showdownCatalog);
+
+  assert.equal(imported.ok, true);
+  assert.equal(imported.value.members[0].pokemonId, "raichu-alola");
+  assert.deepEqual(imported.value.members[0].statPoints, { hp: 4, atk: 0, def: 0, spa: 32, spd: 0, spe: 30 });
+  assert.equal(imported.value.members[0].nature, "Timid");
+  assert.deepEqual(imported.value.members[0].moves.slice(0, 2), ["Thunderbolt", "Protect"]);
+
+  const exported = exportShowdownTeam(imported.value, showdownCatalog);
+  assert.match(exported, /^Raichu-Alola @ Focus Sash/m);
+  assert.match(exported, /EVs: 4 HP \/ 32 SpA \/ 30 Spe/);
+  const roundTrip = importShowdownTeam(exported, showdownCatalog);
+  assert.equal(roundTrip.ok, true);
+  assert.deepEqual(roundTrip.value.members[0].statPoints, imported.value.members[0].statPoints);
+});
+
+test("resolves nicknames and gender while warning that the draft cannot preserve them", () => {
+  const imported = importShowdownTeam("Sparky (Pikachu) @ Light Ball\nIVs: 0 Atk\nJolly Nature\n- Thunderbolt", catalog);
+  assert.equal(imported.ok, true);
+  assert.equal(imported.value.members[0].pokemonId, "pikachu");
+  assert.ok(imported.warnings.some((warning) => warning.includes("apelido “Sparky” não é preservado")));
+  assert.ok(imported.warnings.some((warning) => warning.includes("IVs não são representados")));
+  assert.equal(imported.value.members[0].statPoints.atk, 0);
+
+  const gendered = importShowdownTeam("Pikachu (M)\n- Thunderbolt", catalog);
+  assert.equal(gendered.ok, true);
+  assert.equal(gendered.value.members[0].pokemonId, "pikachu");
+  assert.ok(gendered.warnings.some((warning) => warning.includes("gênero do set não é preservado")));
+});
+
+test("partial public imports skip unknown Pokémon and resolve Showdown female form IDs", () => {
+  const indeedee = {
+    ...catalog[0],
+    slug: "indeedee-female",
+    name: "Female Indeedee",
+    speciesSlug: "indeedee",
+    speciesName: "Indeedee",
+    speciesId: 876,
+    formId: "female",
+  };
+  const paste = "Unknownmon\n- Protect\n\nPikachu @ Light Ball\n- Thunderbolt\n\nIndeedee-F @ Psychic Seed\n- Psychic";
+
+  assert.match(importShowdownTeam(paste, [catalog[0]]).error, /não foi encontrado/);
+  const imported = importShowdownTeam(paste, [catalog[0], indeedee], { allowPartial: true });
+  assert.equal(imported.ok, true);
+  assert.deepEqual(imported.value.members.filter(Boolean).map((member) => member.pokemonId), ["pikachu", "indeedee-female"]);
+  assert.ok(imported.warnings.some((warning) => warning.includes("Unknownmon") && warning.includes("Foi ignorado")));
+  assert.match(importShowdownTeam("Unknownmon", [catalog[0]], { allowPartial: true }).error, /Nenhum Pokémon/);
+});
+
+test("round trips Paldean Tauros breed forms through Showdown species IDs", () => {
+  const tauros = {
+    ...catalog[0],
+    slug: "tauros-paldea-aqua-breed",
+    speciesId: 128,
+    speciesSlug: "tauros",
+    formId: "paldea-aqua-breed",
+    name: "Paldean Tauros (Aqua Breed)",
+    speciesName: "Tauros",
+  };
+  const team = createEmptyTeam();
+  team.members[0] = createTeamMember(tauros);
+  const exported = exportShowdownTeam(team, [tauros]);
+
+  assert.match(exported, /^Tauros-Paldea-Aqua(?:\n|$)/);
+  for (const heading of ["Tauros-Paldea-Aqua", "Paldean Tauros (Aqua Breed)"]) {
+    const imported = importShowdownTeam(heading, [tauros]);
+    assert.equal(imported.ok, true);
+    assert.equal(imported.value.members[0].pokemonId, tauros.slug);
+    if (heading === "Paldean Tauros (Aqua Breed)") assert.deepEqual(imported.warnings, []);
+  }
+  const roundTrip = importShowdownTeam(exported, [tauros]);
+  assert.equal(roundTrip.ok, true);
+  assert.equal(roundTrip.value.members[0].pokemonId, tauros.slug);
+});
+
+test("rejects unsupported or invalid Champions point budgets and malformed species", () => {
+  assert.match(importShowdownTeam("Pikachu\nEVs: 252 Atk", catalog).error, /excede o limite Champions/);
+  assert.match(importShowdownTeam("Missingmon", catalog).error, /não foi encontrado/);
+  assert.match(importShowdownTeam("Pikachu\n- One\n- Two\n- Three\n- Four\n- Five", catalog).error, /mais de quatro golpes/);
+  assert.match(importShowdownTeam(Array(7).fill("Pikachu").join("\n\n"), catalog).error, /mais de seis/);
 });
 
 test("searches by accents, slug, type, and generation with no filters by default", () => {

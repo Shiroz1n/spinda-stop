@@ -26,14 +26,14 @@ Use uma branch por mudança. Se mudar interface, confira uma largura mobile e um
 
 ## Revisão visual
 
-Durante o desenvolvimento, rode somente as rotas afetadas nas larguras 1440 e 390 px:
+Durante o desenvolvimento, rode somente as rotas afetadas em desktop e mobile:
 
 ```sh
-npm run visual:review:fast -- --pages=calculator,builder
-# ou VISUAL_REVIEW_PAGES=calculator,builder npm run visual:review:fast
+npm run visual:review:fast -- --pages=home,pokemon,usage,builder,speed
+# ou VISUAL_REVIEW_PAGES=home,pokemon,usage,builder,speed npm run visual:review:fast
 ```
 
-O modo rápido preserva capturas, mede overflow e erros de aplicação e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. O modo completo continua obrigatório antes de concluir uma PR: `npm run visual:review`. Ele mantém os cenários de todas as telas em 1440, 390, 320 e 720 px, axe e fluxos comunitários com SQLite temporário quando `SPINDA_DB_PATH` está configurado. A versão rápida não é equivalente ao gate completo. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
+O modo rápido preserva capturas iniciais, mede overflow e erros de aplicação e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. Em PRs, o workflow limita as capturas rápidas às cinco rotas alteradas com maior impacto visual (1440 e 390 px) e verifica o construtor também em 320 px, incluindo busca, paste, overflow e foco. A revisão completa das nove rotas e fluxos de comunidade fica disponível em `workflow_dispatch`, quando necessária. Emuladores não substituem teste em aparelho físico. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
 
 ## API comunitária
 

@@ -1,24 +1,24 @@
 # Direção visual do Spinda Stop
 
-O Spinda Stop combina a identificação rápida de uma Pokédex portátil com uma bancada de análise competitiva. A referência FireRed/GBA aparece em sprites, seleção e pequenos sinais de navegação; títulos, tabelas, formulários e resultados priorizam leitura simples. Não usamos layout, texto, código, paleta nem assets exclusivos das referências.
+A direção atual é **O Espécime Bitmap**, registrada em [DESIGN.md](../DESIGN.md). A hipótese FireRed/GBA evoluiu: os sprites e o display bitmap mantêm reconhecimento, enquanto papel, tinta, vermelho de sinal e listas editoriais organizam a ferramenta competitiva. A interface não reutiliza layout, texto, código, paleta nem assets exclusivos das referências.
 
 ## Linguagem atual
 
-- Fundo de papel claro com leve tom vegetal, superfícies quase brancas e campos diferenciados.
-- Tinta verde-escura; azul para navegação/links; coral para ação/alerta; verde para confirmação; dourado para seleção.
+- Fundo de papel claro, superfícies brancas e tinta quase preta.
+- Vermelho para ação/seleção; azul para navegação/links; verde e dourado permanecem limitados aos estados existentes.
 - Contornos fortes somente em seleção, foco, erro ou resultado. Linhas e alinhamento agrupam a informação comum.
-- Press Start 2P fica restrita à marca e a sinais curtos. Texto, formulários, tabelas e números usam sans-serif do sistema e algarismos tabulares quando comparáveis.
+- Press Start 2P dá voz aos títulos; texto, formulários, tabelas e números usam sans-serif e algarismos tabulares quando comparáveis.
 - Sprites ficam ligados ao ID exato da forma, com fallback nominativo, e preservam crédito e origem registrados em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 - Busca, seleção, erro, carregamento e ausência de dados têm rótulo e recuperação acessíveis; a cor não é o único sinal.
 
-Os valores semânticos vigentes estão centralizados em `:root` de [styles.css](../apps/web/src/styles.css); composição por tarefa e breakpoints ficam em [composition-refresh.css](../apps/web/src/composition-refresh.css), sobre a base de [visual-refresh.css](../apps/web/src/visual-refresh.css). A tabela de papéis, componentes e limites está em [SPINDA_STOP_DESIGN_SYSTEM.md](SPINDA_STOP_DESIGN_SYSTEM.md).
+Os tokens e componentes vigentes estão em [DESIGN.md](../DESIGN.md) e em `:root` de [styles.css](../apps/web/src/styles.css); composição por tarefa e breakpoints ficam em [composition-refresh.css](../apps/web/src/composition-refresh.css), sobre a base de [visual-refresh.css](../apps/web/src/visual-refresh.css). [SPINDA_STOP_DESIGN_SYSTEM.md](SPINDA_STOP_DESIGN_SYSTEM.md) documenta a pesquisa e a execução visual histórica da PR #30.
 
 ## Composição por tarefa
 
 | Tela | Primeiro plano | Comportamento estreito |
 |---|---|---|
 | Home | Busca real em um hero assimétrico, uma identidade Spinda e destinos funcionais numa lista compacta. | Busca e entrada para montar time no primeiro viewport; atalhos sem números de atividade. |
-| Dex | Catálogo em quatro colunas no desktop, com sprite maior, forma, número e tipos; filtros secundários têm menos peso. | Grade em duas colunas; nome, forma, tipos, contagem e busca continuam legíveis. |
+| Dex | Catálogo em três colunas no desktop, com sprite, forma, número e tipos alinhados em linhas; filtros secundários têm menos peso. | Duas colunas; nome, forma, tipos, contagem e busca continuam legíveis. |
 | Ficha | Espécie, forma e sprite exatos no destaque; evolução, stats, relações e formas em seções de consulta. | Navegação de seções rola horizontalmente; cada forma continua ligada ao próprio registro e sprite. |
 | Usage e ladder | Fonte/período compactos; ranking e detalhe precedem filtros e metadados extensos. | Ranking e ficha vêm antes dos controles de longa cauda; “Limpar filtros” aparece logo após o disclosure de filtros e fora da grade expandida, quando há filtros ativos. Battle Data e MetaRoll continuam independentes. |
 | Builder | Seis posições num seletor e um editor para o integrante ativo. | Posições em 3×2; o set ativo vem em seguida com Nature, habilidade, item, quatro golpes e SP. |

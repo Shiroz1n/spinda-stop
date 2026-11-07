@@ -6,10 +6,14 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
+import { POKEAPI_SPRITES_BASE } from "../src/data/pokemonSprites.js";
 
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const args = process.argv.slice(2);
-const fastMode = args.includes("--fast") || args.includes("--quick");
+const mobileOnly = args.includes("--mobile-only");
+const narrowMobileOnly = args.includes("--narrow-only");
+const fastMode = mobileOnly || args.includes("--fast") || args.includes("--quick");
+if (narrowMobileOnly && !mobileOnly) throw new Error("--narrow-only requires --mobile-only.");
 const pageFlagIndex = args.findIndex((argument) => argument === "--pages" || argument === "--screens");
 const pageFlag = args.find((argument) => argument.startsWith("--pages=") || argument.startsWith("--screens="));
 const requestedPageList = process.env.VISUAL_REVIEW_PAGES
@@ -18,7 +22,7 @@ if (requestedPageList && !fastMode) {
   throw new Error("A seleção de telas só está disponível no modo rápido (--fast). O modo completo sempre roda todas as telas.");
 }
 const reviewStartedAt = Date.now();
-const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, fastMode ? "artifacts/visual-review-fast" : "artifacts/visual-review"));
+const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, mobileOnly ? "artifacts/visual-review-mobile" : fastMode ? "artifacts/visual-review-fast" : "artifacts/visual-review"));
 const baseUrl = "http://127.0.0.1:4173";
 const spindaFaviconUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png";
 const observations = [];
@@ -35,6 +39,30 @@ const quickScreenRegistry = {
   rooms: "/rooms",
   tournaments: "/tournaments",
 };
+const visualBattleIndex = {
+  defaultSeason: "M-C",
+  generatedAt: "2026-11-07T00:00:00.000Z",
+  pokemon: [
+    { name: "Charizard", showdownId: "charizard", summary: { types: ["Fire", "Flying"], battleSummary: { "M-C": { Doubles: { position: 1 } } } } },
+    { name: "Mega Charizard X", showdownId: "charizard", summary: { types: ["Fire", "Dragon"], battleSummary: { "M-C": { Doubles: { position: 2 } } } } },
+    { name: "Gigantamax Charizard", showdownId: "charizard", summary: { types: ["Fire", "Flying"], battleSummary: { "M-C": { Doubles: { position: 3 } } } } },
+    { name: "Mega Garchomp Z", showdownId: "garchomp-megaz", summary: { types: ["Dragon", "Ground"], battleSummary: { "M-C": { Doubles: { position: 4 } } } } },
+    { name: "Regieleki", showdownId: "regieleki", summary: { types: ["Electric"], battleSummary: { "M-C": { Doubles: { position: null } } } } },
+    { name: "Deoxys", showdownId: "deoxys", summary: { types: ["Psychic"], battleSummary: { "M-C": { Doubles: { position: null } } } } },
+  ],
+};
+const visualBattleRows = [
+  ["move", "Heat Wave", 65], ["move", "Protect", 55], ["move", "Earthquake", 45],
+  ["move", "Flamethrower", 35], ["move", "Overheat", 25],
+  ["held_item", "Life Orb", 40], ["ability", "Blaze", 70],
+  ["stat_alignment", "Modest", 35], ["stat_points", "Balanced", 30],
+].map(([category, name, percentage_value], index) => ({
+  category,
+  name,
+  rank: index + 1,
+  percentage_value,
+  ...(category === "stat_points" ? { hp_points: 2, attack_points: 0, defense_points: 0, sp_atk_points: 32, sp_def_points: 0, speed_points: 32 } : {}),
+}));
 const quickAliases = { pokedex: "dex", detail: "pokemon", "dex-detail": "pokemon", "speed-tiers": "speed" };
 const requestedQuickPages = requestedPageList
   ? requestedPageList.split(",").map((page) => quickAliases[page.trim()] || page.trim()).filter(Boolean)
@@ -59,7 +87,7 @@ const representativeCaptures = new Set([
   "usage-index-loading",
   "usage-empty",
   "usage-battle-data-error",
-  "usage-metaroll-empty",
+  "usage-metaroll-return",
   "usage-metaroll-error",
   "usage-metaroll-mega-error",
   "usage-ladder",
@@ -265,11 +293,20 @@ async function warmVisibleListSprites(page, selector, viewportHeight = 800) {
     await page.waitForTimeout(60);
   }
   await page.waitForFunction((imageSelector) => [...document.querySelectorAll(imageSelector)].every((image) => image.complete), selector, { timeout: 15_000 }).catch(() => {});
-  const spriteState = await page.locator(selector).evaluateAll((images) => ({
-    total: images.length,
-    loaded: images.filter((image) => image.complete && image.naturalWidth > 0).length,
-    failed: images.filter((image) => image.complete && image.naturalWidth === 0).length,
-  }));
+  const spriteState = await page.locator(selector).evaluateAll((elements) => {
+    const arts = elements.map((element) => element.matches(".pokemon-art") ? element : element.closest(".pokemon-art")).filter(Boolean);
+    const loaded = (art) => {
+      const image = art.querySelector("img");
+      return Boolean(image?.complete && image.naturalWidth > 0 && !art.classList.contains("is-loading") && !art.classList.contains("is-fallback"));
+    };
+    return {
+      total: arts.length,
+      loaded: arts.filter(loaded).length,
+      failed: arts.filter((art) => art.classList.contains("is-fallback")).length,
+      pending: arts.filter((art) => art.classList.contains("is-loading")).length,
+      uncovered: arts.filter((art) => !loaded(art) && !art.classList.contains("is-fallback") && !art.classList.contains("is-loading")).length,
+    };
+  });
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   return spriteState;
 }
@@ -397,6 +434,7 @@ async function captureCommunityState(context, viewport, viewportName, kind) {
 async function runViewport(viewportName, viewport) {
   console.log(`Visual review: start ${viewportName} at ${viewport.width}×${viewport.height}.`);
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600, reducedMotion: "reduce" });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -404,6 +442,29 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.locator(".home-hero").waitFor({ state: "visible", timeout: 10_000 });
   await page.getByRole("heading", { name: "Prepare seu próximo time.", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  if (viewport.width <= 360) {
+    const headerLayout = await page.evaluate(() => {
+      const brand = document.querySelector(".site-header .brand").getBoundingClientRect();
+      const tools = document.querySelector(".header-tools").getBoundingClientRect();
+      const theme = document.querySelector(".header-tools .theme-toggle").getBoundingClientRect();
+      const action = document.querySelector(".header-tools .header-action");
+      const actionRect = action.getBoundingClientRect();
+      const actionText = document.createRange();
+      actionText.selectNodeContents(action);
+      return {
+        brandRight: brand.right,
+        toolsLeft: tools.left,
+        themeWidth: theme.width,
+        themeHeight: theme.height,
+        actionHeight: actionRect.height,
+        actionTextLines: actionText.getClientRects().length,
+      };
+    });
+    observations.push({ viewport: viewportName, name: "narrow-header-layout", ...headerLayout });
+    if (headerLayout.brandRight > headerLayout.toolsLeft + 1 || headerLayout.themeWidth < 44 || headerLayout.themeHeight < 44 || headerLayout.actionHeight < 44 || headerLayout.actionTextLines > 1) {
+      failures.push(`${viewportName}: marca e controles do cabeçalho devem caber sem sobreposição e manter área touch de 44 px.`);
+    }
+  }
   if (viewportName === "desktop") {
     const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
     assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");
@@ -482,8 +543,11 @@ async function runViewport(viewportName, viewport) {
   if (loadedCardCount <= initialCardCount || loadedCardCount >= catalogCount) {
     failures.push(`${viewportName}: o carregamento progressivo não adicionou um lote limitado de Pokémon.`);
   }
-  const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art img", viewport.height);
+  const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art", viewport.height);
   observations.push({ viewport: viewportName, name: "pokedex-loaded-batch-sprites", ...dexSpriteState });
+  if (dexSpriteState.total === 0 || dexSpriteState.uncovered > 0) {
+    failures.push(`${viewportName}: há sprites sem imagem carregada nem fallback visível na Pokédex (${dexSpriteState.uncovered}/${dexSpriteState.total}).`);
+  }
   await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
@@ -537,11 +601,14 @@ async function runViewport(viewportName, viewport) {
   }
   await minimumBaseStatInput.fill("");
   await page.locator(".dex-sort-field select").selectOption("number");
-  await page.locator(".pokemon-card-title").first().click();
+  const firstPokemonCard = page.locator(".pokemon-card-link").first();
+  await firstPokemonCard.evaluate((card) => card.scrollIntoView({ block: "center" }));
+  await firstPokemonCard.click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
-  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/25.png", (route) => route.abort());
+  await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/other/home/25.png`, (route) => route.abort());
+  await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/25.png`, (route) => route.abort());
   await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
   const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
   await missingSprite.waitFor({ state: "visible", timeout: 10_000 });
@@ -714,10 +781,10 @@ async function runViewport(viewportName, viewport) {
     evolution: document.querySelector(".detail-evolutions")?.innerText,
   }));
   observations.push({ viewport: viewportName, name: "pokemon-alolan-raichu-exact-form", ...alolanRaichuState });
-  if (alolanRaichuState.title !== "Alolan Raichu" || !alolanRaichuState.types?.includes("Psíquico") || alolanRaichuState.total !== "Total 485" || !alolanRaichuState.sprite?.endsWith("10100.gif")) {
+  if (alolanRaichuState.title !== "Alolan Raichu" || !alolanRaichuState.types?.includes("Psíquico") || alolanRaichuState.total !== "Total 485" || !alolanRaichuState.sprite?.endsWith("10100.png")) {
     failures.push(`${viewportName}: a forma Alolan Raichu não atualizou nome, tipos, stats e sprite pelo ID exato da forma.`);
   }
-  if (!alolanRaichuState.evolution?.includes("Forma resultante: Alola") || !alolanRaichuState.evolution.includes("Thunder Stone")) {
+  if (!alolanRaichuState.evolution?.includes("Região: Alola") || !alolanRaichuState.evolution.includes("Thunder Stone")) {
     failures.push(`${viewportName}: a condição de evolução para a forma Alola não correspondeu à revisão fixa da PokéAPI.`);
   }
   await safeCapture(formEvolutionPage, viewportName, "pokemon-alolan-raichu-evolution", { audit: true, fullPage: false });
@@ -830,7 +897,8 @@ async function runViewport(viewportName, viewport) {
   await page.locator("#move-0").fill("Earthquake");
   await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
-  await page.locator(".builder-tools-details > summary").click();
+  await page.getByRole("button", { name: "Poképaste", exact: true }).click();
+  await page.locator(".builder-json-details > summary").click();
   const downloadReady = page.waitForEvent("download", { timeout: 10_000 });
   await page.getByRole("button", { name: "Exportar JSON" }).click();
   const download = await downloadReady;
@@ -844,6 +912,21 @@ async function runViewport(viewportName, viewport) {
   assert.equal(exportedTeam.members[0].statPoints.atk, 14);
   await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
   await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Importar texto" }).click();
+  await page.getByText("Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado.").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("button", { name: "Preparar e copiar" }).click();
+  const copiedShowdownTeam = await page.evaluate(() => navigator.clipboard.readText());
+  if (!copiedShowdownTeam.includes("Garchomp @ Life Orb") || !copiedShowdownTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe") || !copiedShowdownTeam.includes("Timid Nature")) {
+    failures.push(viewportName + ": a exportação para Showdown não preservou espécie, pontos ou Nature.");
+  }
+  await page.locator("#builder-showdown-input").fill("Pikachu\nEVs: 252 Atk");
+  await page.getByRole("button", { name: "Importar texto" }).click();
+  await page.getByText(/excede o limite Champions/).waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator("#active-member-title").innerText() !== "Garchomp") {
+    failures.push(viewportName + ": o erro de importação de SP alterou a equipe atual.");
+  }
   await safeCapture(page, viewportName, "builder-preserved-set", { audit: true });
   await page.locator(".team-slot").nth(1).click();
   const pickerSearch = page.locator("#species-search");
@@ -1109,6 +1192,15 @@ async function runViewport(viewportName, viewport) {
       }],
     });
   });
+  await loadingUsagePage.route("https://metaroll.app/api/v1/all.json", async (route) => {
+    await usageIndexGate;
+    await fulfillJson(route, {
+      format: "doubles",
+      season: "M-8",
+      capturedAt: "2026-10-18T05:46:15.000Z",
+      entries: [{ id: "garchomp", name: "Garchomp", rank: 2 }],
+    });
+  });
   await loadingUsagePage.route("https://championsbattledata.com/api/battle/Doubles/**", (route) => fulfillJson(route, {
     pokemon: "Garchomp",
     showdownId: "garchomp",
@@ -1123,35 +1215,35 @@ async function runViewport(viewportName, viewport) {
   const loadingUsageState = loadingUsagePage.locator(".usage-index-state");
   await loadingUsageState.waitFor({ state: "visible", timeout: 10_000 });
   const loadingUsageCopy = await loadingUsageState.innerText();
-  assert.equal(loadingUsageCopy, "Carregando o índice público de Doubles…", "o carregamento de Usage deve informar a fonte enquanto o índice está pendente");
+  assert.equal(loadingUsageCopy, "Carregando o catálogo competitivo de Doubles…", "o carregamento de Usage deve identificar o catálogo enquanto ele está pendente");
   observations.push({ viewport: viewportName, name: "usage-index-loading-copy", text: loadingUsageCopy });
   await safeCapture(loadingUsagePage, viewportName, "usage-index-loading", { audit: true, fullPage: false });
   releaseUsageIndex();
-  await loadingUsagePage.locator(".usage-provenance").waitFor({ state: "visible", timeout: 10_000 });
+  await loadingUsagePage.locator(".usage-distributions").waitFor({ state: "visible", timeout: 10_000 });
   await loadingUsagePage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   await waitForUsage(page);
   if (await page.locator(".usage-index-note").count()) {
-    await waitForEither(page, ".usage-provenance, .usage-error", 35_000);
+    await waitForEither(page, ".usage-distributions, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
   const usageComposition = await page.evaluate(() => {
     const heading = document.querySelector(".usage-heading");
     const title = heading?.querySelector("h1");
-    const switcher = heading?.querySelector(".usage-source-switch");
+    const comparisonAction = heading?.querySelector("button");
     const species = document.querySelector(".usage-detail-heading");
     const categoriesNav = document.querySelector(".usage-detail-panel > .usage-category-tabs");
     return {
       headingTop: heading ? Math.round(heading.getBoundingClientRect().top) : null,
-      sourceSwitcherInHeading: Boolean(heading && switcher && switcher.parentElement === heading),
-      headingBeforeControls: Boolean(title && switcher && (title.compareDocumentPosition(switcher) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      comparisonActionInHeading: Boolean(heading && comparisonAction && comparisonAction.parentElement === heading),
+      headingBeforeControls: Boolean(title && comparisonAction && (title.compareDocumentPosition(comparisonAction) & Node.DOCUMENT_POSITION_FOLLOWING)),
       speciesBeforeCategories: Boolean(species && categoriesNav && (species.compareDocumentPosition(categoriesNav) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
   observations.push({ viewport: viewportName, name: "usage-heading-and-ranking-hierarchy", ...usageComposition });
-  if (!usageComposition.sourceSwitcherInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
-    failures.push(`${viewportName}: a fonte deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles de categorias.`);
+  if (!usageComposition.comparisonActionInHeading || !usageComposition.headingBeforeControls || !usageComposition.speciesBeforeCategories) {
+    failures.push(`${viewportName}: a comparação deve ficar junto ao título e o Pokémon selecionado deve vir antes dos controles da ficha.`);
   }
   if (viewport.width <= 760 && usageComposition.headingTop > 160) {
     failures.push(`${viewportName}: o título de Usage deve aparecer sem um vão alto abaixo da navegação.`);
@@ -1214,13 +1306,13 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-empty", { fullPage: false });
     await usageSearch.fill("Garchomp");
     await page.locator(".usage-more-filters > summary").click();
-    const sourceFilters = [
+    const usageFilters = [
       ['.usage-filters .usage-filter-field:has-text("Tipo") select', "Dragon"],
-      ['.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select', "Earthquake"],
-      ['.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select', "Garchompite Z"],
-      ['.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select', "Sand Veil"],
+      ['.usage-filters .usage-filter-field:has-text("Golpe nos índices publicados") select', "Earthquake"],
+      ['.usage-filters .usage-filter-field:has-text("Item nos índices publicados") select', "Garchompite Z"],
+      ['.usage-filters .usage-filter-field:has-text("Habilidade nos índices publicados") select', "Sand Veil"],
     ];
-    for (const [selector, label] of sourceFilters) {
+    for (const [selector, label] of usageFilters) {
       const filter = page.locator(selector);
       const optionExists = await filter.evaluate((select, optionLabel) =>
         Array.from(select.options).some((option) => option.label === optionLabel), label);
@@ -1236,9 +1328,9 @@ async function runViewport(viewportName, viewport) {
       const filterSelectors = [
         ".usage-browser-panel input[type=search]",
         '.usage-filters .usage-filter-field:has-text("Tipo") select',
-        '.usage-filters .usage-filter-field:has-text("Golpe no resumo da fonte") select',
-        '.usage-filters .usage-filter-field:has-text("Item no resumo da fonte") select',
-        '.usage-filters .usage-filter-field:has-text("Habilidade no resumo da fonte") select',
+        '.usage-filters .usage-filter-field:has-text("Golpe nos índices publicados") select',
+        '.usage-filters .usage-filter-field:has-text("Item nos índices publicados") select',
+        '.usage-filters .usage-filter-field:has-text("Habilidade nos índices publicados") select',
       ];
       const beforeRefresh = await Promise.all(filterSelectors.map((selector) => page.locator(selector).inputValue()));
       await page.locator(".usage-index-note button").click();
@@ -1260,59 +1352,71 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-history", { fullPage: false });
   }
 
-  const metaRollButton = page.getByRole("button", { name: "MetaRoll", exact: true });
-  if (await metaRollButton.count()) {
-    await metaRollButton.press("Enter");
-    const activeSource = page.locator(".usage-source-switch button.is-active");
-    await activeSource.filter({ hasText: "MetaRoll" }).waitFor({ state: "visible", timeout: 10_000 });
-    const keyboardSource = await metaRollButton.evaluate((button) => ({
-      focused: document.activeElement === button,
-      pressed: button.getAttribute("aria-pressed"),
-      outlineWidth: getComputedStyle(button).outlineWidth,
-      outlineStyle: getComputedStyle(button).outlineStyle,
-    }));
-    observations.push({ viewport: viewportName, name: "keyboard-source-switch", ...keyboardSource });
-    if (!keyboardSource.focused || keyboardSource.pressed !== "true" || keyboardSource.outlineWidth === "0px" || keyboardSource.outlineStyle === "none") {
-      failures.push(`${viewportName}: a troca de fonte por teclado não deixou estado e foco visíveis.`);
+  const usageComparison = page.locator(".usage-distributions");
+  if (await usageComparison.count()) {
+    const rows = page.locator(".usage-distribution-category .usage-row-list > li");
+    for (const row of await rows.all()) {
+      if (await row.locator(".usage-merged-values > span").count() !== 1) {
+        failures.push(viewportName + ": cada distribuição de Usage deve mostrar um único percentual selecionado.");
+        break;
+      }
     }
-    await page.getByRole("button", { name: "Battle Data", exact: true }).press("Enter");
-    await page.locator(".usage-source-switch button.is-active").filter({ hasText: "Battle Data" }).waitFor({ state: "visible", timeout: 10_000 });
+    const detailLink = usageComparison.getByRole("button", { name: "Histórico e confrontos" });
+    const keyboardLink = await detailLink.evaluate((button) => {
+      button.focus();
+      return {
+        focused: document.activeElement === button,
+        outlineWidth: getComputedStyle(button).outlineWidth,
+        outlineStyle: getComputedStyle(button).outlineStyle,
+      };
+    });
+    observations.push({ viewport: viewportName, name: "keyboard-meta-roll-details", ...keyboardLink });
+    if (!keyboardLink.focused || keyboardLink.outlineWidth === "0px" || keyboardLink.outlineStyle === "none") {
+      failures.push(`${viewportName}: o atalho para detalhes MetaRoll não deixou o foco por teclado visível.`);
+    }
+    await detailLink.press("Enter");
+    await page.locator(".metaroll-layout").waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByRole("button", { name: "Voltar ao catálogo" }).press("Enter");
+    await page.locator(".usage-distributions").waitFor({ state: "visible", timeout: 15_000 });
   } else {
-    failures.push(`${viewportName}: o seletor de fonte não está disponível no Usage de Battle Data.`);
+    failures.push(`${viewportName}: a ficha Usage não juntou as capturas de Battle Data e MetaRoll.`);
   }
 
-  await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Tauros-Paldea-Aqua`, { waitUntil: "domcontentloaded" });
-  const metaRollLoaded = await waitForEither(page, ".metaroll-capture-note, .usage-index-error");
+  await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
+  const metaRollLoaded = await waitForEither(page, ".metaroll-capture-note, .usage-error");
   if (await page.locator(".metaroll-capture-note").count()) {
     await waitForEither(page, ".metaroll-provenance, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-metaroll", { audit: true, fullPage: false });
-  if (await page.locator(".metaroll-layout .usage-more-filters > summary").count()) {
-    await page.locator(".metaroll-layout .usage-more-filters > summary").click();
-    const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
-    if (await profileTabs.count()) {
-      await profileTabs.nth(1).click();
-      await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
-    }
+  const profileTabs = page.locator(".metaroll-profile-tabs .usage-category-tab");
+  if (await profileTabs.count()) {
+    await profileTabs.nth(1).click();
+    await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
+    await profileTabs.first().click();
   }
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
     const teammateCard = page.locator(".metaroll-profile-summary .metaroll-card").filter({ hasText: "Parceiros" }).first();
     const teammateRows = teammateCard.locator(".metaroll-list-row");
     if (await teammateRows.count()) {
-      const missingPercentage = teammateRows.first().locator(".metaroll-row-percent.is-missing");
-      if (!await missingPercentage.count()) {
-        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
-      } else if (await missingPercentage.innerText() !== "—" || await missingPercentage.getAttribute("aria-label") !== "Percentual não informado") {
-        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
+      if (await teammateRows.count() > 2 || await teammateCard.locator(".metaroll-row-percent").count()) {
+        failures.push(`${viewportName}: o resumo de parceiros deve mostrar somente posições, sem percentuais.`);
+      }
+      const partnerRanks = await teammateRows.locator(".metaroll-row-rank").allTextContents();
+      if (partnerRanks.length !== await teammateRows.count() || partnerRanks.some((rank) => !/^#\d+$/.test(rank.trim()))) {
+        failures.push(`${viewportName}: cada parceiro do resumo deve ter uma posição publicada.`);
       }
       if (viewport.width <= 360) {
         const identityWidth = await teammateRows.first().locator(".metaroll-row-identity").evaluate((element) => element.getBoundingClientRect().width);
         if (identityWidth < 80) failures.push(`${viewportName}: o nome do parceiro perde espaço no cartão estreito do MetaRoll.`);
       }
     }
-    const metaRollSearch = page.locator(".metaroll-layout input[type=search]");
-    await metaRollSearch.fill("Garchomp");
-    await page.locator(".metaroll-layout .usage-species-button").filter({ hasText: "Garchomp" }).first().click();
+    await page.getByRole("button", { name: "Parceiros", exact: true }).click();
+    const fullPartnerCard = page.locator(".metaroll-profile-grid .metaroll-card").filter({ hasText: "Parceiros" }).first();
+    const fullPartnerRows = fullPartnerCard.locator(".metaroll-list-row");
+    if (await fullPartnerRows.count() > 15 || await fullPartnerCard.locator(".metaroll-row-percent").count()) {
+      failures.push(`${viewportName}: a lista completa deve limitar parceiros ranqueados a 15 e omitir percentuais.`);
+    }
+    await profileTabs.first().click();
     await waitForEither(page, ".metaroll-mega-list, .metaroll-mega-card .usage-error, .metaroll-mega-card .metaroll-empty", 35_000);
     if (await page.locator(".metaroll-mega-list").count()) {
       const megaText = await page.locator(".metaroll-mega-list").innerText();
@@ -1326,10 +1430,9 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".metaroll-ladder-about > summary, .usage-error", 35_000);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
-    await page.getByRole("button", { name: "Espécies" }).click();
-    await page.locator(".usage-browser-panel input[type=search]").fill("spindastop-no-match-457");
-    await page.locator(".usage-no-results").waitFor({ state: "visible", timeout: 10_000 });
-    await safeCapture(page, viewportName, "usage-metaroll-empty", { fullPage: false });
+    await page.getByRole("button", { name: "Voltar ao catálogo" }).click();
+    await page.getByRole("heading", { name: "Usage" }).waitFor({ state: "visible", timeout: 15_000 });
+    await safeCapture(page, viewportName, "usage-metaroll-return", { audit: true, fullPage: false });
   }
 
   const errorPage = await context.newPage();
@@ -1340,7 +1443,7 @@ async function runViewport(viewportName, viewport) {
   await errorPage.goto(`${baseUrl}/usage?source=metaroll`, { waitUntil: "domcontentloaded" });
   await errorPage.route("https://metaroll.app/**", (route) => route.abort()).catch(() => {});
   await errorPage.reload({ waitUntil: "domcontentloaded" });
-  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeout: 10_000 });
+  await errorPage.locator(".usage-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(errorPage, viewportName, "usage-metaroll-error");
 
   const megaErrorPage = await context.newPage();
@@ -1866,6 +1969,7 @@ async function runFastViewport(viewportName, viewport) {
     hasTouch: viewport.width < 600,
     reducedMotion: "reduce",
   });
+  if (mobileOnly) await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
 
   for (const screen of selectedQuickPages) {
     const page = await context.newPage();
@@ -1900,6 +2004,14 @@ async function runFastViewport(viewportName, viewport) {
         body: JSON.stringify(payload),
       });
     });
+    await page.route("https://championsbattledata.com/api", (route) => fulfillJson(route, visualBattleIndex));
+    await page.route("https://championsbattledata.com/api/battle/**", (route) => {
+      const request = new URL(route.request().url());
+      const showdownId = decodeURIComponent(request.pathname.split("/").at(-1));
+      const pokemon = visualBattleIndex.pokemon.find((entry) => entry.showdownId === showdownId)?.name || showdownId;
+      return fulfillJson(route, { pokemon, showdownId, format: "Doubles", season: "M-C", date: "2026-11-07", source: "visual-fixture.csv", rows: visualBattleRows, daily: [] });
+    });
+    await page.route("https://metaroll.app/api/v1/**", (route) => fulfillJson(route, { format: "doubles", season: "M-C", entries: [] }));
 
     const path = quickScreenRegistry[screen];
     await page.goto(baseUrl + path, { waitUntil: "domcontentloaded" });
@@ -1911,7 +2023,33 @@ async function runFastViewport(viewportName, viewport) {
     }
     await page.waitForTimeout(100);
     const headingText = await heading.textContent().catch(() => "");
-    await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: false });
+    await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: mobileOnly && ["home", "builder"].includes(screen) });
+
+    if (mobileOnly) {
+      const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      if (accessibility.violations.length) {
+        accessibilityIssues.push({
+          viewport: viewportName,
+          name: "quick-" + screen + "-first-fold",
+          violations: accessibility.violations.map((issue) => ({
+            id: issue.id,
+            impact: issue.impact,
+            description: issue.description,
+            help: issue.help,
+            nodes: issue.nodes.map((node) => ({ target: node.target, summary: node.failureSummary })),
+          })),
+        });
+      }
+    }
+
+    if (mobileOnly && screen === "home") {
+      const homeOrder = await page.evaluate(() => [".home-hero", ".home-regulation", ".home-usage-preview", ".home-ladder-preview", ".home-community"]
+        .map((selector) => Math.round(document.querySelector(selector)?.getBoundingClientRect().top ?? -1)));
+      observations.push({ mode: "mobile", viewport: viewportName, name: "home-mobile-priority-order", tops: homeOrder });
+      if (homeOrder.some((top) => top < 0) || homeOrder.some((top, index) => index > 0 && top < homeOrder[index - 1])) {
+        failures.push(viewportName + "/home: a home mobile deve ordenar introdução, regulação, Usage, Ladder e comunidade.");
+      }
+    }
 
     await page.keyboard.press("Tab");
     const skipFocus = await page.evaluate(() => {
@@ -1967,13 +2105,123 @@ async function runFastViewport(viewportName, viewport) {
     if (mainControl.overlapsMobileNav) {
       failures.push(viewportName + "/" + screen + ": o foco do conteúdo ficou sob a navegação fixa.");
     }
-    await capture(page, viewportName, "quick-" + screen + "-keyboard-focus", { audit: false, fullPage: false });
+    if (screen === "builder") {
+      try {
+        await page.locator(".team-slot").first().click();
+        const search = page.locator("#species-search");
+        if (await page.getByRole("button", { name: "Champions", exact: true }).getAttribute("aria-pressed") !== "true") {
+          failures.push(`${viewportName}/builder: Champions não foi aberto como catálogo padrão do seletor.`);
+        }
+        await search.fill("Regieleki");
+        await page.getByText("Nenhum resultado no índice atual de Doubles.").waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByRole("button", { name: "Pokédex geral", exact: true }).click();
+        await page.locator(".species-dialog .picker-result").filter({ hasText: "Regieleki" }).waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByRole("button", { name: "Champions", exact: true }).click();
+        await search.fill("charizard");
+        const results = page.locator(".species-dialog .picker-result");
+        await results.first().waitFor({ state: "visible", timeout: 5_000 });
+        const rows = await results.evaluateAll((buttons) => buttons.map((button) => {
+          const bounds = button.getBoundingClientRect();
+          const parts = [...button.querySelectorAll(".pokemon-art, .picker-identity, .dex-number, .picker-name, .type-list, .type-tag")];
+          return {
+            name: button.querySelector(".picker-name")?.textContent?.trim() || "",
+            horizontalOverflow: button.scrollWidth > button.clientWidth + 1,
+            outOfBounds: parts.some((part) => {
+              const rect = part.getBoundingClientRect();
+              return rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
+            }),
+            unwrappedName: (() => {
+              const name = button.querySelector(".picker-name");
+              return Boolean(name && name.scrollWidth > name.clientWidth + 1);
+            })(),
+          };
+        }));
+        if (rows.some((row) => row.horizontalOverflow || row.outOfBounds || row.unwrappedName)) {
+          failures.push(`${viewportName}/builder: um resultado do seletor ultrapassou sua caixa ou cortou o nome.`);
+        }
+        if (!rows.some((row) => row.name.length >= 16)) {
+          failures.push(`${viewportName}/builder: a busca de Charizard não expôs uma forma longa para validar o layout.`);
+        }
+        await search.press("Tab");
+        const firstResultFocused = await page.evaluate(() => document.activeElement?.matches(".species-dialog .picker-result") || false);
+        if (!firstResultFocused) failures.push(`${viewportName}/builder: o primeiro resultado não recebeu foco pelo teclado após o campo de busca.`);
+        await page.keyboard.press("Enter");
+        await page.locator('.species-dialog[aria-labelledby="species-dialog-title"]').waitFor({ state: "hidden", timeout: 5_000 });
+        await page.getByRole("heading", { name: "Charizard", exact: true }).waitFor({ state: "visible", timeout: 5_000 });
 
-    if (screen === "calculator") {
+        await page.getByRole("button", { name: "Meta", exact: true }).click();
+        await page.getByRole("heading", { name: "Meta de Charizard" }).waitFor({ state: "visible", timeout: 10_000 });
+        const metaCategory = (index) => page.locator(".builder-meta-category").nth(index);
+        await metaCategory(0).getByRole("button", { name: /Heat Wave/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Protect/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Earthquake/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Flamethrower/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Heat Wave/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Overheat/ }).click();
+        await metaCategory(1).getByRole("button", { name: /Life Orb/ }).click();
+        await metaCategory(2).getByRole("button", { name: /Blaze/ }).click();
+        await metaCategory(3).getByRole("button", { name: /Modest/ }).click();
+        await metaCategory(4).getByRole("button", { name: /Balanced/ }).click();
+        await page.getByRole("button", { name: "Equipe", exact: true }).click();
+        const appliedSet = {
+          moves: await page.locator("#move-0, #move-1, #move-2, #move-3").evaluateAll((inputs) => inputs.map((input) => input.value)),
+          item: await page.getByLabel("Item", { exact: true }).inputValue(),
+          ability: await page.getByLabel("Habilidade", { exact: true }).inputValue(),
+          nature: (await page.locator("#member-nature").innerText()).trim(),
+          spa: await page.locator("#stat-spa").inputValue(),
+          speed: await page.locator("#stat-spe").inputValue(),
+          otherSlotEmpty: await page.locator(".team-slot").nth(1).innerText(),
+        };
+        observations.push({ mode: "fast", viewport: viewportName, name: "builder-meta-options-applied", ...appliedSet });
+        if (JSON.stringify(appliedSet.moves) !== JSON.stringify(["Protect", "Earthquake", "Flamethrower", "Overheat"])
+          || appliedSet.item !== "Life Orb" || appliedSet.ability !== "Blaze" || !appliedSet.nature.includes("Modest")
+          || appliedSet.spa !== "32" || appliedSet.speed !== "32" || !appliedSet.otherSlotEmpty.includes("Vazio")) {
+          failures.push(`${viewportName}/builder: o meta não aplicou as opções ao slot ativo com rotação FIFO de quatro golpes.`);
+        }
+      } catch (error) {
+        failures.push(`${viewportName}/builder-species-picker: ${error.message}`);
+      }
+    }
+    if (screen === "calculator" && (!mobileOnly || viewport.width === 390)) {
       try {
         await runQuickCalculatorInteraction(page, viewportName);
       } catch (error) {
         failures.push(viewportName + "/calculator-interaction: " + error.message);
+      }
+    }
+
+    if (screen === "speed") {
+      await page.locator(".speed-results-list .speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+      const speedNames = await page.locator(".speed-results-list .speed-result-pokemon strong").allTextContents();
+      observations.push({ mode: "fast", viewport: viewportName, name: "speed-champions-index-filter", names: speedNames });
+      if (!speedNames.length || speedNames.some((name) => /Regieleki|Deoxys/i.test(name))) {
+        failures.push(`${viewportName}/speed: Champions mostrou formas fora do índice atual de Doubles.`);
+      }
+    }
+
+    if (mobileOnly && screen === "builder" && (viewport.width === 390 || narrowMobileOnly && viewport.width === 320)) {
+      try {
+        await page.getByRole("button", { name: "Poképaste", exact: true }).click();
+        await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
+        page.once("dialog", (dialog) => dialog.accept());
+        await page.getByRole("button", { name: "Importar texto" }).click();
+        await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await capture(page, viewportName, "builder-showdown-imported", { audit: false, fullPage: false });
+        await page.getByRole("button", { name: "Poképaste", exact: true }).click();
+        await page.getByRole("button", { name: "Preparar e copiar" }).click();
+        const copiedTeam = await page.evaluate(() => navigator.clipboard.readText());
+        if (!copiedTeam.includes("Garchomp @ Life Orb") || !copiedTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe")) {
+          failures.push(viewportName + "/builder: a exportação Showdown não preservou a forma ou os pontos Champions.");
+        }
+        await page.locator("#builder-showdown-input").fill("Pikachu\nEVs: 252 Atk");
+        await page.getByRole("button", { name: "Importar texto" }).click();
+        await page.getByRole("status").filter({ hasText: "excede o limite Champions" }).waitFor({ state: "visible", timeout: 10_000 });
+        await page.getByRole("button", { name: "Equipe", exact: true }).click();
+        if (await page.locator("#active-member-title").innerText() !== "Garchomp") {
+          failures.push(viewportName + "/builder: uma importação inválida substituiu o set existente.");
+        }
+      } catch (error) {
+        failures.push(viewportName + "/builder-showdown: " + error.message);
       }
     }
 
@@ -2127,15 +2375,19 @@ try {
   });
   const fullViewports = [
     ["desktop", { width: 1440, height: 960 }],
-    ["mobile", { width: 390, height: 844 }],
-    ["mobile-320", { width: 320, height: 760 }],
-    ["reflow-720", { width: 720, height: 960 }],
+    ["tablet-900", { width: 900, height: 960 }],
   ];
   const quickViewports = [
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
   ];
-  const viewports = fastMode ? quickViewports : fullViewports;
+  const mobileViewports = narrowMobileOnly
+    ? [["mobile-320", { width: 320, height: 760 }]]
+    : [
+      ["mobile", { width: 390, height: 844 }],
+      ["mobile-320", { width: 320, height: 760 }],
+    ];
+  const viewports = mobileOnly ? mobileViewports : fastMode ? quickViewports : fullViewports;
   for (const [name, viewport] of viewports) {
     try {
       if (fastMode) await runFastViewport(name, viewport);
@@ -2148,13 +2400,17 @@ try {
   const durationMs = Date.now() - reviewStartedAt;
   const report = {
     generatedAt: new Date().toISOString(),
-    mode: fastMode ? "fast-development-subset" : "full-gate",
-    scope: fastMode
+    mode: mobileOnly ? "targeted-mobile" : fastMode ? "fast-development-subset" : "full-desktop-gate",
+    scope: mobileOnly
+      ? narrowMobileOnly
+        ? "Selected screens at 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check."
+        : "All nine routes at 390 and 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check at 390 px."
+      : fastMode
       ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
-      : "All existing scenarios at four widths, with axe and community flows against SQLite when SPINDA_DB_PATH is set.",
+      : "All existing scenarios at 1440 and 900 CSS px, with axe and community flows against SQLite when SPINDA_DB_PATH is set. Targeted responsive and mobile accessibility checks run separately at 390 and 320 CSS px.",
     durationMs,
     selectedScreens: fastMode ? selectedQuickPages : "all",
-    axeIncluded: !fastMode,
+    axeIncluded: !fastMode || mobileOnly,
     communityApiIncluded: !fastMode && Boolean(process.env.SPINDA_DB_PATH),
     viewports: viewports.map(([name, viewport]) => ({
       name,

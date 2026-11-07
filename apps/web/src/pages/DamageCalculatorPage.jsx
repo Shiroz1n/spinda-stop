@@ -157,9 +157,11 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
   const currentLearnsetData = currentLearnset?.data || null;
   const versions = currentLearnsetData?.versionGroups || [];
   const defaultVersionId = getDefaultLearnsetVersionGroupId(versions);
-  const selectedVersionId = versions.some((version) => String(version.id) === String(versionGroupId))
-    ? String(versionGroupId)
-    : String(defaultVersionId ?? versions[0]?.id ?? "");
+  const selectedVersionId = versionGroupId === ""
+    ? ""
+    : versions.some((version) => String(version.id) === String(versionGroupId))
+      ? String(versionGroupId)
+      : String(defaultVersionId ?? "");
   const selectedVersion = versions.find((version) => String(version.id) === selectedVersionId);
 
   useEffect(() => {
@@ -172,10 +174,10 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
   }, [pokemonId]);
 
   const learnedMoves = useMemo(() => {
-    if (currentLearnsetStatus !== "ready" || !currentLearnsetData || !selectedVersionId) return [];
+    if (currentLearnsetStatus !== "ready" || !currentLearnsetData) return [];
     const names = new Map();
     for (const [moveId, versionId] of currentLearnsetData.rows) {
-      if (String(versionId) !== selectedVersionId) continue;
+      if (selectedVersionId && String(versionId) !== selectedVersionId) continue;
       const move = moveById.get(moveId);
       if (move) names.set(toCatalogId(move.name), move.name);
     }
@@ -216,17 +218,17 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
           <button type="button" aria-pressed={catalogMode === "engine"} onClick={() => setCatalogMode("engine")}>Catálogo do motor</button>
         </div>
         {currentLearnsetStatus === "ready" ? (
-          <label className="damage-version-select"><span>Jogo consultado</span><select value={selectedVersionId} onChange={(event) => onVersionChange(event.target.value)}>
+          <label className="damage-version-select"><span>Jogo consultado</span><select value={selectedVersionId} onChange={(event) => onVersionChange(event.target.value)}><option value="">Todos os jogos</option>
             {versions.map((version) => <option key={version.id} value={version.id}>{formatVersionGroup(version.name)}</option>)}
           </select></label>
         ) : null}
         <label className="damage-move-search"><span className="sr-only">Buscar golpe para o slot ativo</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar golpe pelo nome" aria-label={`Buscar golpes de ${side.species || positionName}`} /></label>
         {currentLearnsetStatus === "loading" ? <p className="damage-library-note" role="status">Carregando dados gerais para {side.species}…</p> : null}
         {currentLearnsetStatus === "error" ? <p className="damage-library-note is-limited" role="status">{currentLearnset?.error} A lista do motor continua disponível.</p> : null}
-        {catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note">Aprendibilidade geral em {formatVersionGroup(selectedVersion?.name)} · PokéAPI. Isso não confirma presença nem legalidade em Pokémon Champions.</p> : null}
+        {catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note">Golpes listados pela PokéAPI · legalidade em Champions não verificada.</p> : null}
         {catalogMode === "engine" ? <p className="damage-library-note">Golpes conhecidos por @smogon/calc 0.12.0 no conjunto Champions. O catálogo do motor não prova que um Pokémon os aprende ou que são legais.</p> : null}
         {catalogMode === "learned" && currentLearnsetStatus !== "ready" ? <p className="damage-library-note is-limited">Aprendibilidade geral indisponível para esta forma; escolha a aba de catálogo do motor. A legalidade em Champions não foi verificada.</p> : null}
-        {catalogMoves.length === 0 && catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note is-limited">Nenhum golpe registrado para {formatVersionGroup(selectedVersion?.name)} nesta forma.</p> : null}
+        {catalogMoves.length === 0 && catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note is-limited">Nenhum golpe registrado para {selectedVersion ? formatVersionGroup(selectedVersion.name) : "todos os jogos"} nesta forma.</p> : null}
         {filteredMoves.length ? (
           <ul className="damage-move-options" aria-label={`Golpes encontrados para ${side.species || positionName}`}>
             {filteredMoves.map((name) => {
@@ -296,10 +298,10 @@ function SideEditor({ title, side, onChange, sideName, showSpecies = true, compa
   const stats = calculatedStats ? <dl className="damage-calculated-stats" aria-live="polite" aria-label={`Stats calculados de ${side.species} com ${side.nature || "Serious"}`}>
     {statFields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{calculatedStats[key]}</dd></div>)}
   </dl> : null;
-  const advancedStats = <details className="damage-advanced"><summary>SP, status e estágios <span>{statPointTotal} SP</span></summary>
-    <fieldset className="damage-stat-fieldset"><legend>Stat Points</legend><div className="damage-stat-grid">
+  const advancedStats = <details className="damage-advanced"><summary>Pontos, status e estágios <span>{statPointTotal} pontos</span></summary>
+    <fieldset className="damage-stat-fieldset"><legend>Pontos investidos</legend><div className="damage-stat-grid">
       {statFields.map(([key, label]) => <label className="damage-field" key={key}><span>{label}</span><input className="text-input" type="number" min="0" step="1" value={side.statPoints[key]} onChange={(event) => updateNested("statPoints", key, event.target.value === "" ? 0 : Number(event.target.value))} /></label>)}
-    </div><p className="form-hint" role="status" aria-live="polite">Total informado: {statPointTotal} SP. Limites oficiais e legalidade de SP não estão verificados.</p></fieldset>
+    </div><p className="form-hint" role="status" aria-live="polite">Total informado: {statPointTotal} pontos investidos. Limites e legalidade oficiais não estão verificados.</p></fieldset>
     <div className="damage-boost-grid">{boostFields.map(([key, label]) => <label className="damage-field" key={key}><span>{label} (−6 a +6)</span><input className="text-input" type="number" min="-6" max="6" step="1" value={side.boosts[key]} onChange={(event) => updateNested("boosts", key, event.target.value === "" ? 0 : Number(event.target.value))} /></label>)}</div>
   </details>;
 
@@ -562,7 +564,7 @@ export function DamageCalculatorPage() {
   const [targetMode, setTargetMode] = useState("one");
   const [activeSide, setActiveSide] = useState("attacker");
   const [activeMoveSlot, setActiveMoveSlot] = useState(0);
-  const [learnsetVersionId, setLearnsetVersionId] = useState("");
+  const [learnsetVersionId, setLearnsetVersionId] = useState(null);
   const [multiTargets, setMultiTargets] = useState([]);
   const [comparisonAspect, setComparisonAspect] = useState("move");
   const [builderTeamState, setBuilderTeamState] = useState(readBuilderTeam);
@@ -851,7 +853,7 @@ export function DamageCalculatorPage() {
           <details className="damage-edit-task" open={!calculationReady && targetMode !== "many"}>
             <summary>{targetMode === "team" ? "Set do alvo" : "Pokémon e sets"}<span>{targetMode === "team" ? "defesa compartilhada" : "nature · habilidade · item · SP"}</span></summary>
             <section className="damage-input-grid" aria-label="Pokémon e parâmetros dos sets">
-              {targetMode === "team" ? <div className="damage-team-source"><div className="section-heading"><h2>Atacantes do builder</h2><span>{builderTeamState.team?.members.filter(Boolean).length || 0}/6 sets</span></div><p>Nature, habilidade, item, Stat Points e golpes vêm do rascunho salvo. Sets vazios ou inválidos ficam identificados em cada posição.</p><Link className="button button-outline button-small" to="/builder">Editar time</Link></div> : <SideEditor title="Atacante" sideName="attacker" side={form.attacker} onChange={(value) => updateSide("attacker", value)} />}
+              {targetMode === "team" ? <div className="damage-team-source"><div className="section-heading"><h2>Atacantes do builder</h2><span>{builderTeamState.team?.members.filter(Boolean).length || 0}/6 sets</span></div><p>Nature, habilidade, item, pontos investidos e golpes vêm do rascunho salvo. Sets vazios ou inválidos ficam identificados em cada posição.</p><Link className="button button-outline button-small" to="/builder">Editar time</Link></div> : <SideEditor title="Atacante" sideName="attacker" side={form.attacker} onChange={(value) => updateSide("attacker", value)} />}
               <SideEditor title={targetMode === "many" ? "Set defensivo compartilhado" : "Alvo"} sideName="defender" side={form.defender} onChange={(value) => updateSide("defender", value)} showSpecies={targetMode !== "many"} />
             </section>
           </details>

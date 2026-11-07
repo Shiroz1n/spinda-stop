@@ -132,7 +132,7 @@ function EvolutionSection({ pokemon }) {
           </li>
         ))}
       </ol>
-      <p className="form-hint">A relação descreve evolução entre espécies; não confirma presença, forma permitida ou legalidade em Pokémon Champions.</p>
+      <p className="form-hint">Evolução geral do catálogo; compatibilidade com Champions não confirmada.</p>
     </section>
   );
 }
@@ -168,7 +168,7 @@ function MoveLearnsetSection({ pokemon, forms, learnsetState, onRetry, onFormCha
         <div><p className="page-label">Por jogo e forma</p><h2 id="learnsets-heading">Golpes aprendidos</h2></div>
         <span>{learnsetState.status === "ready" ? `${rows.length} registros` : "PokéAPI"}</span>
       </div>
-      <p className="detail-learnset-scope">Aprendibilidade geral por forma e versão. Legalidade em Pokémon Champions: não verificada.</p>
+      <p className="detail-learnset-scope">Aprendibilidade por forma e jogo · legalidade em Champions não verificada.</p>
       {learnsetState.status === "loading" ? <p className="form-hint" role="status">Carregando os dados da forma…</p> : null}
       {learnsetState.status === "error" ? <div className="detail-learnset-error" role="alert"><p>{learnsetState.error}</p><button className="button button-outline button-small" type="button" onClick={onRetry}>Tentar novamente</button></div> : null}
       {learnsets ? <>
@@ -193,7 +193,7 @@ function MoveLearnsetSection({ pokemon, forms, learnsetState, onRetry, onFormCha
               <Link className="text-button detail-move-calc" to={`/calculator?${search}`} aria-label={`Preparar cálculo de ${row.move.name} com ${pokemon.name}`}>Preparar cálculo</Link>
             </li>
           );
-        })}</ul> : <p className="detail-learnset-empty" role="status">A fonte não lista golpes para esta combinação de filtros e forma. Isso não determina compatibilidade ou legalidade em Pokémon Champions.</p>}
+        })}</ul> : <p className="detail-learnset-empty" role="status">Nenhum golpe publicado para estes filtros.</p>}
         <a className="source-link" href={learnsets.metadata.sourceUrl} target="_blank" rel="noreferrer">Fonte: PokéAPI {learnsets.metadata.sourceCommit.slice(0, 7)} ↗</a>
       </> : null}
     </section>
@@ -309,7 +309,6 @@ export function DexDetailPage() {
               );
             })}
           </ul>
-          <p className="form-hint">Referência geral da PokéAPI; não representa o stat final do Pokémon Champions.</p>
         </section>
 
         <section className="panel-frame detail-panel" id="detail-profile" aria-labelledby="profile-heading">
@@ -328,7 +327,7 @@ export function DexDetailPage() {
       <section className="detail-type-relations" id="detail-types" aria-labelledby="type-relations-heading">
         <div className="section-heading"><div><p className="page-label">Carta de tipos</p><h2 id="type-relations-heading">Relações defensivas</h2></div><span>Multiplicador por golpe</span></div>
         {unsupportedDefenseTypes.length ? (
-          <p className="detail-type-source" role="status">O simulador não fornece uma carta completa para o tipo {unsupportedDefenseTypes.map(typeLabel).join(" / ")} desta forma.</p>
+          <p className="detail-type-source" role="status">Carta indisponível para {unsupportedDefenseTypes.map(typeLabel).join(" / ")}.</p>
         ) : (
           <>
             <div className="type-relation-groups">
@@ -343,7 +342,7 @@ export function DexDetailPage() {
                 );
               })}
             </div>
-            <p className="detail-type-source">Carta de tipos derivada de <code>@smogon/calc</code> 0.12.0. Tipos neutros (1×) ficam omitidos. Relações gerais não indicam golpes legais, presença no jogo ou elegibilidade em regulamento do Champions.{unsupportedAttackTypes.length ? ` Sem multiplicador nesta carta: ${unsupportedAttackTypes.map(typeLabel).join(" / ")}.` : ""}</p>
+            <p className="detail-type-source">Carta geral de <code>@smogon/calc</code> · neutro (1×) omitido.{unsupportedAttackTypes.length ? ` Sem relação disponível para ${unsupportedAttackTypes.map(typeLabel).join(" / ")}.` : ""}</p>
           </>
         )}
       </section>
