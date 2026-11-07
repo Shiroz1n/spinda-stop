@@ -38,10 +38,11 @@ function periodLabel() {
 }
 
 function RegulationPanel({ titleId }) {
-  const now = Date.now();
+  const [now, setNow] = useState(null);
+  useEffect(() => { setNow(Date.now()); }, []);
   const startsAt = Date.parse(regulation.startsAt);
   const endsAt = Date.parse(regulation.endsAt);
-  const state = now >= startsAt && now < endsAt ? "Período ranqueado em andamento" : "Último período oficial confirmado";
+  const state = now === null ? "Período oficial confirmado" : now >= startsAt && now < endsAt ? "Período ranqueado em andamento" : "Último período oficial confirmado";
 
   return (
     <section className="home-regulation" aria-labelledby={titleId}>
