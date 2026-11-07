@@ -550,7 +550,9 @@ async function runViewport(viewportName, viewport) {
   }
   await minimumBaseStatInput.fill("");
   await page.locator(".dex-sort-field select").selectOption("number");
-  await page.locator(".pokemon-card-title").first().click();
+  const firstPokemonCard = page.locator(".pokemon-card-link").first();
+  await firstPokemonCard.evaluate((card) => card.scrollIntoView({ block: "center" }));
+  await firstPokemonCard.click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
@@ -727,10 +729,10 @@ async function runViewport(viewportName, viewport) {
     evolution: document.querySelector(".detail-evolutions")?.innerText,
   }));
   observations.push({ viewport: viewportName, name: "pokemon-alolan-raichu-exact-form", ...alolanRaichuState });
-  if (alolanRaichuState.title !== "Alolan Raichu" || !alolanRaichuState.types?.includes("Psíquico") || alolanRaichuState.total !== "Total 485" || !alolanRaichuState.sprite?.endsWith("10100.gif")) {
+  if (alolanRaichuState.title !== "Alolan Raichu" || !alolanRaichuState.types?.includes("Psíquico") || alolanRaichuState.total !== "Total 485" || !alolanRaichuState.sprite?.endsWith("10100.png")) {
     failures.push(`${viewportName}: a forma Alolan Raichu não atualizou nome, tipos, stats e sprite pelo ID exato da forma.`);
   }
-  if (!alolanRaichuState.evolution?.includes("Forma resultante: Alola") || !alolanRaichuState.evolution.includes("Thunder Stone")) {
+  if (!alolanRaichuState.evolution?.includes("Região: Alola") || !alolanRaichuState.evolution.includes("Thunder Stone")) {
     failures.push(`${viewportName}: a condição de evolução para a forma Alola não correspondeu à revisão fixa da PokéAPI.`);
   }
   await safeCapture(formEvolutionPage, viewportName, "pokemon-alolan-raichu-evolution", { audit: true, fullPage: false });
@@ -1136,7 +1138,7 @@ async function runViewport(viewportName, viewport) {
   const loadingUsageState = loadingUsagePage.locator(".usage-index-state");
   await loadingUsageState.waitFor({ state: "visible", timeout: 10_000 });
   const loadingUsageCopy = await loadingUsageState.innerText();
-  assert.equal(loadingUsageCopy, "Carregando o índice público de Doubles…", "o carregamento de Usage deve informar a fonte enquanto o índice está pendente");
+  assert.equal(loadingUsageCopy, "Carregando o catálogo competitivo de Doubles…", "o carregamento de Usage deve identificar o catálogo enquanto ele está pendente");
   observations.push({ viewport: viewportName, name: "usage-index-loading-copy", text: loadingUsageCopy });
   await safeCapture(loadingUsagePage, viewportName, "usage-index-loading", { audit: true, fullPage: false });
   releaseUsageIndex();
