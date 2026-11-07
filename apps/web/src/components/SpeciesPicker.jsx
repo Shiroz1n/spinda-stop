@@ -15,14 +15,13 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
   const filtered = useMemo(() => searchPokemon(activePokemon, query).slice(0, 16), [activePokemon, query]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || roster.status !== "idle") return undefined;
     let active = true;
-    setRoster({ status: "loading", pokemon: [] });
     usageProviders["pokemon-champions-battle-data"].loadIndex()
       .then((index) => { if (active) setRoster({ status: "ready", pokemon: getChampionsIndexedPokemon(index, pokemon) }); })
       .catch(() => { if (active) setRoster({ status: "error", pokemon: [] }); });
     return () => { active = false; };
-  }, [open, pokemon]);
+  }, [open, pokemon, roster.status]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -80,8 +79,8 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
         />
         {catalog === "champions" && <p className="form-hint">Índice atual de Doubles; não confirma legalidade no regulamento.</p>}
         <div className="picker-results" aria-live="polite">
-          {catalog === "champions" && roster.status === "loading" && <p className="empty-state" role="status">Carregando o índice de Doubles…</p>}
-          {catalog === "champions" && roster.status === "error" && <p className="empty-state" role="status">Índice de Champions indisponível. Tente a Pokédex geral.</p>}
+          {catalog === "champions" && roster.status === "idle" && open && <p className="empty-state" role="status">Carregando o índice de Doubles…</p>}
+          {catalog === "champions" && roster.status === "error" && <p className="empty-state" role="status">Índice de Champions indisponível. <button type="button" onClick={() => setRoster({ status: "idle", pokemon: [] })}>Tentar novamente</button> ou escolha a Pokédex geral.</p>}
           {filtered.map((entry) => (
             <button
               className="picker-result"
