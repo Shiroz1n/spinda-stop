@@ -1342,6 +1342,7 @@ input, select, textarea { font-size: 1rem; }
 .home-section-heading .page-label { margin-bottom: 3px; }
 .home-section-heading > a, .home-community-links a { min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
 .home-preview-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.home-usage-preview .home-preview-list, .home-ladder-preview .home-preview-list { max-height: 390px; overflow-y: auto; overscroll-behavior: contain; }
 .home-preview-list li { min-height: 54px; display: grid; grid-template-columns: 28px 42px minmax(0, 1fr); align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
 .home-preview-list .pokemon-art { --sprite-size: 42px !important; }
 .home-preview-rank { color: var(--signal-red-strong); font-variant-numeric: tabular-nums; font-weight: 800; text-align: center; }
