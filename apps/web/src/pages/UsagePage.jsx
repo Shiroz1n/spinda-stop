@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
@@ -7,6 +7,7 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -15,9 +16,17 @@ const categories = [
   { id: "held_item", label: "Itens" },
   { id: "ability", label: "Habilidades" },
   { id: "stat_alignment", label: "Naturezas" },
-  { id: "stat_points", label: "Stat Points" },
+  { id: "stat_points", label: "Pontos investidos" },
   { id: "teammate", label: "Parceiros" },
 ];
+const metaRollCategoryByBattleData = Object.freeze({
+  move: "moves",
+  held_item: "items",
+  ability: "abilities",
+  stat_alignment: "natures",
+  stat_points: "spreads",
+  teammate: "teammates",
+});
 
 const categoryFilters = [
   { id: "move", key: "moves", label: "Golpe" },
@@ -60,50 +69,61 @@ function displayValue(value) {
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
 
+function resolveCatalogPokemon(entry) {
+  return resolveCompetitivePokemonSprite(findPokemonSprite, {
+    id: entry.showdownId || entry.id,
+    name: entry.name,
+  });
+}
+
 function snapshotKey(snapshot) {
   return [snapshot.season || "", snapshot.date || "", snapshot.sourceFile || ""].join("|");
 }
 
 function CategoryRow({ row, category }) {
-  const percentageValue = row.percentageValue;
-  const hasBar = typeof percentageValue === "number";
-  const barWidth = hasBar ? Math.max(0, Math.min(100, percentageValue)) + "%" : "0%";
   const statAlignment = category.id === "stat_alignment";
+  const observation = row.selected;
+  const natureEffects = statAlignment
+    ? [observation?.statUp ? "↑ " + observation.statUp : "", observation?.statDown ? "↓ " + observation.statDown : ""].filter(Boolean).join(" · ")
+    : "";
+  const percentage = observation?.percentageValue !== null && observation?.percentageValue !== undefined
+    ? `${observation.percentageValue}%`
+    : observation?.percentage || null;
+  const partnerRank = category.id === "teammate" ? observation?.rank : null;
+  const sourceLabel = observation?.source === "metaRoll" ? "MetaRoll" : "Pokémon Champions Battle Data";
+  const capturedAt = observation?.source === "battleData"
+    ? formatSnapshotDate(observation.capturedAt)
+    : observation?.capturedAt ? formatTimestamp(observation.capturedAt) : "data da captura não informada";
+  const provenance = [sourceLabel, observation?.season, capturedAt].filter(Boolean).join(" · ");
 
   return (
     <li className="usage-data-row">
       <div className="usage-row-main">
         <div className="usage-row-title">
-          <span className="usage-row-rank">{row.rank === null ? "—" : "#" + row.rank}</span>
           {category.id === "stat_points" ? (
-            <div className="usage-spread" aria-label="Distribuição de Stat Points">
+            hasPublishedStatPoints(row.statPoints) ? <div className="usage-spread" aria-label="Pontos investidos por atributo">
               {statPointLabels.map(([key, label]) => (
                 <span key={key}>
                   <small>{label}</small>
-                  <b>{displayValue(row.statPoints[key])}</b>
+                  <b>{displayValue(row.statPoints?.[key])}</b>
                 </span>
               ))}
-            </div>
+            </div> : <span className="stat-points-empty">SP não publicados</span>
           ) : (
             <div className="usage-row-copy">
               <span className="usage-row-asset">
                 {category.id === "held_item" ? <ItemSprite name={row.name} size={28} /> : null}
                 {category.id === "teammate" && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={38} decorative /> : null}
               </span>
-              <strong>{row.name || "Nome não informado"}</strong>
-              {statAlignment && (row.statUp || row.statDown) ? (
-                <small>
-                  {row.statUp ? "↑ " + row.statUp : ""}
-                  {row.statUp && row.statDown ? " · " : ""}
-                  {row.statDown ? "↓ " + row.statDown : ""}
-                </small>
-              ) : null}
+              <strong>{row.name || (category.id === "stat_points" ? "Distribuição" : "Nome não informado")}</strong>
+              {natureEffects ? <small className="usage-nature-effects">{natureEffects}</small> : null}
             </div>
           )}
         </div>
-        <div className="usage-row-value">
-          {hasBar ? <div className="usage-bar-track" aria-hidden="true"><span style={{ width: barWidth }} /></div> : null}
-          <b>{hasBar ? row.percentage : "Percentual não informado"}</b>
+        <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
+          {category.id === "teammate"
+            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>#{partnerRank}</span>
+            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
         </div>
       </div>
     </li>
@@ -111,19 +131,11 @@ function CategoryRow({ row, category }) {
 }
 
 function CategoryRows({ rows, category }) {
-  if (rows.length === 0) {
-    return (
-      <div className="usage-empty usage-empty-compact">
-        <p>Esta resposta não trouxe linhas para “{category.label}”.</p>
-      </div>
-    );
-  }
-
   return (
     <ol className="usage-row-list">
       {rows.map((row, index) => (
         <CategoryRow
-          key={category.id + "-" + (row.rank === null ? index : row.rank)}
+          key={row.key || `${category.id}-${index}`}
           row={row}
           category={category}
         />
@@ -132,24 +144,97 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, source, onRetry, onCategoryChange }) {
+function MetaRollComparison({ selectedPokemon, usage, status, category, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
+  const provider = usageProviders.metaroll;
+  const entry = indexData?.entries.find((item) => item.id === selectedPokemon.metaRollId) || null;
+  const [detailState, setDetailState] = useState({ key: "", status: "idle" });
+  const [retry, setRetry] = useState(0);
+  const forceNextRequest = useRef(false);
+  const requestKey = `${indexData?.season || "current"}|${indexData?.capturedAt || ""}|${indexData?.appFetchedAt || ""}|${entry?.id || ""}|${retry}`;
+
+  useEffect(() => {
+    if (indexStatus !== "success" || !entry) return undefined;
+    let active = true;
+    const force = forceNextRequest.current;
+    forceNextRequest.current = false;
+    provider.loadPokemonUsage({ id: entry.id, force }).then((result) => {
+      if (active) setDetailState({ key: requestKey, status: "success", result });
+    }).catch(() => {
+      if (active) setDetailState({ key: requestKey, status: "error" });
+    });
+    return () => { active = false; };
+  }, [entry, indexData?.capturedAt, indexData?.appFetchedAt, indexStatus, provider, requestKey, retry]);
+
+  const detail = detailState.key === requestKey ? detailState : { status: entry ? "loading" : "idle" };
+  const metaEntry = detail.result?.entry;
+  const visibleCategories = category.id === "profile"
+    ? categories.filter((item) => item.id !== "profile")
+    : [category];
+  const battleRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
+  const metaRows = (item) => metaEntry?.distributions?.[metaRollCategoryByBattleData[item.id]] || [];
+  const dataPending = !usage && !metaEntry && ((status === "loading" || status === "idle") || indexStatus === "loading" || detail.status === "loading");
+  const dataUnavailable = !usage && !metaEntry && (status === "error" || indexStatus === "error" || detail.status === "error");
+  const emptyMessage = dataPending
+    ? "Carregando os dados publicados…"
+    : dataUnavailable
+      ? "Uma captura não respondeu; não foi possível confirmar se há linhas nesta categoria."
+      : "Nenhuma distribuição publicada nesta categoria.";
+
+  return (
+    <section className="usage-distributions" aria-label="Distribuições competitivas">
+      <div className="usage-distributions-heading">
+        <h3>Distribuições</h3>
+        {selectedPokemon.metaRollId ? <button className="text-button" type="button" onClick={() => onOpenDetails("summary")}>Histórico e confrontos</button> : null}
+      </div>
+      <p className="usage-distributions-note">Uso publicado; não é taxa de vitória.</p>
+      {indexStatus === "loading" && !indexData ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Atualizando dados competitivos…</p> : null}
+      {indexStatus === "error" ? <div className="usage-error" role="alert"><p>Não foi possível atualizar todos os dados competitivos.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
+      {entry && (detail.status === "loading" || detail.status === "idle") ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando os dados de {selectedPokemon.name}…</p> : null}
+      {entry && detail.status === "error" ? <div className="usage-error" role="alert"><p>Os dados complementares desta espécie não responderam.</p><button className="button button-outline button-small" type="button" onClick={() => { forceNextRequest.current = true; setRetry((current) => current + 1); }}>Tentar de novo</button></div> : null}
+      <div className="usage-distribution-grid">
+        {visibleCategories.map((item) => {
+          const mergedRows = mergeCategoryRows({
+            categoryId: item.id,
+            formats: { battleData: usage?.format || selectedPokemon.battleData?.format, metaRoll: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
+            contexts: {
+              battleData: { season: usage?.season || selectedPokemon.battleData?.season, capturedAt: usage?.date || null, sourceFile: usage?.sourceFile || null, format: usage?.format || selectedPokemon.battleData?.format },
+              metaRoll: { season: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season, capturedAt: detail.result?.capturedAt || indexData?.capturedAt || null, format: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
+            },
+            battleRows: battleRows(item),
+            metaRows: metaRows(item),
+            resolvePokemon: resolveCatalogPokemon,
+          });
+          const rows = item.id === "teammate" ? selectRankedPartnerRows(mergedRows) : mergedRows;
+          const categoryEmptyMessage = item.id === "teammate" && !dataPending && !dataUnavailable
+            ? "Esta captura não traz parceiros com posição publicada."
+            : emptyMessage;
+          return (
+            <section className="usage-distribution-category" key={item.id}>
+              <div className="usage-category-heading">
+                <h4>{item.label}</h4>
+                {category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{item.id === "teammate" ? `${rows.length} parceiros` : `${rows.length} linhas`}</span>}
+              </div>
+              {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{categoryEmptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} emptyMessage={categoryEmptyMessage} />}
+            </section>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
         <div className="usage-empty">
           <p className="page-label">Doubles</p>
           <h2>Escolha uma espécie</h2>
-          <p>Use a busca ou os filtros ao lado para abrir as linhas publicadas pela fonte.</p>
+        <p>Use a busca e os filtros para encontrar os dados competitivos publicados.</p>
         </div>
       </section>
     );
   }
-
-  const visibleCategories = categories.filter((item) => item.id !== "profile");
-  const rows = usage && category.id !== "profile"
-    ? usage.rows.filter((row) => row.category === category.id)
-    : [];
-  const profileRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
 
   return (
     <section className="usage-detail-panel" aria-label={"Uso de " + selectedPokemon.name}>
@@ -161,7 +246,6 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
           <div className="type-list usage-type-list">
             {selectedPokemon.types.map((type) => <TypeTag key={type} type={type} />)}
           </div>
-          {Number.isFinite(selectedPokemon.position) ? <p className="usage-selected-rank"><span>Posição na fonte</span><strong>#{selectedPokemon.position}</strong></p> : null}
         </div>
         <span className="usage-format-stamp">Doubles</span>
       </div>
@@ -199,61 +283,25 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, source, o
         </div>
       ) : null}
 
-      {usage ? (
-        <>
-          <div className="usage-provenance usage-provenance-inline" aria-label="Fonte e período dos dados">
-            <a className="usage-provenance-source" href={source.url} target="_blank" rel="noreferrer">
-              {source.attribution}
-            </a>
-            <span><strong>Temporada {usage.season || "não informada"}</strong> · {formatSnapshotDate(usage.date)}</span>
-            <span>Consultado {formatTimestamp(usage.appFetchedAt)}</span>
-            <details className="usage-source-help">
-              <summary>Sobre esta captura</summary>
-              {usage.sourceFile ? <p>Arquivo de origem: <code>{usage.sourceFile}</code></p> : null}
-              <p>Temporada é o rótulo devolvido pela fonte. A amostra e o denominador não foram publicados; percentuais de distribuição não são taxa de partidas.</p>
-            </details>
-          </div>
-
-          {category.id === "profile" ? (
-            <div className="usage-profile-sections">
-              {visibleCategories.map((item) => {
-                const itemRows = profileRows(item);
-                return (
-                  <section className="usage-profile-section" key={item.id}>
-                    <div className="usage-category-heading">
-                      <div>
-                        <h3>{item.label}</h3>
-                      </div>
-                      <div className="usage-profile-actions"><span>{itemRows.length} linhas</span><button className="text-button" type="button" onClick={() => onCategoryChange(item.id)}>Ver tudo</button></div>
-                    </div>
-                    <CategoryRows rows={itemRows.slice(0, 2)} category={item} />
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <div className="usage-category-heading">
-                <div>
-                  <p className="page-label">Distribuição publicada</p>
-                  <h3>{category.label}</h3>
-                </div>
-                <span>{rows.length} linhas</span>
-              </div>
-              <CategoryRows rows={rows} category={category} />
-            </>
-          )}
-        </>
-      ) : null}
+      <MetaRollComparison
+        selectedPokemon={selectedPokemon}
+        usage={usage}
+        status={status}
+        category={category}
+        indexData={metaRollIndex}
+        indexStatus={metaRollIndexStatus}
+        indexError={metaRollIndexError}
+        onRetryIndex={onRetryMetaRoll}
+        onOpenDetails={onOpenMetaRoll}
+      />
     </section>
   );
 }
 
-function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
+function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   const provider = usageProviders["pokemon-champions-battle-data"];
   const [indexData, setIndexData] = useState(null);
   const [indexStatus, setIndexStatus] = useState("loading");
-  const [indexError, setIndexError] = useState("");
   const [indexRetry, setIndexRetry] = useState(0);
   const indexForceKey = useRef("");
   const [query, setQuery] = useState(initialPokemonName);
@@ -264,39 +312,47 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   const [abilityFilter, setAbilityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("position");
   const [selectedId, setSelectedId] = useState(null);
-  const [categoryId, setCategoryId] = useState("move");
+  const [categoryId, setCategoryId] = useState("profile");
   const [periodMode, setPeriodMode] = useState("current");
   const [historySeason, setHistorySeason] = useState("all");
   const [historyDays, setHistoryDays] = useState(7);
   const [selectedSnapshotKey, setSelectedSnapshotKey] = useState("");
-  const [usage, setUsage] = useState(null);
-  const [usageStatus, setUsageStatus] = useState("idle");
-  const [usageError, setUsageError] = useState("");
+  const [usageState, setUsageState] = useState({ key: "", status: "idle", result: null, error: "" });
   const [usageRetry, setUsageRetry] = useState(0);
   const usageForceKey = useRef("");
+  const catalog = useMemo(
+    () => mergeUsageCatalog(indexData ? { ...indexData, format: "Doubles" } : null, metaRollIndex, resolveCatalogPokemon),
+    [indexData, metaRollIndex],
+  );
+  const selectedPokemon = catalog.find((entry) => entry.key === selectedId) || null;
+  const selectedPokemonKey = selectedPokemon?.key;
+  const selectedShowdownId = selectedPokemon?.showdownId;
+  const usageRequestKey = [periodMode, historySeason, historyDays, selectedPokemonKey, usageRetry].join("|");
+  const usageStateIsCurrent = usageState.key === usageRequestKey;
+  const usage = usageStateIsCurrent ? usageState.result : null;
+  const usageStatus = usageStateIsCurrent ? usageState.status : selectedShowdownId ? "loading" : selectedPokemonKey ? "success" : "idle";
+  const usageError = usageStateIsCurrent ? usageState.error : "";
 
   function refreshIndex(force = false) {
     const nextRetry = indexRetry + 1;
     indexForceKey.current = force ? `index|${nextRetry}` : "";
     setIndexStatus("loading");
-    setIndexError("");
     setIndexRetry(nextRetry);
   }
 
   function refreshUsage(force = false) {
-    if (!selectedId) return;
+    if (!selectedPokemon?.showdownId) return;
     const nextRetry = usageRetry + 1;
     usageForceKey.current = force
-      ? [periodMode, historySeason, historyDays, selectedId, nextRetry].join("|")
+      ? [periodMode, historySeason, historyDays, selectedPokemon.key, nextRetry].join("|")
       : "";
-    setUsageStatus("loading");
-    setUsageError("");
     setUsageRetry(nextRetry);
   }
 
   function refreshVisibleData() {
     refreshIndex(true);
     refreshUsage(true);
+    onRetryMetaRoll?.();
   }
 
   useCacheRevalidation(indexData?.cacheExpiresAt, () => refreshIndex(false), Boolean(indexData));
@@ -316,34 +372,37 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
       if (!active) return;
       setIndexData(result);
       setIndexStatus("success");
-      setSelectedId((current) => {
-        if (current && result.pokemon.some((entry) => entry.showdownId === current)) return current;
-        if (initialPokemonNameRef.current) {
-          return findUsagePokemonByReference(result.pokemon, initialPokemonNameRef.current)?.showdownId || null;
-        }
-        return [...result.pokemon].sort((left, right) => {
-          const leftPosition = left.position ?? Number.POSITIVE_INFINITY;
-          const rightPosition = right.position ?? Number.POSITIVE_INFINITY;
-          return leftPosition - rightPosition;
-        })[0]?.showdownId || null;
-      });
     }).catch(() => {
       if (!active) return;
       setIndexStatus("error");
-      setIndexError("Confira sua conexão ou tente novamente mais tarde.");
     });
 
     return () => { active = false; };
   }, [provider, indexRetry]);
 
   useEffect(() => {
-    if (!selectedId) return undefined;
+    if (!catalog.length) return;
+    setSelectedId((current) => {
+      if (catalog.some((entry) => entry.key === current)) return current;
+      if (initialPokemonNameRef.current) {
+        return findUsagePokemonByReference(catalog, initialPokemonNameRef.current)?.key || null;
+      }
+      return [...catalog].sort((left, right) => {
+        const leftRank = left.displayRank ?? Number.POSITIVE_INFINITY;
+        const rightRank = right.displayRank ?? Number.POSITIVE_INFINITY;
+        return leftRank - rightRank || left.name.localeCompare(right.name, "pt-BR");
+      })[0]?.key || null;
+    });
+  }, [catalog]);
+
+  useEffect(() => {
+    if (!selectedShowdownId) return undefined;
 
     let active = true;
-    const requestKey = [periodMode, historySeason, historyDays, selectedId, usageRetry].join("|");
+    const requestKey = usageRequestKey;
     const force = usageForceKey.current === requestKey;
     if (force) usageForceKey.current = "";
-    const request = { showdownId: selectedId, force };
+    const request = { showdownId: selectedShowdownId, force };
     if (periodMode === "history") {
       request.days = historyDays;
       if (historySeason !== "all") request.season = historySeason;
@@ -351,35 +410,32 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
 
     provider.loadPokemonUsage(request).then((result) => {
       if (!active) return;
-      setUsage(result);
+      setUsageState({ key: requestKey, status: "success", result, error: "" });
       setSelectedSnapshotKey((current) => result.daily.some((snapshot) => snapshotKey(snapshot) === current)
         ? current
         : result.daily[0] ? snapshotKey(result.daily[0]) : "");
-      setUsageStatus("success");
     }).catch(() => {
       if (!active) return;
-      setUsageStatus("error");
-      setUsageError("A API pode estar temporariamente fora do ar. Nenhum dado local foi substituído.");
+      setUsageState({ key: requestKey, status: "error", result: null, error: "A API pode estar temporariamente fora do ar. Nenhum dado local foi substituído." });
     });
 
     return () => { active = false; };
-  }, [provider, selectedId, periodMode, historySeason, historyDays, usageRetry]);
+  }, [provider, selectedShowdownId, usageRequestKey, periodMode, historySeason, historyDays]);
 
-  const selectedPokemon = indexData?.pokemon.find((entry) => entry.showdownId === selectedId) || null;
   const requestedPokemon = initialPokemonName
-    ? findUsagePokemonByReference(indexData?.pokemon || [], initialPokemonName)
+    ? findUsagePokemonByReference(catalog, initialPokemonName)
     : null;
-  const types = Array.from(new Set(indexData?.pokemon.flatMap((entry) => entry.types) || [])).sort();
+  const types = Array.from(new Set(catalog.flatMap((entry) => entry.types))).sort();
   const facetOptions = Object.fromEntries(categoryFilters.map(({ key }) => [
     key,
-    Array.from(new Set(indexData?.pokemon.flatMap((entry) => entry.filterValues?.[key] || []) || []))
+    Array.from(new Set(catalog.flatMap((entry) => entry.filterValues?.[key] || [])))
       .sort((left, right) => left.localeCompare(right, "pt-BR")),
   ]));
   const normalizedQuery = normalizeSearch(query.trim());
-  const filteredPokemon = (indexData?.pokemon || [])
+  const filteredPokemon = catalog
     .filter((entry) => {
       const nameMatches = normalizeSearch(entry.name).includes(normalizedQuery)
-        || normalizeSearch(entry.showdownId).includes(normalizedQuery);
+        || normalizeSearch(entry.showdownId || entry.metaRollId).includes(normalizedQuery);
       const typeMatches = typeFilter === "all" || entry.types.includes(typeFilter);
       const moveMatches = moveFilter === "all" || entry.filterValues?.moves?.includes(moveFilter);
       const itemMatches = itemFilter === "all" || entry.filterValues?.items?.includes(itemFilter);
@@ -388,8 +444,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
     })
     .sort((left, right) => {
       if (sortBy === "name") return left.name.localeCompare(right.name, "pt-BR");
-      const leftPosition = left.position ?? Number.POSITIVE_INFINITY;
-      const rightPosition = right.position ?? Number.POSITIVE_INFINITY;
+      const leftPosition = left.displayRank ?? Number.POSITIVE_INFINITY;
+      const rightPosition = right.displayRank ?? Number.POSITIVE_INFINITY;
       if (leftPosition !== rightPosition) return leftPosition - rightPosition;
       return left.name.localeCompare(right.name, "pt-BR");
     });
@@ -404,60 +460,49 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
   return (
     <div className="usage-source-content">
       <div className="usage-source-banner">
-        <span className="usage-source-icon" aria-hidden="true">BD</span>
         <div className="usage-source-copy">
-          <a href={provider.source.url} target="_blank" rel="noreferrer">
-            {provider.source.attribution}
-          </a>
-          <span>Doubles</span>
+          <strong>Meta competitivo em Doubles</strong>
+          <span>Pesquise uma vez e consulte as capturas disponíveis por espécie.</span>
         </div>
         <details className="usage-source-details">
           <summary>Sobre os dados</summary>
-          <p>Esta tela mostra apenas esta fonte. Não combina percentuais com MetaRoll nem expõe uma API própria.</p>
-          <a className="usage-source-guide" href={provider.source.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
+          <p>Percentuais publicados não representam taxa de vitória. Períodos e definições podem variar; por isso, o app seleciona uma captura compatível e mantém ausências sem preenchimento.</p>
+          <a className="usage-source-guide" href={provider.source.url} target="_blank" rel="noreferrer">Pokémon Champions Battle Data ↗</a>
+          <a className="usage-source-guide" href={usageProviders.metaroll.source.url} target="_blank" rel="noreferrer">MetaRoll ↗</a>
         </details>
       </div>
 
-      {indexData ? (
+      {catalog.length ? (
         <div className="usage-index-note" aria-label="Atualização do índice">
-          <span className="usage-period-summary">Doubles · {indexData.pokemon.length} Pokémon no índice</span>
-          <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>
-            {indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
+          <span className="usage-period-summary">{catalog.length} Pokémon e formas · capturas de Doubles</span>
+          <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading" && metaRollIndexStatus === "loading"} onClick={refreshVisibleData}>
+            {indexStatus === "loading" || metaRollIndexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
           </button>
-          <details className="usage-capture-details"><summary>Captura e consulta</summary><span>Captura {formatTimestamp(indexData.generatedAt)} · Consultado {formatTimestamp(indexData.appFetchedAt)}</span></details>
         </div>
       ) : null}
 
-      {indexStatus === "loading" ? (
+      {!catalog.length && (indexStatus === "loading" || metaRollIndexStatus === "loading") ? (
         <div className="usage-index-state" role="status">
           <span className="usage-spinner" aria-hidden="true" />
-          Carregando o índice público de Doubles…
+          Carregando o catálogo competitivo de Doubles…
         </div>
       ) : null}
-      {indexStatus === "loading" && indexData ? <p className="usage-refresh-status" role="status">Atualizando os dados em segundo plano…</p> : null}
+      {catalog.length && (indexStatus === "loading" || metaRollIndexStatus === "loading") ? <p className="usage-refresh-status" role="status">Atualizando as capturas em segundo plano…</p> : null}
 
-      {indexStatus === "error" ? (
+      {!catalog.length && indexStatus === "error" && metaRollIndexStatus === "error" ? (
         <div className="usage-error usage-index-error" role="alert">
-          <div>
-            <strong>O índice não está disponível agora.</strong>
-            <p>{indexError}</p>
-          </div>
-          <button
-            className="button button-outline"
-            type="button"
-              onClick={() => refreshVisibleData()}
-          >
-            Tentar de novo
-          </button>
+          <div><strong>O catálogo não está disponível agora.</strong><p>As capturas públicas não responderam. Tente novamente.</p></div>
+          <button className="button button-outline" type="button" onClick={refreshVisibleData}>Tentar de novo</button>
         </div>
       ) : null}
+      {catalog.length && (indexStatus === "error" || metaRollIndexStatus === "error") ? <p className="usage-partial-error" role="status">Parte dos dados não foi atualizada; o que está disponível continua na ficha.</p> : null}
 
-      {indexData ? (
+      {catalog.length ? (
         <div className="usage-layout">
           <aside className="usage-browser-panel" aria-label="Buscar espécies">
             <div className="usage-browser-heading">
               <div>
-                <p className="page-label">Índice da fonte</p>
+                <p className="page-label">Catálogo</p>
                 <h2>Espécies</h2>
               </div>
               <div className="usage-browser-actions">
@@ -509,7 +554,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                 const options = facetOptions[key] || [];
                 return (
                   <label className="usage-filter-field" key={key}>
-                    <span>{label} no resumo da fonte{options.length === 0 ? " · sem dados" : ""}</span>
+                    <span>{label} nos índices publicados{options.length === 0 ? " · sem dados" : ""}</span>
                     <select value={value} disabled={options.length === 0} onChange={(event) => setValue(event.target.value)}>
                       <option value="all">Todos</option>
                       {options.map((option) => <option key={option} value={option}>{option}</option>)}
@@ -525,9 +570,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                   onChange={(event) => {
                     setPeriodMode(event.target.value);
                     setSelectedSnapshotKey("");
-                    setUsage(null);
-                    setUsageStatus("loading");
-                    setUsageError("");
                     setUsageRetry(0);
                   }}
                 >
@@ -545,9 +587,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                       onChange={(event) => {
                         setHistorySeason(event.target.value);
                         setSelectedSnapshotKey("");
-                        setUsage(null);
-                        setUsageStatus("loading");
-                        setUsageError("");
                         setUsageRetry(0);
                       }}
                     >
@@ -564,9 +603,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
                       onChange={(event) => {
                         setHistoryDays(Number(event.target.value));
                         setSelectedSnapshotKey("");
-                        setUsage(null);
-                        setUsageStatus("loading");
-                        setUsageError("");
                         setUsageRetry(0);
                       }}
                     >
@@ -579,7 +615,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               <label className="usage-filter-field">
                 <span>Ordenar</span>
                 <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                  <option value="position">Posição na fonte</option>
+                  <option value="position">Posição</option>
                   <option value="name">Nome A–Z</option>
                 </select>
               </label>
@@ -589,46 +625,41 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
             </div>
 
             <p className="usage-filter-note">
-              Golpes, itens e habilidades vêm dos destaques do índice atual. Valores ausentes não são inferidos.
+              Golpes, itens e habilidades vêm dos índices publicados. Formas distintas permanecem separadas e valores ausentes não são inferidos.
             </p>
-            {initialPokemonName && indexData && !requestedPokemon ? (
-              <p className="usage-request-note" role="status">A Battle Data não listou {initialPokemonName} neste índice. Limpe a busca para escolher outra espécie.</p>
+            {initialPokemonName && !requestedPokemon ? (
+              <p className="usage-request-note" role="status">{initialPokemonName} não aparece nas capturas disponíveis. Limpe a busca para escolher outra espécie.</p>
             ) : null}
 
             <div className="usage-list-caption">
               <span>Nome</span>
-              <span>Posição na fonte</span>
+              <span>Posição</span>
             </div>
 
             {filteredPokemon.length > 0 ? (
               <ul className="usage-species-list">
                 {filteredPokemon.map((entry) => (
-                  <li key={entry.showdownId}>
+                  <li key={entry.key}>
                     <button
-                      className={"usage-species-button" + (entry.showdownId === selectedId ? " is-selected" : "")}
+                      className={"usage-species-button" + (entry.key === selectedId ? " is-selected" : "")}
                       type="button"
-                      aria-pressed={entry.showdownId === selectedId}
+                      aria-pressed={entry.key === selectedId}
                       onClick={() => {
-                        if (entry.showdownId !== selectedId) {
-                          setSelectedId(entry.showdownId);
+                        if (entry.key !== selectedId) {
+                          setSelectedId(entry.key);
                           onPokemonSelect?.(entry.name);
                           setUsageRetry(0);
-                          setUsage(null);
-                          setUsageStatus("loading");
-                          setUsageError("");
                         }
                       }}
                     >
-                      <span className="usage-species-art"><PokemonSprite pokemon={resolveCompetitivePokemonSprite(findPokemonSprite, { id: entry.showdownId, name: entry.name })} name={entry.name} size={66} decorative /></span>
+                      <span className="usage-species-art"><PokemonSprite pokemon={resolveCatalogPokemon(entry)} name={entry.name} size={66} decorative /></span>
                       <span className="usage-species-name">
                         <strong>{entry.name}</strong>
                         <span className="type-list">
                           {entry.types.map((type) => <TypeTag key={type} type={type} />)}
                         </span>
                       </span>
-                      <span className="usage-position">
-                        {entry.position === null ? "—" : entry.position}
-                      </span>
+                      <span className="usage-position" aria-label={`Posição publicada ${Number.isFinite(entry.displayRank) ? entry.displayRank : "não informada"}`}>{Number.isFinite(entry.displayRank) ? entry.displayRank : "—"}</span>
                     </button>
                   </li>
                 ))}
@@ -663,12 +694,16 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect }) {
               </div>
             ) : null}
             <UsagePanel
-              source={provider.source}
               selectedPokemon={selectedPokemon}
               usage={displayedUsage}
               category={activeCategory}
               status={usageStatus}
               error={usageError}
+              metaRollIndex={metaRollIndex}
+              metaRollIndexStatus={metaRollIndexStatus}
+              metaRollIndexError={metaRollIndexError}
+              onRetryMetaRoll={onRetryMetaRoll}
+              onOpenMetaRoll={(section) => onOpenMetaRoll(selectedPokemon?.name, section, selectedPokemon?.metaRollId)}
               onRetry={() => {
                 refreshUsage(true);
               }}
@@ -685,52 +720,91 @@ export function UsagePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sourceId = searchParams.get("source") === "metaroll" ? "metaroll" : "pokemon-champions-battle-data";
   const initialPokemonName = searchParams.get("pokemon") || "";
-  const selectSource = (nextSource) => {
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("source", nextSource);
-    setSearchParams(nextParams, { replace: true });
-  };
+  const showingMetaDetails = sourceId === "metaroll";
+  const showingTrainerLadder = showingMetaDetails && searchParams.get("view") === "trainers";
+  const [metaRollIndex, setMetaRollIndex] = useState(null);
+  const [metaRollIndexStatus, setMetaRollIndexStatus] = useState("loading");
+  const [metaRollIndexError, setMetaRollIndexError] = useState("");
+  const [metaRollIndexRetry, setMetaRollIndexRetry] = useState(0);
+  const metaRollIndexForceKey = useRef("");
+  const metaRollProvider = usageProviders.metaroll;
+
+  function refreshMetaRollIndex() {
+    const nextRetry = metaRollIndexRetry + 1;
+    metaRollIndexForceKey.current = `index|${nextRetry}`;
+    setMetaRollIndexStatus("loading");
+    setMetaRollIndexError("");
+    setMetaRollIndexRetry(nextRetry);
+  }
+
+  useEffect(() => {
+    if (sourceId === "metaroll") return undefined;
+    let active = true;
+    const requestKey = `index|${metaRollIndexRetry}`;
+    const force = metaRollIndexForceKey.current === requestKey;
+    if (force) metaRollIndexForceKey.current = "";
+    metaRollProvider.loadIndex({ force }).then((result) => {
+      if (!active) return;
+      setMetaRollIndex(result);
+      setMetaRollIndexStatus("success");
+    }).catch(() => {
+      if (!active) return;
+      setMetaRollIndexStatus("error");
+      setMetaRollIndexError("A fonte não respondeu. Tente novamente mais tarde.");
+    });
+    return () => { active = false; };
+  }, [metaRollIndexRetry, metaRollProvider, sourceId]);
+
+  useCacheRevalidation(metaRollIndex?.cacheExpiresAt, refreshMetaRollIndex, sourceId !== "metaroll" && Boolean(metaRollIndex));
+
   const selectPokemon = (pokemonName) => {
     if (!pokemonName) return;
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("pokemon", pokemonName);
+    nextParams.delete("metaRollId");
+    setSearchParams(nextParams, { replace: true });
+  };
+  const openMetaRoll = (pokemonName = initialPokemonName, section = "summary", metaRollId = "") => {
+    const sectionByCategory = { move: "moves", held_item: "items", ability: "abilities", stat_alignment: "natures", stat_points: "spreads", teammate: "teammates" };
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("source", "metaroll");
+    if (pokemonName) nextParams.set("pokemon", pokemonName);
+    if (metaRollId) nextParams.set("metaRollId", metaRollId);
+    else nextParams.delete("metaRollId");
+    nextParams.set("section", sectionByCategory[section] || section);
+    setSearchParams(nextParams, { replace: true });
+  };
+  const openMetaRollLadder = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("source", "metaroll");
+    nextParams.set("view", "trainers");
+    nextParams.delete("metaRollId");
+    setSearchParams(nextParams, { replace: true });
+  };
+  const returnToComparison = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("source");
+    nextParams.delete("view");
+    nextParams.delete("section");
+    nextParams.delete("metaRollId");
     setSearchParams(nextParams, { replace: true });
   };
 
-  const sourceSwitcher = (
-    <div className="usage-source-switch" role="group" aria-label="Selecionar fonte de Usage">
-      <button
-        aria-pressed={sourceId === "pokemon-champions-battle-data"}
-        className={sourceId === "pokemon-champions-battle-data" ? "is-active" : ""}
-        type="button"
-        onClick={() => selectSource("pokemon-champions-battle-data")}
-      >
-        Battle Data
-      </button>
-      <button
-        aria-pressed={sourceId === "metaroll"}
-        className={sourceId === "metaroll" ? "is-active" : ""}
-        type="button"
-        onClick={() => selectSource("metaroll")}
-      >
-        MetaRoll
-      </button>
-    </div>
-  );
-
   return (
-    <section className={"page-wrap usage-page" + (sourceId === "metaroll" ? " metaroll-page" : "")}>
+    <section className={"page-wrap usage-page" + (showingMetaDetails ? " metaroll-page" : "")}>
       <div className="page-heading-row usage-heading">
         <div>
           <p className="page-label">Pesquisa de Doubles</p>
-          <h1>{sourceId === "metaroll" ? "Usage · MetaRoll" : "Usage"}</h1>
-          <p className="page-intro">{sourceId === "metaroll" ? "Ranking e distribuições da captura selecionada." : "Ranking, ficha e distribuições da fonte selecionada."}</p>
+          <h1>{showingTrainerLadder ? "Ladder de jogadores" : showingMetaDetails ? "Histórico e confrontos" : "Usage"}</h1>
+          <p className="page-intro">{showingTrainerLadder ? "Classificação publicada de jogadores de Doubles." : showingMetaDetails ? `Dados complementares publicados para ${initialPokemonName || "a espécie selecionada"}.` : "Explore espécies e consulte rankings e distribuições publicados para Doubles."}</p>
         </div>
-        {sourceSwitcher}
+        {showingMetaDetails
+          ? <button className="button button-outline" type="button" onClick={returnToComparison}>Voltar ao catálogo</button>
+          : <button className="button button-outline" type="button" onClick={openMetaRollLadder}>Ladder de jogadores</button>}
       </div>
-      {sourceId === "metaroll"
-        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />
-        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} />}
+      {showingMetaDetails
+        ? <MetaRollUsagePage initialPokemonName={initialPokemonName} initialPokemonId={searchParams.get("metaRollId") || ""} initialView={searchParams.get("view") === "trainers" ? "trainers" : "species"} initialSection={searchParams.get("section") || "summary"} onPokemonSelect={selectPokemon} />
+        : <BattleDataUsagePage initialPokemonName={initialPokemonName} onPokemonSelect={selectPokemon} metaRollIndex={metaRollIndex} metaRollIndexStatus={metaRollIndexStatus} metaRollIndexError={metaRollIndexError} onRetryMetaRoll={refreshMetaRollIndex} onOpenMetaRoll={openMetaRoll} />}
     </section>
   );
 }

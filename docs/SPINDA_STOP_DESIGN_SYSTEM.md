@@ -1,6 +1,8 @@
-# Spinda Stop — design system e fluxos
+# Spinda Stop — pesquisa visual e execução da PR #30 (histórico)
 
-Estado: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`). Esta PR migra o backend para SQLite local; a auditoria técnica anterior está em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md). A linha de base está em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md); decisões e auditoria visual estão em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Capturas do CI ficam fora do checkout nos artefatos do workflow. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
+Esta página preserva a investigação e as decisões da implementação anterior. A linguagem vigente foi atualizada para **O Espécime Bitmap** em [../DESIGN.md](../DESIGN.md). O norte FireRed/GBA, as medidas de composição e os valores apresentados a seguir são um registro histórico da PR #30, não tokens ou composição atuais.
+
+Estado no registro original: a reformulação composicional foi mesclada na PR #30 (`bf89fc5`); a PR seguinte migrou o backend para SQLite local. A auditoria técnica está em [TECHNICAL_REVIEW.md](TECHNICAL_REVIEW.md), a linha de base em [PR28_FOLLOWUP.md](PR28_FOLLOWUP.md), e as decisões/revisões históricas em [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md), [VISUAL_REDESIGN_REVIEW.md](VISUAL_REDESIGN_REVIEW.md) e [Pesquisa visual](VISUAL_REFERENCE_RESEARCH.md). Capturas do CI ficam fora do checkout nos artefatos do workflow. Consulte [UI Humanizer](UI_HUMANIZER.md) para os critérios gerais e [origens e créditos](THIRD_PARTY_LICENSES.md) para sprites.
 
 ## Norte
 
@@ -65,7 +67,8 @@ O CSS mantém `--fire-ink: #82382f` para ação/alerta e os tokens de tipo. Use 
 | `TypeTag` | Nome/símbolo e cor contextual para reconhecer tipo sem depender só da cor. |
 | `NaturePicker` + `BuilderPage` | Seleção de Nature com efeitos ↑/↓, seis sets, campos editáveis, importação/exportação e stats recalculados. |
 | `DamageCalculatorPage` | Modos 1 vs 1, 1 vs vários e Time vs 1; o resultado 1 vs 1 mostra as formas exatas quando não há barra de confronto, e A/B usa a barra para evitar repetir identidades. Em Time vs 1, telas até 360 px omitem o contexto repetido do cabeçalho para manter o primeiro dano acima da navegação. Os rolls ficam no detalhe do golpe. |
-| `UsagePage` e vistas MetaRoll | Fonte, formato e período junto da seleção, ranking e filtros publicados por cada fonte. |
+| `UsagePage` e vistas complementares | Índice por forma com uma posição e um valor selecionados por distribuição; metadados e atribuições nos detalhes técnicos. |
+| `BuilderPage` | Seis slots, editor de set e análise da equipe; cobertura ofensiva pelos golpes equipados e contagem das fraquezas, resistências e imunidades por tipo. |
 | `RoomsPage` e `TournamentsPage` | Participantes, estado e próxima ação; vazio, erro, convite e resultado em contexto. |
 
 Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicáveis. Busca e filtro preservam contexto ao abrir e voltar. Carregamento, vazio e falha mostram a próxima ação sem páginas de avisos. Fonte, formato, período e captura permanecem visíveis onde qualificam números; detalhes de API ficam em “Sobre os dados”. Total de stats e critérios evolutivos vêm de PokéAPI como dados gerais, nunca como declaração de status no Champions. A [revisão do PR #28](PR28_FOLLOWUP.md) registra a linha de base; [NEXT_VISUAL_REDESIGN.md](NEXT_VISUAL_REDESIGN.md) registra decisões e resultados desta rodada.
@@ -74,11 +77,11 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 
 | Tela | Primeira tarefa e estrutura | Interações a conferir | Fonte e limite |
 | --- | --- | --- | --- |
-| Home | Busca real da Pokédex e entrada para montar time; ferramentas competitivas em uma lista compacta. | Enviar busca, navegar por teclado e testar no celular. | Sem métricas ou promessas de dados “ao vivo”. |
+| Home | Composição do mapa de conteúdo enviado pelo usuário: apresentação e busca, prévias de Usage/Ladder, atividade comunitária e regulação confirmadas. | Mobile prioriza apresentação e regulação; estados vazios e falhas mantêm ações úteis sem simular atividade. | Apenas temporadas e datas publicadas como oficiais; dados não encontrados são omitidos. |
 | Dex | Busca/filtros e ordenação sobre catálogo inteiro; lista densa de espécies/formas com número, sprite e tipos. | Combinar filtros, limitar total base, ordenar e voltar à posição salva. | Stats gerais da PokéAPI; total não é stat de Champions. |
 | Ficha | Sprite/forma/tipos/stats primeiro; seções de evolução/condições, formas, relações de tipo e aprendibilidade. | Trocar forma pela ficha e pelo filtro de golpes; preservar forma exata; alcançar seções por toque/teclado. | Aprendibilidade geral por jogo/versão/método não equivale a compatibilidade de set ou legalidade Champions. Galeria shiny só após licença/cobertura confirmadas. |
-| Usage | Ranking e detalhe de uma espécie, seções compactas para movimentos, item, Nature, SP, parceiros e histórico. | Buscar, selecionar, combinar filtros, trocar fonte/período, atualizar e falhar. | Battle Data e MetaRoll separados; sem inventar denominador. |
-| Builder | Seis slots e set selecionado; Nature com nome e ↑/↓, quatro golpes, SP e orçamento; ações próximas ao set. | Trocar slot, importar/exportar, item desconhecido, golpe não validado, preservar set. | Distinguir `unknown` de `unavailable`; só afirmar validade oficial após fonte. |
+| Usage | Catálogo único por forma; cada categoria mostra uma posição e um percentual selecionados. | Buscar, selecionar, combinar filtros, abrir dados complementares, atualizar e manter valores de uma fonte se a outra falha. | MetaRoll tem prioridade em Doubles; Battle Data preenche registros ausentes. Períodos e denominadores não recebem média. |
+| Builder | Seis slots, Nature com ↑/↓, quatro golpes, SP/orçamento e Team Analysis ao lado do editor. | Conferir cobertura por golpes equipados, fraquezas, resistências e imunidades; importar/exportar JSON ou colar/copiar texto Showdown. | Sem sets prontos de distribuições marginais; distinguir `unknown` de `unavailable`; sem alegar legalidade oficial. |
 | Calculadora | Confronto e dano/HP primeiro; 1 vs 1, 1 vs vários, Time vs 1; detalhes e rolls recolhíveis. Em Time vs 1, a seleção do modo identifica o contexto em larguras até 360 px, enquanto a navegação fixa mantém acesso ao builder; a primeira faixa de dano fica visível antes dela. | Alterar golpe/campo, comparar A/B, carregar seis sets válidos, registrar erro por membro. | `@smogon/calc`; não tratar KO empírico como dano teórico. |
 | Speed Tiers | Alvo, modos de Nature/SP e lista dos seis; empate ≠ ultrapassagem. | Arrastar/editar SP, orçamento de 66 e teto de 32, aplicar ao set. | Fórmula e modificadores comprovados; não chamar de uso no meta. |
 | Salas/torneios | Participantes, estado e próxima ação antes de formulários. | Convite, permissão, check-in, contestação e conclusão em mobile. | Identidade, privacidade e resultados manuais conforme modelo comunitário. |
@@ -88,7 +91,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 
 | Tela | Estrutura vigente | Decisão humanizer que orienta o CSS e a revisão |
 |---|---|---|
-| Home | Hero assimétrico com busca real e cinco destinos existentes em lista compacta. | Remove catálogo simulado, contadores sem fonte e cartões repetidos; a busca define a tarefa. |
+| Home | Apresentação e busca, prévias reais de Usage e Ladder, atividade da conta e regulação oficial confirmada; no mobile, regulação vem logo após a apresentação. | Preserva chamadas para explorar, montar time, comunidade, Usage e Ladder; nenhum conteúdo ativo é simulado. |
 | Pokédex | Quatro colunas com arte dominante no desktop; filtros menores. | Cada entrada é uma entidade comparável; removidos stats e CTA repetidos de cada cartão. |
 | Ficha | Identidade da forma em destaque; evolução, formas, stats, relações e perfil em seções contínuas. | O objeto selecionado ocupa o começo; seções usam navegação e divisórias. |
 | Usage | Ranking e espécie selecionada antes dos filtros secundários e proveniência longa. No mobile, o navegador de espécies usa o fluxo natural da página; só a lista mantém rolagem própria. | Fonte/período têm rótulo funcional; “Limpar filtros” fica ao lado da contagem de espécies e só aparece quando necessário; metadados repetidos ficam fora do primeiro plano. |
@@ -97,7 +100,7 @@ Cada controle precisa exibir foco, seleção, desabilitado e erro quando aplicá
 | Speed | Alvo e resultado calculado antes dos detalhes do modelo. | A tabela responde primeiro; explicação e limites ficam em ajuda contextual. |
 | Salas e torneios | Estado operacional, pessoas/chave e próxima ação antes de configuração. | Erro/vazio mantém recuperação junto ao contexto; formulários não antecedem a tarefa. |
 
-O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. Registra capturas, foco/teclado, erros e overflow; não substitui o gate completo nas quatro larguras, axe e fluxos comunitários com SQLite temporário.
+O modo `visual:review:fast` apoia iterações em telas selecionadas, desktop e 390 px. O gate atual roda cenários completos em desktop e uma segunda passada mobile em 390/320 px com axe, foco/teclado, erros e overflow. Os fluxos comunitários rodam só em desktop para evitar repetição; a passagem mobile cobre as rotas sem repetir a jornada completa.
 
 ## Oportunidades de produto
 

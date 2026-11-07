@@ -1,4 +1,4 @@
-import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, rmSync, constants } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Database } from "bun:sqlite";
 
@@ -50,12 +50,14 @@ export function restoreDatabase(backupPath, destinationPath) {
   verifyDatabaseFile(backup);
   mkdirSync(dirname(destination), { recursive: true, mode: 0o700 });
 
+  let created = false;
   try {
-    copyFileSync(backup, destination);
+    copyFileSync(backup, destination, constants.COPYFILE_EXCL);
+    created = true;
     chmodSync(destination, 0o600);
     verifyDatabaseFile(destination);
   } catch (error) {
-    rmSync(destination, { force: true });
+    if (created) rmSync(destination, { force: true });
     throw error;
   }
   return destination;

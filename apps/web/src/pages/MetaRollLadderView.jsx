@@ -9,6 +9,10 @@ function normalizeSearch(value) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
 }
 
+function playerInitials(value) {
+  return String(value || "?").trim().split(/\s+/).slice(0, 2).map((part) => Array.from(part)[0] || "").join("").toLocaleUpperCase("pt-BR") || "?";
+}
+
 function formatCapture(value) {
   if (!value || Number.isNaN(Date.parse(value))) return "não informada";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -263,7 +267,7 @@ export function MetaRollLadderView({ season, seasonOptions, currentSeason, onSea
             <ol className="metaroll-ladder-list">
               {pagedLadder.map((person) => (
                 <li className="metaroll-ladder-row" key={person.id}>
-                  <div className="metaroll-player-identity"><span className="metaroll-player-rank">{person.rank === null ? "—" : "#" + person.rank}</span><div><strong>{person.name || "Nome não informado"}</strong><small>ID {person.id}</small></div></div>
+                  <div className="metaroll-player-identity"><span className="metaroll-player-rank">{person.rank === null ? "—" : person.rank}</span><span className="metaroll-player-avatar" aria-hidden="true">{playerInitials(person.name)}</span><div><strong>{person.name || "Nome não informado"}</strong><small>ID {person.id}</small></div></div>
                   <div><span>Rating</span><strong>{formatRating(person.rating)}</strong></div>
                   <div><span>Registro publicado</span><strong>{person.wins ?? "—"}V · {person.losses ?? "—"}D · {person.draws ?? "—"}E</strong></div>
                   <div><span>Partidas</span><strong>{person.battles ?? "não informado"}</strong></div>

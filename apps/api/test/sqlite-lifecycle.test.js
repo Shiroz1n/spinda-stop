@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
@@ -43,6 +43,22 @@ test("migrations are repeatable, versioned, and reject changed history", async (
     await database.query("UPDATE schema_migrations SET checksum = ?1 WHERE version = ?2", ["changed", "001_community.sql"]);
     await assert.rejects(migrateDatabase(database), /alterada depois de aplicada/);
   });
+});
+
+test("concurrent API starts apply each migration once", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "spinda-sqlite-migrate-race-"));
+  const path = join(directory, "database.sqlite");
+  const first = createDatabase(path);
+  const second = createDatabase(path);
+  try {
+    await Promise.all([migrateDatabase(first), migrateDatabase(second)]);
+    assert.equal((await first.query("SELECT count(*) AS count FROM schema_migrations")).rows[0].count, 3);
+    assert.equal((await first.query("PRAGMA integrity_check")).rows[0].integrity_check, "ok");
+  } finally {
+    await first.close();
+    await second.close();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("each file connection enables foreign keys, WAL and a bounded busy wait", async () => {
@@ -131,6 +147,10 @@ test("backup and restore produce independently verified SQLite files", async () 
     await database.query("INSERT INTO users (id, provider, provider_subject, handle) VALUES (?1, 'test', ?2, ?3)", userValues(uuid(51), "Backed up"));
     const backup = backupDatabase(path, join(directory, "snapshot.sqlite"));
     const restored = restoreDatabase(backup, join(directory, "restored.sqlite"));
+    const existing = join(directory, "existing.sqlite");
+    await writeFile(existing, "preserve existing file");
+    assert.throws(() => restoreDatabase(backup, existing), /destino já existe/);
+    assert.equal(await readFile(existing, "utf8"), "preserve existing file");
     assert.equal(verifyDatabaseFile(backup), true);
     assert.equal(verifyDatabaseFile(restored), true);
 

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T01:59:29Z",
+  "title": "Design System: Spinda Stop",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Signal Red",
+        "canonical": "#a61020",
+        "tonalRamp": ["#54101a", "#71141f", "#8f1927", "#a61020", "#bd1d2c", "#d0525d", "#e59ba1", "#f7dadd"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f2f0eb",
+        "tonalRamp": ["#302f2c", "#504f49", "#706f68", "#929189", "#b0afa8", "#cbc9c2", "#e1dfd9", "#f2f0eb"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111111",
+        "tonalRamp": ["#111111", "#292929", "#414141", "#5a5a5a", "#747474", "#909090", "#b4b4b4", "#ffffff"]
+      },
+      "link": {
+        "role": "secondary",
+        "displayName": "Atlas Blue",
+        "canonical": "#1d4e91",
+        "tonalRamp": ["#10213b", "#173b6b", "#1d4e91", "#456e9f", "#7392b8", "#a2b6d0", "#c8d6e5", "#f2f6fb"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Bitmap Display", "purpose": "Route titles and short hierarchy cues; never dense data." },
+      "body": { "displayName": "System Sans", "purpose": "Species, forms, tables, controls, and competitive analysis." }
+    },
+    "shadows": [
+      { "name": "transient-menu", "value": "0 8px 18px rgb(0 0 0 / 16%)", "purpose": "Existing mobile overflow menu only." }
+    ],
+    "motion": [
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "Suppress transitions and scrolling motion for users who request it." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "760px" },
+      { "name": "narrow", "value": "420px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The red next action, with touch, focus, disabled, and fine-pointer feedback.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">Buscar na Pokédex</button>",
+      "css": ".ds-button-primary { min-height: 44px; padding: 10px 14px; border: 1px solid #a61020; border-radius: 2px; background: #a61020; color: #fff; font: 700 1rem/1.2 Inter, system-ui, sans-serif; touch-action: manipulation; } .ds-button-primary:active { transform: translateY(1px); } .ds-button-primary:focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; } @media (hover: hover) and (pointer: fine) { .ds-button-primary:hover:not(:disabled) { background: #8f1220; } }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A readable white field with a full-size touch target.",
+      "html": "<label class=\"ds-field\"><span>Espécie</span><input type=\"search\" placeholder=\"Ex.: Garchomp\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #111; font: 600 1rem/1.4 Inter, system-ui, sans-serif; } .ds-field input { min-height: 44px; padding: 10px 12px; border: 1px solid #111; border-radius: 2px; background: #fff; color: #111; font: 400 1rem/1.4 Inter, system-ui, sans-serif; touch-action: manipulation; } .ds-field input:focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "A dark shell link whose red underline identifies the current route.",
+      "html": "<a class=\"ds-nav-link\" href=\"#\" aria-current=\"page\">Pokédex</a>",
+      "css": ".ds-nav-link { min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px; border-bottom: 2px solid #a61020; color: #fff; font: 600 1rem/1.2 Inter, system-ui, sans-serif; text-decoration: none; } .ds-nav-link:focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }"
+    },
+    {
+      "name": "Type Badge",
+      "kind": "chip",
+      "refersTo": "type-tag",
+      "description": "A type-tinted tag at 20% opacity with dark text and a crisp edge.",
+      "html": "<span class=\"ds-type-badge\">Grass</span>",
+      "css": ".ds-type-badge { min-height: 26px; display: inline-flex; align-items: center; padding: 2px 8px; border: 1px solid #7f9281; border-radius: 2px; background: rgb(126 184 100 / 20%); color: #111; font: 600 .875rem/1.2 Inter, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Species Row",
+      "kind": "custom",
+      "description": "A ruled catalog entry that keeps sprite, number, name, form, and type in one scan.",
+      "html": "<a class=\"ds-species-row\" href=\"#\"><span class=\"ds-species-art\">SP</span><span class=\"ds-species-copy\"><small>#327</small><strong>Spinda</strong><span>Normal</span></span></a>",
+      "css": ".ds-species-row { min-height: 88px; display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid #bbb9b3; color: #111; text-decoration: none; } .ds-species-art { width: 54px; height: 54px; display: grid; place-items: center; border: 1px solid #bbb9b3; background: #e8e6e0; } .ds-species-copy { display: grid; gap: 2px; font: 400 1rem/1.35 Inter, system-ui, sans-serif; } .ds-species-copy small { color: #484a4b; font-size: 1rem; } .ds-species-copy strong { font-weight: 700; } .ds-species-row:focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }"
+    },
+    {
+      "name": "Competitive Result",
+      "kind": "custom",
+      "description": "A calculator result separated by rules, with the numeric outcome highlighted in red.",
+      "html": "<section class=\"ds-result\"><span>Damage range</span><strong>Resultado</strong><span>16 rolls calculados</span></section>",
+      "css": ".ds-result { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid #a61020; border-left-width: 4px; background: #fff; color: #111; font: 400 1rem/1.45 Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; } .ds-result strong { color: #a61020; font: 700 1.5rem/1.2 Inter, system-ui, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Espécime Bitmap",
+    "overview": "A competitive field guide that leads with species discovery and exact-form reading, then supports team and battle analysis with clear controls and source-aware data.",
+    "keyCharacteristics": ["Bitmap display with neutral sans-serif data", "Search and comparison lead each workflow", "Flat rows and rules replace repeated floating cards"],
+    "rules": [
+      { "name": "The Signal Rule", "body": "Red marks a meaningful next action or selected result; it does not decorate every surface.", "section": "colors" },
+      { "name": "The Readable Data Rule", "body": "Keep species, forms, moves, periods, and inputs in the body face at a 1rem base.", "section": "typography" },
+      { "name": "The Flat-by-Default Rule", "body": "A data region earns a border or tint only when it separates a task, state, or input group.", "section": "elevation" }
+    ],
+    "dos": ["Keep provenance and period visible beside usage data.", "Preserve keyboard focus, pressed feedback, and reduced motion.", "Tie each sprite to its exact form."],
+    "donts": ["Do not imply general Pokédex data proves Champions legality.", "Do not use bitmap type for dense rows or labels.", "Do not reuse reference-site assets or layouts."]
+  }
+}

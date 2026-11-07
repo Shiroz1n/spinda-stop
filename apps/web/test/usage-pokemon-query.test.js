@@ -17,6 +17,15 @@ test("normalizes accents and whitespace when resolving a team member", () => {
   assert.equal(findUsagePokemonByReference([entry], "  FLABEBE "), entry);
 });
 
+test("matches punctuation variants through provider IDs without matching a different form", () => {
+  const farfetchd = { id: "farfetchd", name: "Farfetch'd" };
+  const vivillon = { id: "vivillon", name: "Vivillon" };
+
+  assert.equal(findUsagePokemonByReference([farfetchd], "Farfetch’d"), farfetchd);
+  assert.equal(findUsagePokemonByReference([vivillon], "Vivillon-Fancy"), null);
+  assert.equal(findUsagePokemonByReference([{}], "!!!"), null);
+});
+
 test("returns no selection when the source has no matching entry", () => {
   assert.equal(findUsagePokemonByReference([], "Garchomp"), null);
   assert.equal(findUsagePokemonByReference([{ id: "garchomp" }], ""), null);
