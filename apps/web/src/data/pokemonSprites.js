@@ -152,7 +152,7 @@ export function resolvePokemonSpriteUrl(pokemon) {
 export function resolvePokemonSpriteFallbackUrl(pokemon) {
   const spriteId = Number(pokemon?.spriteId);
   return Number.isInteger(spriteId) && spriteId > 0
-    ? `${POKEAPI_SPRITES_BASE}/pokemon/${spriteId}.png`
+    ? `${POKEAPI_SPRITES_BASE}/pokemon/other/official-artwork/${spriteId}.png`
     : null;
 }
 

@@ -111,10 +111,10 @@ test("Showdown gender IDs resolve to the matching local form", () => {
   assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "indeedeef", name: "Indeedee-F" })?.slug, "indeedee-female");
 });
 
-test("a HOME sprite can fall back to the matching static PokeAPI sprite", () => {
+test("a HOME sprite can fall back to matching official artwork for alternate forms", () => {
   assert.equal(
     resolvePokemonSpriteFallbackUrl({ spriteId: 10248 }),
-    `${POKEAPI_SPRITES_BASE}/pokemon/10248.png`,
+    `${POKEAPI_SPRITES_BASE}/pokemon/other/official-artwork/10248.png`,
   );
   assert.equal(resolvePokemonSpriteFallbackUrl({}), null);
 });

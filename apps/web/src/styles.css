@@ -881,7 +881,7 @@ a { color: var(--blue-dark); }
 .site-footer a { color: #ffdf76; }
 .pokemon-art { position: relative; width: var(--sprite-size, 72px); height: var(--sprite-size, 72px); min-width: var(--sprite-size, 72px); display: grid; place-items: center; overflow: hidden; }
 .pokemon-art img { position: relative; z-index: 1; display: block; max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
-.pokemon-art img[src*="/pokemon/other/home/"] { image-rendering: auto; }
+.pokemon-art img[src*="/pokemon/other/home/"], .pokemon-art img[src*="/pokemon/other/official-artwork/"] { image-rendering: auto; }
 .pokemon-art img.is-loading { opacity: 0; }
 .pokemon-art.is-fallback, .pokemon-art.is-loading { border: 1px dashed #94aaa4; background: #eef4eb; }
 .pokemon-art-fallback { position: absolute; inset: 0; z-index: 0; display: grid; place-items: center; color: #4d6669; font-size: 0.7rem; font-weight: 850; letter-spacing: 0.04em; }
