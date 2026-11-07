@@ -2102,7 +2102,7 @@ async function runFastViewport(viewportName, viewport) {
         const firstResultFocused = await page.evaluate(() => document.activeElement?.matches(".species-dialog .picker-result") || false);
         if (!firstResultFocused) failures.push(`${viewportName}/builder: o primeiro resultado não recebeu foco pelo teclado após o campo de busca.`);
         await page.keyboard.press("Enter");
-        await page.locator(".species-dialog").waitFor({ state: "hidden", timeout: 5_000 });
+        await page.locator('.species-dialog[aria-labelledby="species-dialog-title"]').waitFor({ state: "hidden", timeout: 5_000 });
       } catch (error) {
         failures.push(`${viewportName}/builder-species-picker: ${error.message}`);
       }
