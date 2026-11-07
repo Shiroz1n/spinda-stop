@@ -190,7 +190,7 @@ export function SpeedTiersPage() {
           {visibleCount < ranked.length ? <button className="button button-outline speed-load-more" type="button" onClick={() => setVisibleCount((count) => Math.min(ranked.length, count + 90))}>Mostrar mais {Math.min(90, ranked.length - visibleCount)}</button> : <p className="speed-end">Fim da lista · {ranked.length.toLocaleString("pt-BR")} entradas</p>}
         </>
       )}
-      <details className="speed-about"><summary>Sobre os dados e a fórmula</summary><p>Speed calculada a partir dos stats base e do modelo escolhido. Empate significa o mesmo valor bruto; Trick Room não altera Speed, apenas a ordem de atuação. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Tier calculado não é ranking de uso.</p><p>Champions usa a fórmula no nível 50 exposta pelo modo Champions do <code>@smogon/calc</code>: <code>floor((base + SP + 20) × nature)</code>, com até 32 SP no atributo. A comparação de tiers não tem os outros cinco atributos do set para calcular os 66 SP restantes; no builder esse orçamento é contado antes de aplicar a prévia. O modelo geral usa base, IV, EV e nível como hipóteses de cálculo, não como validação de set. As formas vêm do catálogo da PokéAPI.</p></details>
+      <details className="speed-about"><summary>Sobre o cálculo</summary><p>Champions: nível 50, fórmula de <code>@smogon/calc</code>, base, Stat Points e Nature. Trick Room inverte a ordem; outros efeitos de batalha não entram. O tier calculado não é ranking de uso.</p><p>Outros jogos usam base, IV, EV e nível como hipótese; esta comparação não valida sets ou legalidade. Espécies e formas vêm da PokéAPI.</p></details>
     </div>
   );
 }

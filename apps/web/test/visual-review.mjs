@@ -872,7 +872,8 @@ async function runViewport(viewportName, viewport) {
   await page.locator("#move-0").fill("Earthquake");
   await page.locator(".points-section summary").click();
   await page.locator("#stat-atk").fill("14");
-  await page.locator(".builder-tools-details > summary").click();
+  await page.getByRole("button", { name: "Poképaste", exact: true }).click();
+  await page.locator(".builder-json-details > summary").click();
   const downloadReady = page.waitForEvent("download", { timeout: 10_000 });
   await page.getByRole("button", { name: "Exportar JSON" }).click();
   const download = await downloadReady;
@@ -890,7 +891,7 @@ async function runViewport(viewportName, viewport) {
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Importar texto" }).click();
   await page.getByText("Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado.").waitFor({ state: "visible", timeout: 10_000 });
-  await page.getByRole("button", { name: "Preparar e copiar texto" }).click();
+  await page.getByRole("button", { name: "Preparar e copiar" }).click();
   const copiedShowdownTeam = await page.evaluate(() => navigator.clipboard.readText());
   if (!copiedShowdownTeam.includes("Garchomp @ Life Orb") || !copiedShowdownTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe") || !copiedShowdownTeam.includes("Timid Nature")) {
     failures.push(viewportName + ": a exportação para Showdown não preservou espécie, pontos ou Nature.");
@@ -2080,7 +2081,7 @@ async function runFastViewport(viewportName, viewport) {
         await results.first().waitFor({ state: "visible", timeout: 5_000 });
         const rows = await results.evaluateAll((buttons) => buttons.map((button) => {
           const bounds = button.getBoundingClientRect();
-          const parts = [...button.querySelectorAll(".pokemon-art, .dex-number, .picker-name, .type-list, .type-tag")];
+          const parts = [...button.querySelectorAll(".pokemon-art, .picker-identity, .dex-number, .picker-name, .type-list, .type-tag")];
           return {
             name: button.querySelector(".picker-name")?.textContent?.trim() || "",
             horizontalOverflow: button.scrollWidth > button.clientWidth + 1,
@@ -2119,13 +2120,13 @@ async function runFastViewport(viewportName, viewport) {
 
     if (mobileOnly && screen === "builder" && (viewport.width === 390 || narrowMobileOnly && viewport.width === 320)) {
       try {
-        await page.locator(".builder-tools-details > summary").click();
+        await page.getByRole("button", { name: "Poképaste", exact: true }).click();
         await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
         page.once("dialog", (dialog) => dialog.accept());
         await page.getByRole("button", { name: "Importar texto" }).click();
         await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
         await capture(page, viewportName, "builder-showdown-imported", { audit: false, fullPage: false });
-        await page.getByRole("button", { name: "Preparar e copiar texto" }).click();
+        await page.getByRole("button", { name: "Preparar e copiar" }).click();
         const copiedTeam = await page.evaluate(() => navigator.clipboard.readText());
         if (!copiedTeam.includes("Garchomp @ Life Orb") || !copiedTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe")) {
           failures.push(viewportName + "/builder: a exportação Showdown não preservou a forma ou os pontos Champions.");

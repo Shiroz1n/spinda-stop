@@ -71,7 +71,6 @@ function DistributionCard({ title, rows, spread = false, pokemonRows = false, ro
         <h3>{title}</h3>
         <span>{visibleRows.length}</span>
       </div>
-      {spread ? <p className="metaroll-card-note">Pontos por atributo, não stats finais nem EVs.</p> : null}
       {visibleRows.length === 0 ? (
         <p className="metaroll-empty">{pokemonRows ? "Esta captura não traz parceiros ranqueados." : "A fonte não publicou valores nesta categoria."}</p>
       ) : (
@@ -141,12 +140,6 @@ function MegaFormsCard({ state, rows, onRetry }) {
       ) : null}
           {state.status === "success" || rows.length > 0 ? (
         <>
-          <div className="metaroll-mega-provenance">
-            <div><span>Fonte</span><a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a></div>
-            <div><span>Temporada da resposta</span><strong>{state.data.season || "não informada"}</strong></div>
-            <div><span>Captura própria</span><strong>{formatCapture(state.data.capturedAt)}</strong></div>
-            <div><span>Última consulta do app</span><strong>{formatCapture(state.data.appFetchedAt)}</strong></div>
-          </div>
           {rows.length > 0 ? (
             <ol className="metaroll-mega-list">
               {rows.map((row) => (
@@ -158,7 +151,7 @@ function MegaFormsCard({ state, rows, onRetry }) {
               ))}
             </ol>
           ) : <p className="metaroll-empty">A fonte não listou forma Mega associada a este Pokémon nesta captura.</p>}
-          <p className="metaroll-card-note">O percentual é o uso publicado para a pedra associada à forma; não é chance de Mega Evolução nem percentual de partidas.</p>
+          <p className="metaroll-card-note">Uso publicado da pedra; não indica chance de Mega.</p>
         </>
       ) : null}
     </section>
@@ -399,12 +392,12 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = 
       <div className="usage-source-banner metaroll-source-banner">
         <span className="usage-source-icon" aria-hidden="true">MR</span>
         <div className="usage-source-copy">
-          <a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados publicados por MetaRoll</a>
-          <span>Período e captura informados pela fonte</span>
+          <a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos ↗</a>
+          <span>Doubles</span>
         </div>
         <details className="usage-source-details">
-          <summary>Atribuição e limites</summary>
-          <p>As distribuições são parcelas das aparições desta espécie. O tamanho da amostra não foi publicado.</p>
+          <summary>Sobre os dados</summary>
+          <p>Percentuais são parcelas das aparições; a amostra e o regulamento oficial não foram publicados.</p>
           <a className="usage-source-guide" href={metaRollSource.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
         </details>
       </div>
@@ -413,7 +406,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = 
         <div className="metaroll-capture-note" aria-label="Captura e período da fonte">
           <span><b>Formato</b> Doubles</span>
           <span><b>Temporada</b> {indexData.season || "não informada"}</span>
-          <details className="metaroll-capture-more"><summary>Sobre esta captura</summary><div><span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span><span><b>Última consulta</b> {formatCapture(indexData.appFetchedAt)}</span><span><b>Pokémon ranqueados</b> {indexData.count}</span></div><p>A temporada é o nome da fonte; o regulamento oficial não foi confirmado. A contagem é de Pokémon ranqueados, não de partidas.</p></details>
+          <details className="metaroll-capture-more"><summary>Sobre esta captura</summary><div><span><b>Captura</b> {formatCapture(indexData.capturedAt)}</span><span><b>Pokémon no índice</b> {indexData.count}</span></div></details>
         </div>
       ) : null}
       {view === "species" && indexData ? <button className="button button-outline button-small metaroll-refresh" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>{indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}</button> : null}
@@ -560,11 +553,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = 
                 ) : null}
                 {entry ? (
                   <>
-                    <div className="usage-provenance usage-provenance-inline metaroll-provenance">
-                      <span><strong>Temporada {entryCapture?.season || "não informada"}</strong> · captura {formatCapture(entryCapture?.capturedAt)}</span>
-                      <span>Consultado {formatCapture(entryCapture?.appFetchedAt)}</span>
-                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Distribuições e posições seguem a captura selecionada. A fonte não informa o tamanho da amostra; pontos investidos não são stats finais nem EVs.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
-                    </div>
+                    <p className="usage-provenance usage-provenance-inline metaroll-provenance"><strong>Temporada {entryCapture?.season || "não informada"}</strong> · captura {formatCapture(entryCapture?.capturedAt)}</p>
                     <div className="metaroll-rank-summary">
                       <div><span>Posição nesta captura</span><strong>#{entry.rank ?? "não informada"}</strong></div>
                       <div><span>Captura anterior</span><strong>{!entry.hasPreviousRank ? "sem captura anterior" : entry.previousRank === null ? "fora da captura anterior" : "#" + entry.previousRank}</strong></div>

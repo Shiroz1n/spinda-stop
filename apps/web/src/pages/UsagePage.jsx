@@ -123,7 +123,7 @@ function CategoryRow({ row, category }) {
         <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
           {category.id === "teammate"
             ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>#{partnerRank}</span>
-            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual não informado"} · ${provenance}`} title={provenance}>{percentage ?? "Não informado"}</span>}
+            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
         </div>
       </div>
     </li>
@@ -214,7 +214,6 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
                 <h4>{item.label}</h4>
                 {category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{item.id === "teammate" ? `${rows.length} parceiros` : `${rows.length} linhas`}</span>}
               </div>
-              {item.id === "stat_points" ? <p className="usage-stat-points-note">Pontos do set, não stats finais; até 66 no total e 32 por atributo.</p> : null}
               {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{categoryEmptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} emptyMessage={categoryEmptyMessage} />}
             </section>
           );

@@ -59,7 +59,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
           placeholder="Ex.: Garchomp ou 445"
           autoComplete="off"
         />
-        <p className="form-hint">Os resultados vêm do catálogo geral. Disponibilidade no Champions não está confirmada.</p>
+        <p className="form-hint">Catálogo geral · disponibilidade em Champions não confirmada.</p>
         <div className="picker-results" aria-live="polite">
           {filtered.map((entry) => (
             <button
@@ -69,8 +69,10 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
               onClick={() => { setQuery(""); onChoose(entry); }}
             >
               <PokemonSprite pokemon={entry} name={entry.name} size={48} decorative />
-              <span className="dex-number">#{String(entry.speciesId).padStart(4, "0")}</span>
-              <span className="picker-name">{entry.name}</span>
+              <span className="picker-identity">
+                <span className="dex-number">#{String(entry.speciesId).padStart(4, "0")}</span>
+                <span className="picker-name">{entry.name}</span>
+              </span>
               <span className="type-list">
                 {entry.types.map((type) => <TypeTag key={type} type={type} />)}
               </span>

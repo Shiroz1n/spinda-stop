@@ -5,19 +5,11 @@ import { PokemonSprite } from "../components/PokemonSprite.jsx";
 import { usageProviders } from "../data/usage/registry.js";
 import { communityRequest } from "../data/communityApi.js";
 import { mergeUsageCatalog } from "../data/usage/mergeUsageData.js";
+import { getCompetitionPhase, getRankedRegulationPhase, megaEvolutionBattle, rankedRegulation } from "../data/championsCompetition.js";
 
 const spinda = dexData.pokemon.find((pokemon) => pokemon.slug === "spinda");
 const metaRoll = usageProviders.metaroll;
 const battleData = usageProviders["pokemon-champions-battle-data"];
-const regulation = {
-  season: "M-8",
-  ruleset: "Regulation M-C",
-  startsAt: "2026-11-04T02:00:00Z",
-  endsAt: "2026-12-02T01:59:00Z",
-  checkedAt: "2026-11-06",
-  url: "https://champions-news.pokemon-home.com/en/page/867.html",
-};
-
 function normalized(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -32,31 +24,78 @@ function initials(value) {
 }
 
 function periodLabel() {
-  const start = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(regulation.startsAt));
-  const end = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(regulation.endsAt));
+  const start = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(rankedRegulation.startsAt));
+  const end = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(rankedRegulation.endsAt));
   return `${start} – ${end} · UTC`;
 }
 
 function RegulationPanel({ titleId }) {
-  const state = "Período oficial confirmado";
+  const phase = getRankedRegulationPhase();
+  const state = phase === "ended" ? "Aviso expirado" : phase === "upcoming" ? "Ainda não vigente" : "Vigente";
+  const title = phase === "ended" ? "Última regulação publicada" : phase === "upcoming" ? "Próxima regulação" : "Regulação atual";
 
   return (
     <section className="home-regulation" aria-labelledby={titleId}>
       <div className="home-section-heading">
-        <div><p className="page-label">Aviso oficial</p><h2 id={titleId}>Regulação atual</h2></div>
+        <div><p className="page-label">Pokémon HOME</p><h2 id={titleId}>{title}</h2></div>
         <span className="home-season-status">{state}</span>
       </div>
-      <p className="home-regulation-name"><strong>Season {regulation.season}</strong><span>{regulation.ruleset}</span></p>
+      <p className="home-regulation-name"><strong>Season {rankedRegulation.season}</strong><span>{rankedRegulation.ruleset}</span></p>
       <p className="home-regulation-period">{periodLabel()}</p>
-      <p className="home-regulation-copy">O aviso informa que a temporada ranqueada segue esta regulação. A lista de Pokémon elegíveis e os detalhes das regras precisam ser conferidos no jogo.</p>
-      <details className="home-regulation-details">
-        <summary>O que foi confirmado</summary>
-        <p>Pokémon HOME confirma o período de Season M-8 e Regulation M-C. O anúncio não publica aqui a contagem do roster, o número de Megas disponíveis nem os novos Pokémon liberados.</p>
-      </details>
-      <a className="home-text-link" href={regulation.url} target="_blank" rel="noreferrer">Abrir anúncio oficial ↗</a>
-      <small className="home-checked-at">Verificado em 6 nov. 2026 · dados de elenco não confirmados</small>
+      <p className="home-regulation-copy">{phase === "ended" ? "O período anunciado terminou. Consulte o jogo para confirmar a regulação vigente." : phase === "upcoming" ? "O anúncio informa as datas; confirme as regras no jogo antes de montar o time." : "Ranked segue esta regulação até 2 dez. 2026. Confirme a elegibilidade no jogo."}</p>
+      <details className="home-regulation-details"><summary>Dados do roster</summary><p>O anúncio consultado não informa contagem de Pokémon, Megas disponíveis ou novas liberações.</p></details>
+      <a className="home-text-link" href={rankedRegulation.sourceUrl} target="_blank" rel="noreferrer">Anúncio oficial ↗</a>
+      <small className="home-checked-at">Verificado em 6 nov. 2026</small>
     </section>
   );
+}
+
+function formatUtcRange(start, end) {
+  const format = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
+  return `${format.format(new Date(start))} – ${format.format(new Date(end))} UTC`;
+}
+
+function OfficialCompetition() {
+  const phase = getCompetitionPhase();
+  if (phase === "ended") return null;
+  const status = phase === "in-progress" ? "Em andamento" : phase === "registration-open" ? "Inscrições abertas" : "Em breve";
+  return <section className="home-official-competition" aria-labelledby="home-official-competition-title">
+    <div className="home-official-heading"><div><p className="page-label">Pokémon Champions · online</p><h3 id="home-official-competition-title">{megaEvolutionBattle.name}</h3></div><span>{status}</span></div>
+    <div className="home-official-dates"><p><strong>Inscrições</strong><span>{formatUtcRange(megaEvolutionBattle.entryStartsAt, megaEvolutionBattle.endsAt)}</span></p><p><strong>Batalhas</strong><span>{formatUtcRange(megaEvolutionBattle.startsAt, megaEvolutionBattle.endsAt)}</span></p></div>
+    <p className="home-official-format">Duplas · {megaEvolutionBattle.restrictions.join(" · ")}</p>
+    <small>Confirmado em 7 nov. 2026 · <a href={megaEvolutionBattle.sourceUrl} target="_blank" rel="noreferrer">anúncio oficial ↗</a></small>
+  </section>;
+}
+
+function PublicVgcTournaments() {
+  const [state, setState] = useState({ status: "loading", tournaments: [] });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/public/vgc-tournaments", { signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error?.message || "Agenda indisponível.");
+        return payload;
+      })
+      .then((payload) => setState({ status: "ready", tournaments: Array.isArray(payload.tournaments) ? payload.tournaments : [] }))
+      .catch((error) => { if (!controller.signal.aborted) setState({ status: "error", tournaments: [], message: error.message }); });
+    return () => controller.abort();
+  }, []);
+
+  return <section className="home-vgc-tournaments" aria-labelledby="home-vgc-title">
+    <div className="home-section-heading"><div><p className="page-label">Pokémon VGC · M-C</p><h2 id="home-vgc-title">Agenda de torneios</h2></div><a href="https://play.limitlesstcg.com/tournaments?game=VGC&format=M-C" target="_blank" rel="noreferrer">Ver torneios ↗</a></div>
+    <p className="home-vgc-intro">Inícios publicados pela comunidade; o feed não informa duração nem estado ao vivo.</p>
+    {state.status === "loading" && <p className="home-data-state" role="status">Carregando torneios M-C…</p>}
+    {state.status === "error" && <p className="home-data-state" role="status">{state.message || "A agenda não respondeu."}</p>}
+    {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum torneio M-C publicado nesta captura.</p>}
+    {state.tournaments.length > 0 && <ol className="home-vgc-list">{state.tournaments.slice(0, 6).map((tournament) => <li key={tournament.id}>
+      <span className="home-vgc-date">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(tournament.date))}</span>
+      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.players === null ? "Participantes não publicados" : `${tournament.players} participantes`}</small></span>
+      <a href={tournament.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${tournament.name || "torneio"} no Limitless`}>Abrir ↗</a>
+    </li>)}</ol>}
+    <small className="home-vgc-credit">Fonte: <a href="https://docs.limitlesstcg.com/developer/tournaments.html" target="_blank" rel="noreferrer">API pública Limitless VGC</a>.</small>
+  </section>;
 }
 
 function HomeCommunity() {
@@ -187,6 +226,8 @@ export function HomePage() {
       </div>
       <div className="home-dashboard-bottom">
         <HomeCommunity />
+        <OfficialCompetition />
+        <PublicVgcTournaments />
         <div className="home-desktop-regulation"><RegulationPanel titleId="home-regulation-desktop-title" /></div>
       </div>
       <p className="home-data-credit">Dados gerais: <a href="https://pokeapi.co/" target="_blank" rel="noreferrer">PokéAPI</a>. Dados competitivos: <a href={battleData.source.url} target="_blank" rel="noreferrer">Pokémon Champions Battle Data</a> e <a href={metaRoll.source.url} target="_blank" rel="noreferrer">MetaRoll</a>.</p>
