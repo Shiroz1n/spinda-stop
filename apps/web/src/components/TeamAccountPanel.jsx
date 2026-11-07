@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { communityRequest } from "../data/communityApi.js";
+
+function errorMessage(error) {
+  return error.code === "persistent_storage_required" ? "Equipes da conta indisponíveis nesta hospedagem." : error.message;
+}
 
 export function TeamAccountPanel({ onLoad, onSave }) {
   const [state, setState] = useState({ status: "loading" });
@@ -10,11 +14,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
   const [savedVisibility, setSavedVisibility] = useState({});
   const [busy, setBusy] = useState(false);
 
-  function errorMessage(error) {
-    return error.code === "persistent_storage_required" ? "Equipes da conta indisponíveis nesta hospedagem." : error.message;
-  }
-
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       const [session, teamList] = await Promise.all([
         communityRequest("/me"),
@@ -29,9 +29,9 @@ export function TeamAccountPanel({ onLoad, onSave }) {
     } catch (error) {
       setState({ status: "error", error: errorMessage(error) });
     }
-  }
+  }, []);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
 
   async function saveCopy() {
     setBusy(true);

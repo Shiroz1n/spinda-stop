@@ -27,6 +27,7 @@ function reply(body, status = 200, cacheControl = "no-store") {
 
 function safeText(value, maximum = 120) {
   if (typeof value !== "string" && typeof value !== "number") return "";
+  // eslint-disable-next-line no-control-regex -- Strip untrusted control characters from public metadata.
   return String(value).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, maximum);
 }
 

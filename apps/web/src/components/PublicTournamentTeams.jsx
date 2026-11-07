@@ -16,9 +16,6 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ status: "loading", teams: [] });
-    setOpened(null);
-    setPastes({});
     fetch(`/api/public/teams?pokemon=${encodeURIComponent(pokemon.name)}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));

@@ -50,7 +50,6 @@ export function BuilderMetaPanel({ pokemon }) {
 
   useEffect(() => {
     let active = true;
-    setState({ status: "loading", battle: null, metaRoll: null, contexts: {} });
     Promise.allSettled([sources["pokemon-champions-battle-data"].loadIndex(), sources.metaroll.loadIndex()]).then(async ([battleIndex, metaIndex]) => {
       const indexes = {
         battleData: battleIndex.status === "fulfilled" ? battleIndex.value : null,

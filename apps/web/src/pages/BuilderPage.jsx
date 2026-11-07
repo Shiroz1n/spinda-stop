@@ -621,7 +621,7 @@ export function BuilderPage() {
         </div>}
 
         {builderTab === "meta" && (selectedPokemon
-          ? <BuilderMetaPanel pokemon={selectedPokemon} />
+          ? <BuilderMetaPanel key={selectedPokemon.slug} pokemon={selectedPokemon} />
           : <section className="builder-meta-empty"><h2>Meta da equipe</h2><p>Adicione um Pokémon para consultar suas distribuições.</p></section>)}
 
         {builderTab === "paste" && <section className="builder-paste-panel" aria-labelledby="builder-paste-title">
@@ -648,7 +648,7 @@ export function BuilderPage() {
         </div>
         <TeamAnalysis analysis={teamAnalysis} />
 
-        {teamReferencePokemon ? <PublicTournamentTeams pokemon={teamReferencePokemon} selectedPokemon={teamReferencePokemon} onImport={importShowdownText} onApplySet={applyPublicSet} /> : <aside className="builder-public-teams builder-public-empty"><p className="page-label">Arquivo público · M-C</p><h2>Equipes de torneio</h2><p>Adicione um Pokémon para encontrar equipes arquivadas com ele.</p></aside>}
+        {teamReferencePokemon ? <PublicTournamentTeams key={teamReferencePokemon.slug} pokemon={teamReferencePokemon} selectedPokemon={teamReferencePokemon} onImport={importShowdownText} onApplySet={applyPublicSet} /> : <aside className="builder-public-teams builder-public-empty"><p className="page-label">Arquivo público · M-C</p><h2>Equipes de torneio</h2><p>Adicione um Pokémon para encontrar equipes arquivadas com ele.</p></aside>}
       </section>
 
       <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
