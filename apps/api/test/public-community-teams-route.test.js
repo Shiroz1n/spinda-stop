@@ -4,6 +4,7 @@ import { createApiApp } from "../src/server.js";
 
 test("Elysia serves the public archive through the scoped route", async () => {
   const app = createApiApp({
+    database: {},
     publicTeamsFetch: async () => Response.json({ teams: [{ team_id: "MC781", pokemon: ["Sneasler"] }] }),
   });
   const response = await app.handle(new Request("https://app.test/api/public/teams?pokemon=Sneasler"));
@@ -15,6 +16,7 @@ test("Elysia serves the public archive through the scoped route", async () => {
 
 test("Elysia serves the public VGC agenda through the scoped route", async () => {
   const app = createApiApp({
+    database: {},
     publicVgcTournamentsFetch: async () => Response.json([{
       id: "6aee620dc931f53978d951e6",
       game: "VGC",
