@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildEvolutionRules, buildPokedex, buildPokemonMoveLearnsets, parseCsv, POKEAPI_COMMIT, shardPokemonMoveLearnsets, toDexIndex } from "../scripts/sync-pokedex.mjs";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { buildEvolutionRules, buildPokedex, buildPokemonMoveLearnsets, parseCsv, POKEAPI_COMMIT, publishGeneratedSnapshot, shardPokemonMoveLearnsets, toDexIndex } from "../scripts/sync-pokedex.mjs";
 
 test("parses quoted commas, escaped quotes, and line breaks", () => {
   const rows = parseCsv('id,name,description\r\n1,"Mr. Mime","line one,\nline ""two"""\r\n');
@@ -142,4 +145,27 @@ test("attaches exact evolution triggers, named conditions, and source version gr
     { key: "minimum_level", value: 12 },
     { key: "gender_id", value: "genderless" },
   ]);
+});
+
+test("publishes generated data as one staged directory and keeps the prior snapshot on staging failure", async () => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), "spinda-data-snapshot-"));
+  const generatedDirectory = join(temporaryDirectory, "generated");
+  try {
+    await mkdir(join(generatedDirectory, "learnsets"), { recursive: true });
+    await writeFile(join(generatedDirectory, "pokedex.json"), "old dex", "utf8");
+    await writeFile(join(generatedDirectory, "old-only.json"), "old marker", "utf8");
+    await publishGeneratedSnapshot({
+      "pokedex.json": "new dex",
+      "learnsets/00.json": "new shard",
+    }, generatedDirectory);
+    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "new dex");
+    assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "new shard");
+    await assert.rejects(readFile(join(generatedDirectory, "old-only.json")));
+
+    await assert.rejects(publishGeneratedSnapshot({ "../escape.json": "invalid" }, generatedDirectory), /Caminho de saída inválido/);
+    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "new dex");
+    assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "new shard");
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 });

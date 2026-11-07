@@ -1,14 +1,11 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POKEAPI_COMMIT = "6fd69dfe90465ba96534f6816fc817737d1f97f6";
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const GENERATED_FILE = resolve(PACKAGE_ROOT, "generated/pokedex.json");
-const DETAILS_FILE = resolve(PACKAGE_ROOT, "generated/details.json");
-const MOVES_FILE = resolve(PACKAGE_ROOT, "generated/moves.json");
-const NATURES_FILE = resolve(PACKAGE_ROOT, "generated/natures.json");
-const LEARNSETS_DIRECTORY = resolve(PACKAGE_ROOT, "generated/learnsets");
+const GENERATED_DIRECTORY = resolve(PACKAGE_ROOT, "generated");
 export const LEARNSET_SHARD_COUNT = 32;
 const SOURCE_BASE = `https://raw.githubusercontent.com/PokeAPI/pokeapi/${POKEAPI_COMMIT}/data/v2/csv`;
 const FILES = [
@@ -396,6 +393,50 @@ export function shardPokemonMoveLearnsets(learnsets, shardCount = LEARNSET_SHARD
   return shards;
 }
 
+export async function publishGeneratedSnapshot(files, destination) {
+  const parent = dirname(destination);
+  await mkdir(parent, { recursive: true });
+  const staging = await mkdtemp(resolve(parent, ".generated-stage-"));
+  const backup = resolve(parent, `.${basename(destination)}-backup-${randomUUID()}`);
+  let backedUp = false;
+  try {
+    for (const [fileName, contents] of Object.entries(files)) {
+      const target = resolve(staging, fileName);
+      const pathFromStage = relative(staging, target);
+      if (!fileName || isAbsolute(fileName) || pathFromStage === ".." || pathFromStage.startsWith(`..${sep}`)) {
+        throw new Error("Caminho de saída inválido no snapshot.");
+      }
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, contents, "utf8");
+    }
+
+    // shortcut: directory replacement has a brief missing-path window; use a pointer swap if readers run during sync.
+    try {
+      await rename(destination, backup);
+      backedUp = true;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    try {
+      await rename(staging, destination);
+    } catch (error) {
+      if (backedUp) {
+        try {
+          await rename(backup, destination);
+          backedUp = false;
+        } catch (restoreError) {
+          throw new AggregateError([error, restoreError], `A publicação falhou; o snapshot anterior está preservado em ${backup}.`);
+        }
+      }
+      throw error;
+    }
+    if (backedUp) await rm(backup, { recursive: true, force: true });
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
+}
+
 function englishNameMap(rows, idField, nameField, secondaryField) {
   return new Map(rows.filter((row) => row.local_language_id === LANGUAGE_ENGLISH).map((row) => [
     row[idField],
@@ -435,10 +476,11 @@ async function run() {
 
   if (!force && !sourceDirectory) {
     try {
-      const existing = await Promise.all([GENERATED_FILE, DETAILS_FILE, MOVES_FILE, NATURES_FILE]
+      const existing = await Promise.all(["pokedex.json", "details.json", "moves.json", "natures.json"]
+        .map((file) => resolve(GENERATED_DIRECTORY, file))
         .map(async (file) => JSON.parse(await readFile(file, "utf8"))));
       const learnsetShards = await Promise.all(Array.from({ length: LEARNSET_SHARD_COUNT }, (_, index) =>
-        readFile(resolve(LEARNSETS_DIRECTORY, `${String(index).padStart(2, "0")}.json`), "utf8")
+        readFile(resolve(GENERATED_DIRECTORY, "learnsets", `${String(index).padStart(2, "0")}.json`), "utf8")
           .then((content) => JSON.parse(content))));
       const spriteIndexIsCurrent = Array.isArray(existing[0]?.pokemon)
         && existing[0].pokemon.every((entry) => Number.isInteger(entry.spriteId)
@@ -464,8 +506,6 @@ async function run() {
   const learnsets = buildPokemonMoveLearnsets(csvByFilename);
   const learnsetShards = shardPokemonMoveLearnsets(learnsets);
   const { pokemon: fullPokemon, moves, natures, ...pokedexData } = result;
-  await mkdir(dirname(GENERATED_FILE), { recursive: true });
-  await mkdir(LEARNSETS_DIRECTORY, { recursive: true });
   const dexPokemon = toDexIndex(fullPokemon);
   const detailBySlug = Object.fromEntries(fullPokemon.map((entry) => [entry.slug, {
     stats: entry.stats,
@@ -473,17 +513,16 @@ async function run() {
     height: entry.height,
     weight: entry.weight,
   }]));
-  await Promise.all([
-    writeFile(GENERATED_FILE, `${JSON.stringify({ ...pokedexData, pokemon: dexPokemon })}\n`, "utf8"),
-    writeFile(DETAILS_FILE, `${JSON.stringify({ metadata: result.metadata, pokemonBySlug: detailBySlug })}\n`, "utf8"),
-    writeFile(MOVES_FILE, `${JSON.stringify({ metadata: result.metadata, moves })}\n`, "utf8"),
-    writeFile(NATURES_FILE, `${JSON.stringify({ metadata: result.metadata, natures })}\n`, "utf8"),
-    ...learnsetShards.map((shard, index) => writeFile(
-      resolve(LEARNSETS_DIRECTORY, `${String(index).padStart(2, "0")}.json`),
-      `${JSON.stringify(shard)}\n`,
-      "utf8",
-    )),
-  ]);
+  const snapshot = {
+    "pokedex.json": `${JSON.stringify({ ...pokedexData, pokemon: dexPokemon })}\n`,
+    "details.json": `${JSON.stringify({ metadata: result.metadata, pokemonBySlug: detailBySlug })}\n`,
+    "moves.json": `${JSON.stringify({ metadata: result.metadata, moves })}\n`,
+    "natures.json": `${JSON.stringify({ metadata: result.metadata, natures })}\n`,
+  };
+  learnsetShards.forEach((shard, index) => {
+    snapshot[`learnsets/${String(index).padStart(2, "0")}.json`] = `${JSON.stringify(shard)}\n`;
+  });
+  await publishGeneratedSnapshot(snapshot, GENERATED_DIRECTORY);
   console.log(`Catálogo atualizado: ${result.metadata.speciesCount} espécies, ${result.metadata.formCount} entradas, ${result.metadata.moveCount} golpes e ${learnsets.metadata.recordCount} relações de aprendibilidade.`);
   console.log(`Fonte geral: PokéAPI ${POKEAPI_COMMIT.slice(0, 7)}. Compatibilidade com Pokémon Champions não verificada.`);
 }

@@ -459,7 +459,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
       <div className="usage-source-banner">
         <div className="usage-source-copy">
           <strong>Meta competitivo em Doubles</strong>
-          <span>Pesquise uma vez e consulte as capturas disponíveis por espécie.</span>
         </div>
         <details className="usage-source-details">
           <summary>Sobre os dados</summary>
@@ -471,7 +470,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
 
       {catalog.length ? (
         <div className="usage-index-note" aria-label="Atualização do índice">
-          <span className="usage-period-summary">{catalog.length} Pokémon e formas · capturas de Doubles</span>
+          <span className="usage-period-summary">{catalog.length} Pokémon e formas</span>
           <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading" && metaRollIndexStatus === "loading"} onClick={refreshVisibleData}>
             {indexStatus === "loading" || metaRollIndexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
           </button>

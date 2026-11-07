@@ -1,4 +1,4 @@
-export function validateTeamPayload(payload) {
+export function validateTeamPayload(payload, pokemonCatalog) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return { ok: false, error: "A equipe precisa ser um objeto JSON." };
   }
@@ -27,14 +27,22 @@ export function validateTeamPayload(payload) {
     ) {
       return { ok: false, error: `A posição ${index + 1} precisa de espécie e nível válidos.` };
     }
+    const catalogForm = pokemonCatalog?.find((pokemon) => pokemon.slug === member.pokemonId);
+    if (!catalogForm || catalogForm.speciesId !== member.speciesId || catalogForm.speciesSlug !== member.speciesSlug
+      || catalogForm.formId !== member.formId || member.formSlug !== catalogForm.slug) {
+      return { ok: false, error: `A posição ${index + 1} precisa corresponder a uma espécie e forma do catálogo.` };
+    }
     if (["ability", "item", "nature"].some((key) => typeof member[key] !== "string" || member[key].length > 100)) {
       return { ok: false, error: `A posição ${index + 1} tem habilidade, item ou nature inválidos.` };
     }
     if (!Array.isArray(member.moves) || member.moves.length !== 4 || member.moves.some((move) => typeof move !== "string" || move.length > 100)) {
       return { ok: false, error: `A posição ${index + 1} precisa de quatro campos de golpe.` };
     }
-    if (!member.statPoints || typeof member.statPoints !== "object" || statKeys.some((key) => !Number.isInteger(member.statPoints[key]) || member.statPoints[key] < 0 || member.statPoints[key] > 999)) {
+    if (!member.statPoints || typeof member.statPoints !== "object" || statKeys.some((key) => !Number.isInteger(member.statPoints[key]) || member.statPoints[key] < 0 || member.statPoints[key] > 32)) {
       return { ok: false, error: `A posição ${index + 1} precisa dos seis campos de Stat Points.` };
+    }
+    if (statKeys.reduce((total, key) => total + member.statPoints[key], 0) > 66) {
+      return { ok: false, error: `A posição ${index + 1} pode distribuir no máximo 66 Stat Points.` };
     }
   }
   return { ok: true, value: payload };

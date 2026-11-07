@@ -25,6 +25,7 @@ beforeAll(async () => {
   };
   api = createApiApp({
     database,
+    pokemonCatalog: [{ slug: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: "default" }],
     fetchImpl: fakeOAuthFetch,
     env: { ...process.env, APP_ENV: "test", APP_ORIGIN: appOrigin, FRIEND_CODE_ENCRYPTION_KEY: testKey, GITHUB_CLIENT_ID: "test-tx", GITHUB_CLIENT_SECRET: "test-secret" },
   });
@@ -89,13 +90,43 @@ test("authenticated team and two-person room lifecycle enforce ownership and tra
   const emptyTeamPayload = { ...sampleTeam, name: "Equipe sem Pokémon", members: Array(6).fill(null) };
   const emptyTeam = await request("/api/teams", { method: "POST", cookie: host.cookie, body: { visibility: "private", data: emptyTeamPayload } });
   assert.equal(emptyTeam.response.status, 201);
-  assert.equal((await request("/api/teams", { cookie: guest.cookie })).body.teams.length, 0);
+  const invalidForm = { ...sampleTeam, members: [{ ...sampleTeam.members[0], formId: "missing-form" }, null, null, null, null, null] };
+  assert.equal((await request("/api/teams", { method: "POST", cookie: host.cookie, body: { visibility: "private", data: invalidForm } })).response.status, 400);
+  const invalidPoints = { ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 32, atk: 32, def: 3, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] };
+  assert.equal((await request(`/api/teams/${createdTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { data: invalidPoints } })).response.status, 400);
+  const guestTeams = await request("/api/teams", { cookie: guest.cookie });
+  assert.equal(guestTeams.body.teams.length, 0);
+  const ownerTeams = await request("/api/teams?limit=1", { cookie: host.cookie });
+  assert.equal(ownerTeams.body.teams.length, 1);
+  assert.equal(ownerTeams.body.nextOffset, 1);
+  assert.equal("data" in ownerTeams.body.teams[0], false);
+  assert.equal(ownerTeams.body.teams[0].memberPokemonIds.length, 6);
+  const nextOwnerPage = await request(`/api/teams?limit=1&offset=${ownerTeams.body.nextOffset}`, { cookie: host.cookie });
+  const ownerSummaries = [...ownerTeams.body.teams, ...nextOwnerPage.body.teams];
+  assert.equal(ownerSummaries.every((team) => !("data" in team)), true);
+  assert.equal(ownerSummaries.some((team) => team.memberPokemonIds[0] === "garchomp" && team.memberCount === 1), true);
+  assert.equal(ownerSummaries.some((team) => team.memberCount === 0), true);
+  assert.deepEqual((await request(`/api/teams/${createdTeam.body.team.id}`, { cookie: host.cookie })).body.team.data, sampleTeam);
+  assert.equal((await request(`/api/teams/${createdTeam.body.team.id}`, { cookie: guest.cookie })).response.status, 404);
   const publicTeam = await request(`/api/teams/${createdTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { visibility: "public" } });
   assert.equal(publicTeam.response.status, 200);
-  assert.equal((await request("/api/teams/public", { cookie: guest.cookie })).body.teams.length, 1);
+  assert.equal((await request(`/api/teams/${emptyTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { visibility: "public" } })).response.status, 200);
+  const firstPublicPage = await request("/api/teams/public?limit=1");
+  assert.equal(firstPublicPage.body.teams.length, 1);
+  assert.equal(firstPublicPage.body.nextOffset, 1);
+  assert.equal("data" in firstPublicPage.body.teams[0], false);
+  const secondPublicPage = await request("/api/teams/public?limit=1&offset=1");
+  assert.equal(secondPublicPage.body.teams.length, 1);
+  assert.equal(secondPublicPage.body.nextOffset, null);
+  assert.equal([...firstPublicPage.body.teams, ...secondPublicPage.body.teams].some((team) => team.memberPokemonIds[0] === "garchomp"), true);
+  assert.equal((await request(`/api/teams/public/${createdTeam.body.team.id}`)).body.team.data.name, sampleTeam.name);
+  assert.equal("visibility" in (await request(`/api/teams/public/${createdTeam.body.team.id}`)).body.team, false);
   assert.deepEqual(publicTeam.body.team.data.members[0], sampleTeam.members[0]);
   assert.equal((await request(`/api/teams/${createdTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { visibility: "private" } })).body.team.visibility, "private");
+  await request(`/api/teams/${emptyTeam.body.team.id}`, { method: "PATCH", cookie: host.cookie, body: { visibility: "private" } });
   assert.equal((await request("/api/teams/public", { cookie: guest.cookie })).body.teams.length, 0);
+  assert.equal((await request(`/api/teams/public/${createdTeam.body.team.id}`)).response.status, 404);
+  assert.equal((await request("/api/teams/public?limit=51")).response.status, 400);
   assert.equal((await request(`/api/teams/${createdTeam.body.team.id}`, { method: "PATCH", cookie: guest.cookie, body: { visibility: "private" } })).response.status, 404);
 
   const createdRoom = await request("/api/rooms", { method: "POST", cookie: host.cookie, body: { name: "Sala de teste" } });

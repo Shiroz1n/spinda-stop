@@ -18,13 +18,13 @@ export function TeamAccountPanel({ onLoad, onSave }) {
     try {
       const [session, teamList] = await Promise.all([
         communityRequest("/me"),
-        communityRequest("/teams").catch((error) => {
+        communityRequest("/teams?limit=20").catch((error) => {
           if (error.message.includes("Entre com GitHub")) return null;
           throw error;
         }),
       ]);
       setState(session.user
-        ? { status: "ready", user: session.user, teams: teamList?.teams || [] }
+        ? { status: "ready", user: session.user, teams: teamList?.teams || [], nextOffset: teamList?.nextOffset ?? null }
         : { status: "signed-out" });
     } catch (error) {
       setState({ status: "error", error: errorMessage(error) });
@@ -69,6 +69,31 @@ export function TeamAccountPanel({ onLoad, onSave }) {
     }
   }
 
+  async function loadSavedTeam(saved) {
+    setBusy(true);
+    try {
+      const { team } = await communityRequest(`/teams/${saved.id}`);
+      onLoad(team.data);
+    } catch (error) {
+      setState((current) => ({ ...current, actionError: errorMessage(error) }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadMoreTeams() {
+    if (state.nextOffset === null || busy) return;
+    setBusy(true);
+    try {
+      const page = await communityRequest(`/teams?limit=20&offset=${state.nextOffset}`);
+      setState((current) => ({ ...current, teams: [...current.teams, ...page.teams], nextOffset: page.nextOffset ?? null }));
+    } catch (error) {
+      setState((current) => ({ ...current, actionError: errorMessage(error) }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="team-account-panel panel-frame" aria-labelledby="team-account-title">
       <div className="section-heading">
@@ -99,8 +124,8 @@ export function TeamAccountPanel({ onLoad, onSave }) {
               <div className="account-team-row" role="listitem" key={saved.id}>
                 <div className="account-team-summary"><strong>{saved.name}</strong><span>{saved.visibility === "public" ? "Pública" : "Privada"}</span></div>
                 <div className="account-team-sprites" role="list" aria-label={`Integrantes de ${saved.name}`}>
-                  {(saved.data?.members || []).slice(0, 6).map((member, index) => {
-                    const pokemon = dexData.pokemon.find((entry) => entry.slug === member?.pokemonId);
+                  {(saved.memberPokemonIds || Array(6).fill(null)).map((pokemonId, index) => {
+                    const pokemon = dexData.pokemon.find((entry) => entry.slug === pokemonId);
                     return (
                       <span className="account-team-member" role="listitem" key={`${saved.id}-${index}`}>
                         {pokemon
@@ -110,7 +135,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
                     );
                   })}
                 </div>
-                <button className="button button-outline button-small" type="button" disabled={busy} onClick={() => onLoad(saved.data)}>Carregar</button>
+                <button className="button button-outline button-small" type="button" disabled={busy} onClick={() => loadSavedTeam(saved)}>Carregar</button>
                 <label className="sr-only" htmlFor={`team-visibility-${saved.id}`}>Visibilidade de {saved.name}</label>
                 <select className="text-input account-team-visibility" id={`team-visibility-${saved.id}`} value={savedVisibility[saved.id] || saved.visibility} onChange={(event) => setSavedVisibility((current) => ({ ...current, [saved.id]: event.target.value }))}>
                   <option value="private">Privada</option><option value="public">Pública</option>
@@ -120,6 +145,7 @@ export function TeamAccountPanel({ onLoad, onSave }) {
               </div>
             )) : null}
           </div>
+          {state.nextOffset !== null ? <button className="button button-outline button-small" type="button" disabled={busy} onClick={loadMoreTeams}>Carregar mais equipes</button> : null}
           {!state.teams.length ? <p className="community-muted">Nenhuma cópia na conta ainda.</p> : null}
           <p className="form-hint">Sets públicos são visíveis a qualquer pessoa. A equipe não é validada como legal ou permitida no jogo.</p>
         </>

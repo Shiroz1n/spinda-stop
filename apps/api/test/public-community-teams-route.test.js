@@ -14,6 +14,26 @@ test("Elysia serves the public archive through the scoped route", async () => {
   });
 });
 
+test("Elysia limits paste cache misses by requester address", async () => {
+  let upstreamRequests = 0;
+  const app = createApiApp({
+    database: {},
+    env: { ...process.env, VERCEL_ENV: "" },
+    publicTeamsFetch: async () => {
+      upstreamRequests += 1;
+      return Response.json({ text: "Sneasler @ Focus Sash" });
+    },
+  });
+  let lastResponse;
+  for (let index = 0; index < 25; index += 1) {
+    lastResponse = await app.handle(new Request("https://app.test/api/public/teams/MC781/paste", {
+      headers: { "x-forwarded-for": `198.51.100.${index + 1}` },
+    }));
+  }
+  assert.equal(upstreamRequests, 24);
+  assert.equal(lastResponse.status, 429);
+});
+
 test("Elysia serves the public VGC agenda through the scoped route", async () => {
   const tomorrow = new Date();
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);

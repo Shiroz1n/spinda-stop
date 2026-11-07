@@ -1,4 +1,5 @@
 import dexData from "../../../packages/data/generated/pokedex.json" with { type: "json" };
+import { readBoundedJson } from "./read-bounded-json.js";
 
 const MUNCHSTATS_TEAMS_URL = "https://www.munchstats.com/teams/api/champions-mc/";
 const PUBLIC_CACHE = "public, max-age=60, s-maxage=900, stale-while-revalidate=3600";
@@ -72,12 +73,7 @@ async function fetchJson(fetchImpl, url) {
       redirect: "error",
       signal: controller.signal,
     });
-    if (!response.ok) throw new Error("upstream_status");
-    const contentLength = Number(response.headers.get("content-length"));
-    if (Number.isFinite(contentLength) && contentLength > MAX_BODY_LENGTH) throw new Error("upstream_size");
-    const text = await response.text();
-    if (text.length > MAX_BODY_LENGTH) throw new Error("upstream_size");
-    return JSON.parse(text);
+    return await readBoundedJson(response, MAX_BODY_LENGTH);
   } finally {
     clearTimeout(timeout);
   }
