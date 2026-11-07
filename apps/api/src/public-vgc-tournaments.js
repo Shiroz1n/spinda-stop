@@ -13,15 +13,18 @@ function safeText(value, maximum = 140) {
   return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, maximum);
 }
 
-function normalizeTournament(row) {
+function normalizeTournament(row, currentDate) {
   if (!row || row.game !== "VGC" || row.format !== "M-C" || !TOURNAMENT_ID.test(row.id || "")) return null;
   const date = typeof row.date === "string" && Number.isFinite(Date.parse(row.date)) ? row.date : null;
   if (!date) return null;
+  const eventDate = new Date(date).toISOString().slice(0, 10);
+  if (eventDate < currentDate) return null;
   return {
     id: row.id,
     name: safeText(row.name),
     date,
     players: Number.isSafeInteger(row.players) && row.players >= 0 ? row.players : null,
+    scheduleStatus: eventDate === currentDate ? "today" : "upcoming",
     url: `https://play.limitlesstcg.com/tournament/${row.id}`,
   };
 }
@@ -46,16 +49,17 @@ async function fetchJson(fetchImpl, url) {
   }
 }
 
-export function createPublicVgcTournamentsHandler(fetchImpl = globalThis.fetch) {
+export function createPublicVgcTournamentsHandler(fetchImpl = globalThis.fetch, now = () => new Date()) {
   return async function handlePublicVgcTournaments(request) {
     if (new URL(request.url).pathname !== "/api/public/vgc-tournaments") return reply({ error: { code: "not_found" } }, 404);
     if (request.method !== "GET") return reply({ error: { code: "method_not_allowed" } }, 405);
     try {
       const url = new URL(TOURNAMENTS_URL);
-      url.search = new URLSearchParams({ game: "VGC", format: "M-C", limit: "8" }).toString();
+      url.search = new URLSearchParams({ game: "VGC", format: "M-C", limit: "50" }).toString();
       const payload = await fetchJson(fetchImpl, url);
       if (!Array.isArray(payload)) throw new Error("invalid_tournaments");
-      const tournaments = payload.map(normalizeTournament).filter(Boolean).slice(0, 8);
+      const currentDate = now().toISOString().slice(0, 10);
+      const tournaments = payload.map((row) => normalizeTournament(row, currentDate)).filter(Boolean).slice(0, 8);
       return reply({ tournaments }, 200, PUBLIC_CACHE);
     } catch {
       return reply({ error: { code: "public_tournaments_unavailable", message: "A agenda de torneios não está disponível agora." } }, 502);

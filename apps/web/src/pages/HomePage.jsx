@@ -85,13 +85,13 @@ function PublicVgcTournaments() {
 
   return <section className="home-vgc-tournaments" aria-labelledby="home-vgc-title">
     <div className="home-section-heading"><div><p className="page-label">Pokémon VGC · M-C</p><h2 id="home-vgc-title">Agenda de torneios</h2></div><a href="https://play.limitlesstcg.com/tournaments?game=VGC&format=M-C" target="_blank" rel="noreferrer">Ver torneios ↗</a></div>
-    <p className="home-vgc-intro">Inícios publicados pela comunidade; o feed não informa duração nem estado ao vivo.</p>
+    <p className="home-vgc-intro">Datas de início publicadas pela comunidade; não indicam se o torneio está ao vivo.</p>
     {state.status === "loading" && <p className="home-data-state" role="status">Carregando torneios M-C…</p>}
     {state.status === "error" && <p className="home-data-state" role="status">{state.message || "A agenda não respondeu."}</p>}
-    {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum torneio M-C publicado nesta captura.</p>}
+    {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum torneio M-C de hoje ou futuro foi publicado.</p>}
     {state.tournaments.length > 0 && <ol className="home-vgc-list">{state.tournaments.slice(0, 6).map((tournament) => <li key={tournament.id}>
-      <span className="home-vgc-date">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(tournament.date))}</span>
-      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.players === null ? "Participantes não publicados" : `${tournament.players} participantes`}</small></span>
+      <span className="home-vgc-date">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" }).format(new Date(tournament.date))} UTC</span>
+      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.scheduleStatus === "today" ? "Começa hoje · sem estado ao vivo" : "Próximo torneio"}</small></span>
       <a href={tournament.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${tournament.name || "torneio"} no Limitless`}>Abrir ↗</a>
     </li>)}</ol>}
     <small className="home-vgc-credit">Fonte: <a href="https://docs.limitlesstcg.com/developer/tournaments.html" target="_blank" rel="noreferrer">API pública Limitless VGC</a>.</small>
