@@ -16,7 +16,7 @@ Spinda Stop is an independent browser workspace for preparing teams and organizi
 
 ## Positioning
 
-The existing product brings species data, two independent Usage sources, editable team drafts, damage and Speed calculations, and optional community organization into one workspace. It preserves each source's meaning and the boundary between general game data and Champions legality.
+The existing product brings species data, one Usage catalog selected from two published captures, editable team drafts, damage and Speed calculations, and optional community organization into one workspace. It preserves each observation's meaning and the boundary between general game data and Champions legality.
 
 ## Operating Context
 
@@ -25,8 +25,8 @@ Players move between discovery, team editing, matchup analysis, and community or
 ## Capabilities and Constraints
 
 - The Pokédex uses a pinned PokéAPI revision for general species, form, stat, evolution, type, and learnset data. Those facts do not prove availability, move coexistence, or legality in a Champions ruleset.
-- Battle Data and MetaRoll are separate Usage providers. Their periods, denominators, missing values, and source metadata must not be combined or relabeled.
-- The builder has six editable positions and supports local drafts plus the existing JSON import/export flow. Optional GitHub accounts save private or public copies.
+- The Usage catalog selects one published value per distribution, prefers a matching MetaRoll Doubles observation, and falls back to Battle Data only for unmatched identities. Different periods, denominators, and missing values are not averaged; source provenance remains in technical details.
+- The builder has six editable positions, local drafts, JSON import/export, and Pokémon Showdown text paste/export. Optional GitHub accounts save private or public copies. Team analysis uses equipped damaging move types and the local type chart; it does not simulate abilities or field effects.
 - Damage calculations use the existing `@smogon/calc` integration and expose its supported modes, rolls, field modifiers, and limits. Speed values are calculated from the project's formulas, not Usage rankings.
 - The site's rooms and tournaments organize voluntary reports; they do not connect to Pokémon Champions.
 - The local community API uses SQLite. Vercel previews do not provide persistent community storage and must not be presented as if they save room or tournament data.

@@ -12,13 +12,15 @@ A interface usa cores de arena, molduras em degraus e sprites de Pokémon carreg
 - Comparar Speed calculada no catálogo ou os seis integrantes do builder contra um alvo, sem confundir tiers calculados com ranking de uso.
 - Comparar um atacante contra vários alvos com o mesmo set defensivo; cada dano aparece separadamente.
 - Salvar o rascunho neste navegador e importar ou exportar o formato JSON do projeto.
+- Colar e exportar equipes em texto do Pokémon Showdown/Poképaste; preservar a importação e exportação JSON existentes.
+- Conferir a cobertura ofensiva pelos golpes equipados e as fraquezas, resistências e imunidades por tipos no Team Analysis do construtor.
 - Entrar com GitHub para salvar cópias privadas ou públicas de equipes e organizar salas de duas pessoas ou torneios privados de quatro, com convite, check-in e resultados confirmados manualmente.
-- Explorar Usage de Doubles por espécie, comparando as posições e distribuições publicadas por Pokémon Champions Battle Data e MetaRoll na mesma ficha; a MetaRoll também publica matchups, históricos e ladder de jogadores.
+- Explorar um catálogo único de Usage em Doubles: uma posição e um valor por distribuição, com prioridade determinística e fallback entre as capturas de Pokémon Champions Battle Data e MetaRoll; históricos, matchups e Ladder publicados ficam acessíveis como dados complementares.
 - Conferir cenários representativos da calculadora contra os rolls do simulador Pokémon Showdown fixado; essa checagem valida concordância entre implementações, não uma partida real no jogo.
 
 A PokéAPI fornece dados gerais; disponibilidade e legalidade no Champions seguem como desconhecidas até confirmação por formato e regulamento. Cada equipe aparece como rascunho.
 
-Usage mostra a fonte e o período que cada API informa. “Current” e nomes de temporada são rótulos da fonte, não regulamentos oficiais. Os percentuais da Battle Data não têm denominador conhecido; MetaRoll define distribuições como parcela das aparições do Pokémon. As posições e percentuais continuam separados por fonte, sem média ou amostra combinada.
+Usage mostra um valor selecionado por distribuição. MetaRoll tem prioridade em Doubles; Battle Data preenche apenas registros ausentes, sem média entre períodos ou denominadores diferentes. Atribuição, períodos e dados publicados ficam disponíveis nos detalhes técnicos. “Current” e nomes de temporada são rótulos das capturas, não regulamentos oficiais. Os dados de Stat Points são distribuições investidas, não atributos finais, e conjuntos completos não podem ser derivados das distribuições marginais.
 
 ## Próximas partes
 

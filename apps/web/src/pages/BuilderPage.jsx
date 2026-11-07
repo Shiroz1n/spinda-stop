@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { addPokemonToDraft, createEmptyTeam, parseTeam, serializeTeam, setTeamMember } from "@spinda-stop/domain";
+import { addPokemonToDraft, createEmptyTeam, exportShowdownTeam, importShowdownTeam, parseTeam, serializeTeam, setTeamMember } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import detailData from "@spinda-stop/data/details";
 import moveData from "@spinda-stop/data/moves";
@@ -11,6 +11,7 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
 import { getNature, getNatureSpeedClass } from "../data/natures.js";
+import { calculateTeamAnalysis } from "../data/teamAnalysis.js";
 import { applySpeedPointsToStatSpread, calculateChampionsSpeed, CHAMPIONS_MAX_STAT_POINTS, CHAMPIONS_MAX_TOTAL_POINTS, compareSpeed, compareSpeedOrder, getChampionsSpeedRecommendation, maximumLegalSpeedPoints, resolveSpeedPreviewNature, speedNatureFromName } from "../data/speedTiers.js";
 import { communityRequest } from "../data/communityApi.js";
 
@@ -70,6 +71,8 @@ export function BuilderPage() {
   const importRef = useRef(null);
   const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug));
   const [team, setTeam] = useState(initialDraft.team);
+  const [showdownInput, setShowdownInput] = useState("");
+  const [showdownExport, setShowdownExport] = useState("");
   const [selectedSlot, setSelectedSlot] = useState(initialDraft.selectedSlot);
   const [damageOpponentSlot, setDamageOpponentSlot] = useState(() => initialDraft.team.members.findIndex((member, index) => index !== initialDraft.selectedSlot && Boolean(member)));
   const [speedTargetSlug, setSpeedTargetSlug] = useState("");
@@ -83,6 +86,7 @@ export function BuilderPage() {
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
+  const teamAnalysis = useMemo(() => calculateTeamAnalysis(team, dexData.pokemon, moveData.moves), [team]);
   const selectedPokemon = useMemo(
     () => selectedMember ? pokemonWithDetails(selectedMember.pokemonId) : null,
     [selectedMember],
@@ -252,6 +256,39 @@ export function BuilderPage() {
     const saved = commitTeam(result.value);
     setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
     setMessage(saved ? "Equipe importada e salva neste navegador." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+  }
+
+  function importShowdownPaste() {
+    const result = importShowdownTeam(showdownInput, dexData.pokemon);
+    if (!result.ok) {
+      setMessage(result.error);
+      return;
+    }
+    const consequences = [
+      team.members.some(Boolean) ? "A importação substituirá as seis posições e as configurações atuais do rascunho." : "A equipe será salva neste navegador.",
+      ...(result.warnings.length ? [`Avisos:\n${result.warnings.join("\n")}`] : []),
+    ].join("\n\n");
+    if ((team.members.some(Boolean) || result.warnings.length) && !window.confirm(consequences)) return;
+    const saved = commitTeam(result.value);
+    setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
+    setSpeedPreviews({});
+    setShowdownInput("");
+    setMessage(saved ? "Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+  }
+
+  async function copyShowdownPaste() {
+    const text = exportShowdownTeam(team, dexData.pokemon);
+    if (!text) {
+      setMessage("Adicione ao menos um Pokémon para preparar o texto da equipe.");
+      return;
+    }
+    setShowdownExport(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage("Texto Showdown copiado. Você pode colá-lo em uma nova Poképaste.");
+    } catch {
+      setMessage("Texto preparado abaixo. A cópia automática não está disponível neste navegador.");
+    }
   }
 
   function updateMove(index, value) {
@@ -440,6 +477,8 @@ export function BuilderPage() {
                 </div>
               </div>
 
+              <p className="builder-ready-set-note field-wide">Sets prontos ainda não estão disponíveis: as fontes publicam golpes, itens, Nature e SP como distribuições separadas, sem relação verificável entre eles.</p>
+
               <div className="editor-fields">
                 <label className="field-label" htmlFor="member-ability">Habilidade</label>
                 <input id="member-ability" className="text-input" list="ability-options" value={selectedMember.ability} maxLength={100} onChange={(event) => updateMember({ ability: event.target.value })} placeholder="Escolha ou digite" />
@@ -487,6 +526,8 @@ export function BuilderPage() {
             </section>
           )}
         </div>
+
+        <TeamAnalysis analysis={teamAnalysis} />
       </section>
 
       <section className="builder-speed-panel" aria-labelledby="builder-speed-title">
@@ -544,9 +585,25 @@ export function BuilderPage() {
 
       <details className="builder-tools-details">
         <summary>Importar ou exportar equipe</summary>
-        <div className="builder-actions">
+        <div className="builder-showdown-tools">
+          <section aria-labelledby="builder-showdown-import-title">
+            <h2 id="builder-showdown-import-title">Colar do Showdown ou Poképaste</h2>
+            <p>Copie o texto exportado da equipe e cole aqui. Importar uma URL do Poképaste não está disponível.</p>
+            <label className="builder-paste-label" htmlFor="builder-showdown-input">Texto da equipe</label>
+            <textarea id="builder-showdown-input" className="text-input builder-paste-input" value={showdownInput} onChange={(event) => setShowdownInput(event.target.value)} placeholder={"Garchomp @ Life Orb\nAbility: Rough Skin\nJolly Nature\n- Earthquake"} />
+            <button className="button button-primary" type="button" onClick={importShowdownPaste}>Importar texto</button>
+          </section>
+          <section aria-labelledby="builder-showdown-export-title">
+            <h2 id="builder-showdown-export-title">Copiar equipe</h2>
+            <p>No formato Champions do Showdown, o campo EVs representa os Stat Points. Os valores são copiados diretamente, sem conversão. <a href="https://github.com/smogon/pokemon-showdown/blob/master/sim/TEAMS.md" target="_blank" rel="noreferrer">Ver formato oficial ↗</a></p>
+            <label className="builder-paste-label" htmlFor="builder-showdown-export">Texto exportado</label>
+            <textarea id="builder-showdown-export" className="text-input builder-paste-input" value={showdownExport} readOnly placeholder="O texto da equipe aparecerá aqui." />
+            <button className="button button-outline" type="button" onClick={copyShowdownPaste}>Preparar e copiar texto</button>
+          </section>
+        </div>
+        <div className="builder-actions builder-json-actions">
           <button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button>
-          <button className="button button-primary" type="button" onClick={exportTeam}>Exportar JSON</button>
+          <button className="button button-outline" type="button" onClick={exportTeam}>Exportar JSON</button>
           <input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" />
         </div>
       </details>
@@ -565,6 +622,41 @@ export function BuilderPage() {
       <SpeciesPicker open={pickerOpen} pokemon={dexData.pokemon} onChoose={choosePokemon} onClose={() => setPickerOpen(false)} />
       <SpeciesPicker idPrefix="speed-target" open={speedTargetPickerOpen} pokemon={dexData.pokemon} onChoose={selectSpeedTarget} onClose={() => setSpeedTargetPickerOpen(false)} />
     </div>
+  );
+}
+
+function TeamAnalysis({ analysis }) {
+  function multiplierLabel(value) {
+    if (value === 0) return "0×";
+    if (value < 1) return ({ 0.5: "½×", 0.25: "¼×", 0.125: "⅛×" })[value] || `${value}×`;
+    return `${value}×`;
+  }
+
+  function relationGroup(title, items, kind) {
+    return (
+      <section className={`team-analysis-relation is-${kind}`}>
+        <h3>{title}</h3>
+        {items.length ? <ul>{items.map(({ type, counts }) => <li key={type}><TypeTag type={type} /><span>{counts.map(([multiplier, count]) => `${count} ${count === 1 ? "integrante" : "integrantes"} · ${multiplierLabel(multiplier)}`).join(" / ")}</span></li>)}</ul> : <p className="team-analysis-empty">Nenhum tipo nesta categoria.</p>}
+      </section>
+    );
+  }
+
+  return (
+    <aside className="builder-team-analysis" aria-labelledby="team-analysis-title">
+      <div className="team-analysis-heading"><div><p className="page-label">Visão da equipe</p><h2 id="team-analysis-title">Análise da equipe</h2></div><span>{analysis.filledSlots}/6</span></div>
+      <section className="team-analysis-coverage" aria-labelledby="team-coverage-title">
+        <div><h3 id="team-coverage-title">Cobertura ofensiva</h3><p>Melhor efetividade dos golpes equipados contra cada tipo puro.</p></div>
+        {analysis.attackTypes.length ? <ul className="team-analysis-type-grid">{analysis.coverage.map(({ type, multiplier }) => <li key={type} className={multiplier > 1 ? "is-effective" : ""}><TypeTag type={type} /><strong>{multiplier === null ? "—" : multiplierLabel(multiplier)}</strong></li>)}</ul> : <p className="team-analysis-empty">Adicione golpes de dano reconhecidos para ver a cobertura. Golpes de status não entram no cálculo.</p>}
+        {analysis.attackTypes.length ? <p className="team-analysis-note">Tipos sem cobertura super efetiva: {analysis.blindSpots.length ? analysis.blindSpots.map((type) => type.slice(0, 3).toUpperCase()).join(", ") : "nenhum contra tipos puros"}.</p> : null}
+        <p className="team-analysis-note">A análise considera só o tipo do golpe. Não inclui STAB, habilidade, item, clima, campo ou combinação com os tipos do alvo.</p>
+      </section>
+      <div className="team-analysis-defenses">
+        {relationGroup("Fraquezas", analysis.weaknesses, "weakness")}
+        {relationGroup("Resistências", analysis.resistances, "resistance")}
+        {relationGroup("Imunidades", analysis.immunities, "immunity")}
+      </div>
+      <p className="team-analysis-note">Defesas calculadas pelos tipos de cada integrante, incluindo multiplicadores duplos. Habilidades e efeitos de itens não são simulados.</p>
+    </aside>
   );
 }
 

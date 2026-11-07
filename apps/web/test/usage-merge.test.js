@@ -4,21 +4,18 @@ import { mergeCategoryRows, mergeUsageCatalog } from "../src/data/usage/mergeUsa
 
 const resolvePokemon = ({ id, name }) => {
   const key = String(id || name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  return ({ "vivillonfancy": { slug: "vivillon-fancy", types: ["Bug", "Flying"] } })[key] || null;
+  return ({ vivillonfancy: { slug: "vivillon-fancy", types: ["Bug", "Flying"] } })[key] || null;
 };
 
-test("unifies species by exact form and unions filter fields without inventing ranks", () => {
+test("unifies species by exact form, picks one published position, and unions search fields", () => {
   const catalog = mergeUsageCatalog({
-    format: "Doubles",
-    season: "Current",
-    generatedAt: null,
+    format: "Doubles", season: "Current", generatedAt: null,
     pokemon: [
       { name: "Vivillon-Fancy", showdownId: "vivillonfancy", position: 4, types: [], filterValues: { moves: ["Hurricane"] } },
       { name: "Garchomp", showdownId: "garchomp", position: null, types: ["Dragon", "Ground"], filterValues: {} },
     ],
   }, {
-    format: "doubles",
-    season: "M-8",
+    format: "doubles", season: "M-8",
     entries: [
       { id: "vivillonfancy", name: "Vivillon-Fancy", rank: 6, filterValues: { abilities: ["Compound Eyes"] } },
       { id: "vivillon", name: "Vivillon", rank: 1, filterValues: {} },
@@ -27,64 +24,64 @@ test("unifies species by exact form and unions filter fields without inventing r
 
   assert.equal(catalog.length, 3);
   const fancy = catalog.find((entry) => entry.key === "form:vivillonfancy");
-  assert.equal(fancy.position, 4);
-  assert.equal(fancy.metaRollRank, 6);
+  assert.equal(fancy.displayRank, 6);
+  assert.equal(fancy.displaySource, "metaRoll");
   assert.deepEqual(fancy.types, ["Bug", "Flying"]);
+  assert.deepEqual(fancy.filterValues, { moves: ["Hurricane"], items: [], abilities: ["Compound Eyes"] });
   assert.equal(fancy.battleData.season, "Current");
   assert.equal(fancy.metaRoll.season, "M-8");
-  assert.deepEqual(fancy.filterValues, { moves: ["Hurricane"], items: [], abilities: ["Compound Eyes"] });
-  assert.equal(catalog.find((entry) => entry.name === "Vivillon").battleData, null);
-  assert.equal(catalog.find((entry) => entry.name === "Garchomp").position, null);
 });
 
-test("merges matching category identities into one row with separate source observations", () => {
+test("keeps positions from unmatched species out of the preferred provider ranking", () => {
+  const catalog = mergeUsageCatalog({
+    format: "Doubles",
+    pokemon: [{ name: "Garchomp", showdownId: "garchomp", position: 1, filterValues: {} }],
+  }, {
+    format: "Doubles",
+    entries: [{ id: "sneasler", name: "Sneasler", rank: 4, filterValues: {} }],
+  });
+
+  assert.equal(catalog.find((entry) => entry.name === "Sneasler").displayRank, 4);
+  assert.equal(catalog.find((entry) => entry.name === "Garchomp").displayRank, null);
+  assert.equal(catalog.find((entry) => entry.name === "Garchomp").displaySource, "battleData");
+});
+
+test("deduplicates the same distribution and selects one source value without averaging", () => {
   const rows = mergeCategoryRows({
     categoryId: "move",
     formats: { battleData: "Doubles", metaRoll: "doubles" },
+    contexts: { battleData: { season: "Current", capturedAt: "2026-10-30" }, metaRoll: { season: "M-8", capturedAt: "2026-11-06" } },
     battleRows: [{ rank: 1, name: "Dire Claw", percentage: "79.1%", percentageValue: 79.1 }],
     metaRows: [{ rank: 2, name: "dire-claw", percentage: "79.4%", percentageValue: 79.4 }],
   });
 
   assert.equal(rows.length, 1);
+  assert.equal(rows[0].selectedSource, "metaRoll");
+  assert.equal(rows[0].selected.percentageValue, 79.4);
+  assert.equal(rows[0].selected.rank, 2);
   assert.equal(rows[0].observations.battleData.percentageValue, 79.1);
-  assert.equal(rows[0].observations.metaRoll.percentageValue, 79.4);
-  assert.equal(Object.hasOwn(rows[0], "average"), false);
+  assert.equal(rows[0].observations.metaRoll.season, "M-8");
 });
 
-test("keys stat point spreads by all six values and keeps zero distinct from missing", () => {
+test("keeps zero distinct from a missing percentage and requires complete spreads to deduplicate", () => {
   const rows = mergeCategoryRows({
     categoryId: "stat_points",
     formats: { battleData: "Doubles", metaRoll: "doubles" },
     battleRows: [{ rank: 1, statPoints: { hp: 2, attack: 32, defense: 0, spAttack: 0, spDefense: 0, speed: 32 }, percentageValue: 15 }],
     metaRows: [
-      { rank: 1, statPoints: { hp: 2, attack: 32, defense: 0, spAttack: 0, spDefense: 0, speed: 32 }, percentageValue: 14.8 },
-      { rank: 2, statPoints: { hp: 2, attack: 32, defense: null, spAttack: 0, spDefense: 0, speed: 32 }, percentageValue: 2 },
+      { rank: 1, statPoints: { hp: 2, attack: 32, defense: 0, spAttack: 0, spDefense: 0, speed: 32 }, percentageValue: 0 },
+      { rank: 2, statPoints: { hp: 2, attack: 32, defense: null, spAttack: 0, spDefense: 0, speed: 32 }, percentageValue: null },
     ],
   });
 
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].observations.battleData.percentageValue, 15);
-  assert.equal(rows[0].observations.metaRoll.percentageValue, 14.8);
+  assert.equal(rows[0].selected.percentageValue, 0);
+  assert.equal(rows[0].selectedSource, "metaRoll");
+  assert.equal(rows[1].selected.percentageValue, null);
   assert.equal(rows[1].statPoints.defense, null);
-  assert.equal(rows[0].statPoints.defense, 0);
 });
 
-test("keeps incomplete spreads as separate observations instead of deduplicating unknown values", () => {
-  const rows = mergeCategoryRows({
-    categoryId: "stat_points",
-    formats: { battleData: "Doubles", metaRoll: "doubles" },
-    battleRows: [{ rank: 1, statPoints: { hp: 2, attack: 32, defense: 0, spAttack: 0, spDefense: 0, speed: 32 } }],
-    metaRows: [
-      { rank: 1, statPoints: { hp: 2, attack: 32, defense: null, spAttack: 0, spDefense: 0, speed: 32 } },
-      { rank: 2, statPoints: { hp: 2, attack: 32, defense: null, spAttack: 0, spDefense: 0, speed: 32 } },
-    ],
-  });
-
-  assert.equal(rows.length, 3);
-  assert.equal(rows.filter((row) => row.observations.metaRoll).length, 2);
-});
-
-test("does not deduplicate provider rows from different formats", () => {
+test("does not select a row from a different format", () => {
   const rows = mergeCategoryRows({
     categoryId: "ability",
     formats: { battleData: "Doubles", metaRoll: "Singles" },
@@ -92,22 +89,36 @@ test("does not deduplicate provider rows from different formats", () => {
     metaRows: [{ rank: 1, name: "Intimidate", percentageValue: 40 }],
   });
 
-  assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map((row) => Object.keys(row.observations)), [["battleData"], ["metaRoll"]]);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].selectedSource, "battleData");
+  assert.equal(rows[0].selected.percentageValue, 30);
 });
 
-test("does not merge distributions when one source format is unknown", () => {
+test("uses the selected capture season without mixing it with the other season", () => {
   const rows = mergeCategoryRows({
     categoryId: "ability",
-    formats: { battleData: "Doubles", metaRoll: null },
-    battleRows: [{ rank: 1, name: "Intimidate" }],
-    metaRows: [{ rank: 1, name: "Intimidate" }],
+    contexts: { battleData: { season: "Current" }, metaRoll: { season: "M-8" } },
+    battleRows: [{ rank: 1, name: "Intimidate", percentageValue: 30 }],
+    metaRows: [{ rank: 1, name: "Intimidate", percentageValue: 40 }],
   });
 
-  assert.equal(rows.length, 2);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].selected.percentageValue, 40);
+  assert.equal(rows[0].selected.season, "M-8");
 });
 
-test("keeps the usable provider catalog when the other index failed", () => {
+test("orders unmatched distributions after the preferred capture without comparing their ranks", () => {
+  const rows = mergeCategoryRows({
+    categoryId: "move",
+    battleRows: [{ rank: 1, name: "Protect", percentageValue: 50 }],
+    metaRows: [{ rank: 4, name: "Close Combat", percentageValue: 40 }],
+  });
+
+  assert.deepEqual(rows.map((row) => row.name), ["Close Combat", "Protect"]);
+  assert.equal(rows[1].selectedSource, "battleData");
+});
+
+test("keeps whichever catalog responded when the other index failed", () => {
   const catalog = mergeUsageCatalog(null, {
     format: "doubles",
     entries: [{ id: "garchomp", name: "Garchomp", rank: 1, filterValues: {} }],
@@ -115,5 +126,19 @@ test("keeps the usable provider catalog when the other index failed", () => {
 
   assert.equal(catalog.length, 1);
   assert.equal(catalog[0].battleData, null);
-  assert.equal(catalog[0].metaRoll.rank, 1);
+  assert.equal(catalog[0].displayRank, 1);
+});
+
+test("does not place a catalog from another format in the active Doubles index", () => {
+  const catalog = mergeUsageCatalog({
+    format: "Singles",
+    pokemon: [{ name: "Garchomp", showdownId: "garchomp", position: 1, filterValues: {} }],
+  }, {
+    format: "doubles",
+    entries: [{ id: "garchomp", name: "Garchomp", rank: 2, filterValues: {} }],
+  });
+
+  assert.equal(catalog.length, 1);
+  assert.equal(catalog[0].displaySource, "metaRoll");
+  assert.equal(catalog[0].battleData, null);
 });

@@ -26,14 +26,14 @@ Use uma branch por mudança. Se mudar interface, confira uma largura mobile e um
 
 ## Revisão visual
 
-Durante o desenvolvimento, rode somente as rotas afetadas nas larguras 1440 e 390 px:
+Durante o desenvolvimento, rode somente as rotas afetadas em desktop e mobile:
 
 ```sh
 npm run visual:review:fast -- --pages=calculator,builder
 # ou VISUAL_REVIEW_PAGES=calculator,builder npm run visual:review:fast
 ```
 
-O modo rápido preserva capturas, mede overflow e erros de aplicação e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. O modo completo continua obrigatório antes de concluir uma PR: `npm run visual:review`. Ele mantém os cenários de todas as telas em 1440, 390, 320 e 720 px, axe e fluxos comunitários com SQLite temporário quando `SPINDA_DB_PATH` está configurado. A versão rápida não é equivalente ao gate completo. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
+O modo rápido preserva capturas iniciais, mede overflow e erros de aplicação e verifica foco/teclado nas rotas selecionadas. IDs: `home`, `dex` (`pokedex`), `pokemon` (`detail`), `usage`, `builder`, `calculator`, `speed` (`speed-tiers`), `rooms`, `tournaments`. Antes de concluir uma PR, o workflow roda `npm run visual:review` em 1440 px e verifica a transição tablet em 900 px (todos os cenários e SQLite temporário) e `npm run visual:review:mobile` em 390 e 320 px (primeira dobra de todas as rotas, axe, foco, overflow e erros; home/builder completos e importação/exportação de texto no builder em 390 px). Isso evita repetir os mesmos fluxos comunitários e calculadora em várias larguras. Esses modos não são validação em aparelho físico. Veja [docs/VISUAL_REVIEW.md](docs/VISUAL_REVIEW.md).
 
 ## API comunitária
 

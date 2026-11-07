@@ -10,7 +10,8 @@ import { POKEAPI_SPRITES_BASE } from "../src/data/pokemonSprites.js";
 
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const args = process.argv.slice(2);
-const fastMode = args.includes("--fast") || args.includes("--quick");
+const mobileOnly = args.includes("--mobile-only");
+const fastMode = mobileOnly || args.includes("--fast") || args.includes("--quick");
 const pageFlagIndex = args.findIndex((argument) => argument === "--pages" || argument === "--screens");
 const pageFlag = args.find((argument) => argument.startsWith("--pages=") || argument.startsWith("--screens="));
 const requestedPageList = process.env.VISUAL_REVIEW_PAGES
@@ -19,7 +20,7 @@ if (requestedPageList && !fastMode) {
   throw new Error("A seleção de telas só está disponível no modo rápido (--fast). O modo completo sempre roda todas as telas.");
 }
 const reviewStartedAt = Date.now();
-const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, fastMode ? "artifacts/visual-review-fast" : "artifacts/visual-review"));
+const outputDir = resolve(process.env.VISUAL_OUTPUT_DIR || join(root, mobileOnly ? "artifacts/visual-review-mobile" : fastMode ? "artifacts/visual-review-fast" : "artifacts/visual-review"));
 const baseUrl = "http://127.0.0.1:4173";
 const spindaFaviconUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/327.png";
 const observations = [];
@@ -407,6 +408,7 @@ async function captureCommunityState(context, viewport, viewportName, kind) {
 async function runViewport(viewportName, viewport) {
   console.log(`Visual review: start ${viewportName} at ${viewport.width}×${viewport.height}.`);
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, isMobile: viewport.width < 600, hasTouch: viewport.width < 600, reducedMotion: "reduce" });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
   const page = await context.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -882,6 +884,21 @@ async function runViewport(viewportName, viewport) {
   assert.equal(exportedTeam.members[0].statPoints.atk, 14);
   await page.locator('input[aria-label="Selecionar arquivo de equipe JSON"]').setInputFiles(exportedFile);
   await page.getByText("Equipe importada e salva neste navegador.").waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Importar texto" }).click();
+  await page.getByText("Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado.").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("button", { name: "Preparar e copiar texto" }).click();
+  const copiedShowdownTeam = await page.evaluate(() => navigator.clipboard.readText());
+  if (!copiedShowdownTeam.includes("Garchomp @ Life Orb") || !copiedShowdownTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe") || !copiedShowdownTeam.includes("Timid Nature")) {
+    failures.push(viewportName + ": a exportação para Showdown não preservou espécie, pontos ou Nature.");
+  }
+  await page.locator("#builder-showdown-input").fill("Pikachu\nEVs: 252 Atk");
+  await page.getByRole("button", { name: "Importar texto" }).click();
+  await page.getByText(/excede o limite Champions/).waitFor({ state: "visible", timeout: 10_000 });
+  if (await page.locator("#active-member-title").innerText() !== "Garchomp") {
+    failures.push(viewportName + ": o erro de importação de SP alterou a equipe atual.");
+  }
   await safeCapture(page, viewportName, "builder-preserved-set", { audit: true });
   await page.locator(".team-slot").nth(1).click();
   const pickerSearch = page.locator("#species-search");
@@ -1180,7 +1197,7 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
   await waitForUsage(page);
   if (await page.locator(".usage-index-note").count()) {
-    await waitForEither(page, ".usage-source-comparison, .usage-error", 35_000);
+    await waitForEither(page, ".usage-distributions, .usage-error", 35_000);
   }
   await safeCapture(page, viewportName, "usage-battle-data", { audit: true, fullPage: false });
   const usageComposition = await page.evaluate(() => {
@@ -1236,7 +1253,7 @@ async function runViewport(viewportName, viewport) {
         const nameRange = document.createRange();
         if (name) nameRange.selectNodeContents(name);
         const artRect = rect(".usage-species-art");
-        const positionRect = rect(".usage-position-pair");
+        const positionRect = rect(".usage-position");
         const typeList = button.querySelector(".usage-species-name .type-list");
         const typeListRect = typeList?.getBoundingClientRect();
         const typeTagsFit = !typeList || Array.from(typeList.children).every((tag) => {
@@ -1307,9 +1324,16 @@ async function runViewport(viewportName, viewport) {
     await safeCapture(page, viewportName, "usage-history", { fullPage: false });
   }
 
-  const usageComparison = page.locator(".usage-source-comparison");
+  const usageComparison = page.locator(".usage-distributions");
   if (await usageComparison.count()) {
-    const detailLink = usageComparison.getByRole("button", { name: "Histórico, matchups e outros dados MetaRoll" });
+    const rows = page.locator(".usage-distribution-category .usage-row-list > li");
+    for (const row of await rows.all()) {
+      if (await row.locator(".usage-merged-values > span").count() !== 1) {
+        failures.push(viewportName + ": cada distribuição de Usage deve mostrar um único percentual selecionado.");
+        break;
+      }
+    }
+    const detailLink = usageComparison.getByRole("button", { name: "Histórico e confrontos" });
     const keyboardLink = await detailLink.evaluate((button) => {
       button.focus();
       return {
@@ -1324,14 +1348,14 @@ async function runViewport(viewportName, viewport) {
     }
     await detailLink.press("Enter");
     await page.locator(".metaroll-layout").waitFor({ state: "visible", timeout: 15_000 });
-    await page.getByRole("button", { name: "Voltar à comparação" }).press("Enter");
-    await page.locator(".usage-source-comparison").waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByRole("button", { name: "Voltar ao catálogo" }).press("Enter");
+    await page.locator(".usage-distributions").waitFor({ state: "visible", timeout: 15_000 });
   } else {
     failures.push(`${viewportName}: a ficha Usage não juntou as capturas de Battle Data e MetaRoll.`);
   }
 
   await page.goto(`${baseUrl}/usage?source=metaroll&pokemon=Garchomp`, { waitUntil: "domcontentloaded" });
-  const metaRollLoaded = await waitForEither(page, ".metaroll-capture-note, .usage-index-error");
+  const metaRollLoaded = await waitForEither(page, ".metaroll-capture-note, .usage-error");
   if (await page.locator(".metaroll-capture-note").count()) {
     await waitForEither(page, ".metaroll-provenance, .usage-error", 35_000);
   }
@@ -1382,7 +1406,7 @@ async function runViewport(viewportName, viewport) {
   await errorPage.goto(`${baseUrl}/usage?source=metaroll`, { waitUntil: "domcontentloaded" });
   await errorPage.route("https://metaroll.app/**", (route) => route.abort()).catch(() => {});
   await errorPage.reload({ waitUntil: "domcontentloaded" });
-  await errorPage.locator(".usage-index-error").waitFor({ state: "visible", timeout: 10_000 });
+  await errorPage.locator(".usage-error").waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(errorPage, viewportName, "usage-metaroll-error");
 
   const megaErrorPage = await context.newPage();
@@ -1908,6 +1932,7 @@ async function runFastViewport(viewportName, viewport) {
     hasTouch: viewport.width < 600,
     reducedMotion: "reduce",
   });
+  if (mobileOnly) await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
 
   for (const screen of selectedQuickPages) {
     const page = await context.newPage();
@@ -1953,7 +1978,33 @@ async function runFastViewport(viewportName, viewport) {
     }
     await page.waitForTimeout(100);
     const headingText = await heading.textContent().catch(() => "");
-    await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: false });
+    await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: mobileOnly && ["home", "builder"].includes(screen) });
+
+    if (mobileOnly) {
+      const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      if (accessibility.violations.length) {
+        accessibilityIssues.push({
+          viewport: viewportName,
+          name: "quick-" + screen + "-first-fold",
+          violations: accessibility.violations.map((issue) => ({
+            id: issue.id,
+            impact: issue.impact,
+            description: issue.description,
+            help: issue.help,
+            nodes: issue.nodes.map((node) => ({ target: node.target, summary: node.failureSummary })),
+          })),
+        });
+      }
+    }
+
+    if (mobileOnly && screen === "home") {
+      const homeOrder = await page.evaluate(() => [".home-hero", ".home-regulation", ".home-usage-preview", ".home-ladder-preview", ".home-community"]
+        .map((selector) => Math.round(document.querySelector(selector)?.getBoundingClientRect().top ?? -1)));
+      observations.push({ mode: "mobile", viewport: viewportName, name: "home-mobile-priority-order", tops: homeOrder });
+      if (homeOrder.some((top) => top < 0) || homeOrder.some((top, index) => index > 0 && top < homeOrder[index - 1])) {
+        failures.push(viewportName + "/home: a home mobile deve ordenar introdução, regulação, Usage, Ladder e comunidade.");
+      }
+    }
 
     await page.keyboard.press("Tab");
     const skipFocus = await page.evaluate(() => {
@@ -2009,13 +2060,34 @@ async function runFastViewport(viewportName, viewport) {
     if (mainControl.overlapsMobileNav) {
       failures.push(viewportName + "/" + screen + ": o foco do conteúdo ficou sob a navegação fixa.");
     }
-    await capture(page, viewportName, "quick-" + screen + "-keyboard-focus", { audit: false, fullPage: false });
-
-    if (screen === "calculator") {
+    if (screen === "calculator" && (!mobileOnly || viewport.width === 390)) {
       try {
         await runQuickCalculatorInteraction(page, viewportName);
       } catch (error) {
         failures.push(viewportName + "/calculator-interaction: " + error.message);
+      }
+    }
+
+    if (mobileOnly && viewport.width === 390 && screen === "builder") {
+      try {
+        await page.locator(".builder-tools-details > summary").click();
+        await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
+        await page.getByRole("button", { name: "Importar texto" }).click();
+        await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+        await capture(page, viewportName, "builder-showdown-imported", { audit: false, fullPage: false });
+        await page.getByRole("button", { name: "Preparar e copiar texto" }).click();
+        const copiedTeam = await page.evaluate(() => navigator.clipboard.readText());
+        if (!copiedTeam.includes("Garchomp @ Life Orb") || !copiedTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe")) {
+          failures.push(viewportName + "/builder: a exportação Showdown não preservou a forma ou os pontos Champions.");
+        }
+        await page.locator("#builder-showdown-input").fill("Pikachu\nEVs: 252 Atk");
+        await page.getByRole("button", { name: "Importar texto" }).click();
+        await page.getByRole("status").filter({ hasText: "excede o limite Champions" }).waitFor({ state: "visible", timeout: 10_000 });
+        if (await page.locator("#active-member-title").innerText() !== "Garchomp") {
+          failures.push(viewportName + "/builder: uma importação inválida substituiu o set existente.");
+        }
+      } catch (error) {
+        failures.push(viewportName + "/builder-showdown: " + error.message);
       }
     }
 
@@ -2170,16 +2242,16 @@ try {
   const fullViewports = [
     ["desktop", { width: 1440, height: 960 }],
     ["tablet-900", { width: 900, height: 960 }],
-    ["mobile", { width: 390, height: 844 }],
-    ["mobile-320", { width: 320, height: 760 }],
-    ["reflow-720", { width: 720, height: 960 }],
   ];
   const quickViewports = [
     ["desktop", { width: 1440, height: 960 }],
-    ["tablet-900", { width: 900, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
   ];
-  const viewports = fastMode ? quickViewports : fullViewports;
+  const mobileViewports = [
+    ["mobile", { width: 390, height: 844 }],
+    ["mobile-320", { width: 320, height: 760 }],
+  ];
+  const viewports = mobileOnly ? mobileViewports : fastMode ? quickViewports : fullViewports;
   for (const [name, viewport] of viewports) {
     try {
       if (fastMode) await runFastViewport(name, viewport);
@@ -2192,13 +2264,15 @@ try {
   const durationMs = Date.now() - reviewStartedAt;
   const report = {
     generatedAt: new Date().toISOString(),
-    mode: fastMode ? "fast-development-subset" : "full-gate",
-    scope: fastMode
+    mode: mobileOnly ? "targeted-mobile" : fastMode ? "fast-development-subset" : "full-desktop-gate",
+    scope: mobileOnly
+      ? "All nine routes at 390 and 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check at 390 px."
+      : fastMode
       ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
-      : "All existing scenarios at four widths, with axe and community flows against SQLite when SPINDA_DB_PATH is set.",
+      : "All existing scenarios at 1440 and 900 CSS px, with axe and community flows against SQLite when SPINDA_DB_PATH is set. Targeted responsive and mobile accessibility checks run separately at 390 and 320 CSS px.",
     durationMs,
     selectedScreens: fastMode ? selectedQuickPages : "all",
-    axeIncluded: !fastMode,
+    axeIncluded: !fastMode || mobileOnly,
     communityApiIncluded: !fastMode && Boolean(process.env.SPINDA_DB_PATH),
     viewports: viewports.map(([name, viewport]) => ({
       name,
