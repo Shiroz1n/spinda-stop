@@ -1295,6 +1295,13 @@ input, select, textarea { font-size: 1rem; }
 }
 
 @media (max-width: 360px) {
+  .site-header { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding-inline: 10px; }
+  .site-header .brand { min-width: 0; gap: 6px; }
+  .site-header .brand-mark { flex: 0 0 32px; width: 32px; height: 32px; }
+  .site-header .brand > span { font-size: 0.58rem; white-space: nowrap; }
+  .header-tools { gap: 4px; }
+  .header-tools .theme-toggle { flex: 0 0 44px; }
+  .header-tools .header-action { padding-inline: 6px; font-size: 1rem; white-space: nowrap; }
   .evolution-list li { grid-template-columns: minmax(0, 1fr); }
   .evolution-list li > a { grid-column: 1; grid-row: auto; }
 }
