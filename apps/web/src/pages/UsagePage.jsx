@@ -430,7 +430,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
     });
 
     return () => { active = false; };
-  }, [provider, selectedShowdownId, usageRequestKey]);
+  }, [provider, selectedShowdownId, usageRequestKey, periodMode, historySeason, historyDays]);
 
   const requestedPokemon = initialPokemonName
     ? findUsagePokemonByReference(catalog, initialPokemonName)
