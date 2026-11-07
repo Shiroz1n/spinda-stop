@@ -8,7 +8,7 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { getNatureForStat, getNatureSpeedClass } from "../data/natures.js";
 import { calculateChampionsSpeed, calculateStandardSpeed, compareSpeed, compareSpeedOrder, minimumTrainingToOutspeed } from "../data/speedTiers.js";
 import { usageProviders } from "../data/usage/registry.js";
-import { getChampionsIndexedPokemon } from "../data/pokemonChampionsRoster.js";
+import { getChampionsIndexedMegaPokemon, getChampionsIndexedPokemon } from "../data/pokemonChampionsRoster.js";
 const bySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
 
 function baseSpeed(pokemon) {
@@ -57,7 +57,9 @@ export function SpeedTiersPage() {
   const navigate = useNavigate();
   const requestedTarget = new URLSearchParams(location.search).get("target") || "";
   const [model, setModel] = useState("champions");
-  const [roster, setRoster] = useState({ status: "loading", pokemon: [] });
+  const [roster, setRoster] = useState({ status: "loading", pokemon: [], index: null });
+  const [megaRoster, setMegaRoster] = useState({ status: "loading", entries: [], season: null });
+  const [includeMegas, setIncludeMegas] = useState(true);
   const [targetSlug, setTargetSlug] = useState(() => bySlug.has(requestedTarget) ? requestedTarget : "");
   const [targetQuery, setTargetQuery] = useState(() => bySlug.get(requestedTarget)?.name || "");
   const [candidateQuery, setCandidateQuery] = useState("");
@@ -69,11 +71,19 @@ export function SpeedTiersPage() {
   useEffect(() => {
     let active = true;
     usageProviders["pokemon-champions-battle-data"].loadIndex()
-      .then((index) => { if (active) setRoster({ status: "ready", pokemon: getChampionsIndexedPokemon(index, dexData.pokemon) }); })
-      .catch(() => { if (active) setRoster({ status: "error", pokemon: [] }); });
+      .then((index) => { if (active) setRoster({ status: "ready", pokemon: getChampionsIndexedPokemon(index, dexData.pokemon), index }); })
+      .catch(() => { if (active) setRoster({ status: "error", pokemon: [], index: null }); });
+    usageProviders.metaroll.loadMegas()
+      .then((data) => { if (active) setMegaRoster({ status: "ready", entries: data.entries, season: data.season }); })
+      .catch(() => { if (active) setMegaRoster({ status: "error", entries: [], season: null }); });
     return () => { active = false; };
   }, []);
-  const availablePokemon = model === "champions" ? roster.pokemon : dexData.pokemon;
+  const megaPokemon = useMemo(() => roster.index && megaRoster.status === "ready"
+    ? getChampionsIndexedMegaPokemon(roster.index, dexData.pokemon, megaRoster.entries)
+    : [], [roster.index, megaRoster.entries, megaRoster.status]);
+  const availablePokemon = useMemo(() => model === "champions"
+    ? [...roster.pokemon, ...(includeMegas ? megaPokemon : [])]
+    : dexData.pokemon, [model, roster.pokemon, megaPokemon, includeMegas]);
   const availableSlugs = useMemo(() => new Set(availablePokemon.map((pokemon) => pokemon.slug)), [availablePokemon]);
   const selectedTarget = availableSlugs.has(targetSlug) ? bySlug.get(targetSlug) || null : null;
   const targetOptions = useMemo(() => {
@@ -131,6 +141,15 @@ export function SpeedTiersPage() {
     setModel(nextModel);
     setVisibleCount(90);
   }
+  function toggleMegas(checked) {
+    setIncludeMegas(checked);
+    if (!checked && bySlug.get(targetSlug)?.formId.startsWith("mega")) {
+      setTargetSlug("");
+      setTargetQuery("");
+      navigate("/speed-tiers", { replace: true });
+    }
+    setVisibleCount(90);
+  }
 
   return (
     <div className="page-wrap speed-page">
@@ -182,7 +201,14 @@ export function SpeedTiersPage() {
               <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />
             </div>
           </details>
-          <div className="speed-results-toolbar"><div><strong>{ranked.length.toLocaleString("pt-BR")}</strong> {model === "champions" ? "entradas no índice Doubles" : "entradas no catálogo"}</div><label>Buscar na lista <input className="text-input" value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setVisibleCount(90); }} placeholder="Espécie ou forma" /></label></div>
+          <div className="speed-results-toolbar">
+            <div><strong>{ranked.length.toLocaleString("pt-BR")}</strong> {model === "champions" ? "entradas no índice Doubles" : "entradas no catálogo"}</div>
+            <div className="speed-results-options">
+              <label className="speed-candidate-search">Buscar na lista <input className="text-input" value={candidateQuery} onChange={(event) => { setCandidateQuery(event.target.value); setVisibleCount(90); }} placeholder="Espécie ou forma" /></label>
+              {model === "champions" && <label className="speed-mega-toggle"><input type="checkbox" checked={includeMegas} disabled={megaRoster.status !== "ready"} onChange={(event) => toggleMegas(event.target.checked)} /><span>Incluir Megas</span>{megaRoster.status === "ready" && <small>{megaPokemon.length}</small>}</label>}
+            </div>
+          </div>
+          {model === "champions" && megaRoster.status === "error" && <p className="speed-mega-unavailable" role="status">As formas Mega não estão disponíveis agora.</p>}
           <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
           <div className="speed-results-list" aria-live="polite">
             {visibleRows.map(({ pokemon, value, relation, order, required, favorableRequired, favorableNature }) => (
@@ -202,7 +228,7 @@ export function SpeedTiersPage() {
           {visibleCount < ranked.length ? <button className="button button-outline speed-load-more" type="button" onClick={() => setVisibleCount((count) => Math.min(ranked.length, count + 90))}>Mostrar mais {Math.min(90, ranked.length - visibleCount)}</button> : <p className="speed-end">Fim da lista · {ranked.length.toLocaleString("pt-BR")} entradas</p>}
         </>
       )}
-      <details className="speed-about"><summary>Sobre o cálculo e os dados</summary><p>Champions usa o índice atual de Doubles do Pokémon Champions Battle Data; a lista não é uma confirmação oficial de legalidade. O cálculo usa nível 50, base, Stat Points e Nature. Trick Room inverte a ordem; outros efeitos de batalha não entram. O tier calculado não é ranking de uso.</p><p>Outros jogos usam base, IV, EV e nível como hipótese. Espécies e formas vêm da PokéAPI.</p></details>
+      <details className="speed-about"><summary>Sobre o cálculo e os dados</summary><p>Champions usa o índice atual de Doubles. As Megas adicionadas vêm dos registros de Doubles publicados pela MetaRoll{megaRoster.season ? ` (${megaRoster.season})` : ""}, limitadas a espécies presentes no índice. A lista não confirma legalidade oficial. O cálculo usa nível 50, base, Stat Points e Nature; Trick Room inverte a ordem, sem outros efeitos de batalha.</p><p>Outros jogos usam base, IV, EV e nível como hipótese. Espécies e formas vêm da PokéAPI.</p></details>
     </div>
   );
 }

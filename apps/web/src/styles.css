@@ -1174,6 +1174,11 @@ h1 { font-size: clamp(1.8rem, 2.7vw, 2.5rem); letter-spacing: -0.035em; }
 .speed-results-toolbar strong { color: var(--ink); }
 .speed-results-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; font-weight: 800; }
 .speed-results-toolbar input { width: min(320px, 42vw); min-height: 38px; }
+.speed-results-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 8px 14px; }
+.speed-results-toolbar .speed-mega-toggle { min-height: 44px; font-size: 1rem; }
+.speed-mega-toggle input { width: 18px; min-height: 18px; accent-color: var(--blue-dark); }
+.speed-mega-toggle small { color: var(--muted); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.speed-mega-unavailable { margin: -2px 0 8px; color: var(--muted); }
 .speed-results-head, .speed-result-row { display: grid; grid-template-columns: minmax(270px, 1.5fr) 74px minmax(120px, 0.7fr) minmax(150px, 0.8fr); align-items: center; gap: 10px; }
 .speed-results-head { padding: 7px 12px; border-bottom: 2px solid var(--blue-dark); color: var(--muted); font-size: 0.7rem; font-weight: 850; text-transform: uppercase; }
 .speed-result-row { min-height: 68px; padding: 6px 12px; border-bottom: 1px solid #b6c9bd; background: rgb(255 253 241 / 55%); }
@@ -2730,6 +2735,9 @@ a { color: var(--blue-dark); }
 .speed-setting-field > span { color: var(--muted); }
 .speed-results-toolbar { padding: 9px 0 6px; }
 .speed-results-toolbar input { min-height: 38px; }
+.speed-results-options { min-width: 0; }
+.speed-results-toolbar .speed-candidate-search { min-width: 0; }
+.speed-results-toolbar .speed-mega-toggle { justify-content: flex-start; }
 .speed-result-row { border-bottom-color: var(--line); background: var(--surface); }
 .speed-result-row.is-faster { border-left-color: var(--green); }
 .speed-result-row.is-tie { background: var(--selection); }
@@ -2977,6 +2985,8 @@ a { color: var(--blue-dark); }
   .speed-results-toolbar { align-items: stretch; flex-direction: column; gap: 6px; }
   .speed-results-toolbar label { display: grid; }
   .speed-results-toolbar input { width: 100%; }
+  .speed-results-options { display: grid; justify-content: stretch; }
+  .speed-results-toolbar .speed-mega-toggle { display: flex; }
   .speed-results-head { display: none; }
   .speed-result-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
   .speed-result-pokemon { grid-column: 1 / -1; }

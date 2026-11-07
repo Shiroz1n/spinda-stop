@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { importShowdownTeam } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
-import { PokemonSprite } from "./PokemonSprite.jsx";
+import { ItemSprite, PokemonSprite } from "./PokemonSprite.jsx";
+import { TypeTag } from "./TypeTag.jsx";
 import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 
 const pokemonBySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
@@ -89,9 +90,22 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
           {paste?.status === "loading" && <p role="status">Carregando paste…</p>}
           {paste?.status === "error" && <p role="status">{paste.message}</p>}
           {paste?.status === "ready" && <>
-            <ul>{paste.team.members.filter(Boolean).map((member) => {
+            <ul className="builder-public-set-grid" aria-label={`Sets da equipe de ${team.player || "jogador"}`}>{paste.team.members.filter(Boolean).map((member) => {
               const entry = pokemonBySlug.get(member.pokemonId);
-              return <li key={member.pokemonId}><strong>{entry?.name || member.pokemonId}</strong><span>{[member.item, member.ability, member.nature].filter(Boolean).join(" · ") || "Set parcial"}</span><small>{member.moves.filter(Boolean).join(" · ") || "Sem golpes publicados"}</small></li>;
+              const moves = member.moves.filter(Boolean);
+              return <li className="builder-public-set-card" key={member.pokemonId}>
+                <div className="builder-public-set-heading">
+                  {entry ? <PokemonSprite pokemon={entry} name={entry.name} size={44} decorative /> : <span className="builder-public-fallback" aria-hidden="true">?</span>}
+                  <div><strong>{entry?.name || member.pokemonId}</strong>{entry?.types?.length ? <span className="type-list">{entry.types.map((type) => <TypeTag key={type} type={type} />)}</span> : null}</div>
+                </div>
+                <div className="builder-public-set-columns">
+                  <div className="builder-public-set-equipment">
+                    {member.ability ? <div><small>Habilidade</small><strong>{member.ability}</strong></div> : null}
+                    {member.item ? <div><small>Item</small><strong><ItemSprite name={member.item} size={24} />{member.item}</strong></div> : null}
+                  </div>
+                  <div className="builder-public-set-moves"><small>Golpes</small>{moves.length ? <ol>{moves.map((move, index) => <li key={`${index}-${move}`}>{move}</li>)}</ol> : <span>Não publicados</span>}</div>
+                </div>
+              </li>;
             })}</ul>
             {paste.warnings.length > 0 && <ul className="builder-public-warnings">{paste.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
             {matchingMember && <button className="button button-primary button-small" type="button" onClick={() => applySet(team)}>Aplicar set de {selectedPokemon.name}</button>}
