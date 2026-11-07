@@ -414,6 +414,29 @@ async function runViewport(viewportName, viewport) {
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.locator(".home-hero").waitFor({ state: "visible", timeout: 10_000 });
   await page.getByRole("heading", { name: "Prepare seu próximo time.", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  if (viewport.width <= 360) {
+    const headerLayout = await page.evaluate(() => {
+      const brand = document.querySelector(".site-header .brand").getBoundingClientRect();
+      const tools = document.querySelector(".header-tools").getBoundingClientRect();
+      const theme = document.querySelector(".header-tools .theme-toggle").getBoundingClientRect();
+      const action = document.querySelector(".header-tools .header-action");
+      const actionRect = action.getBoundingClientRect();
+      const actionText = document.createRange();
+      actionText.selectNodeContents(action);
+      return {
+        brandRight: brand.right,
+        toolsLeft: tools.left,
+        themeWidth: theme.width,
+        themeHeight: theme.height,
+        actionHeight: actionRect.height,
+        actionTextLines: actionText.getClientRects().length,
+      };
+    });
+    observations.push({ viewport: viewportName, name: "narrow-header-layout", ...headerLayout });
+    if (headerLayout.brandRight > headerLayout.toolsLeft + 1 || headerLayout.themeWidth < 44 || headerLayout.themeHeight < 44 || headerLayout.actionHeight < 44 || headerLayout.actionTextLines > 1) {
+      failures.push(`${viewportName}: marca e controles do cabeçalho devem caber sem sobreposição e manter área touch de 44 px.`);
+    }
+  }
   if (viewportName === "desktop") {
     const declaredFavicon = await page.locator('link[rel="icon"]').getAttribute("href");
     assert.equal(declaredFavicon, spindaFaviconUrl, "favicon deve usar a mesma URL versionada do sprite Spinda Black/White");

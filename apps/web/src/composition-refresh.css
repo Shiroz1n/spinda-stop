@@ -1297,7 +1297,7 @@ input, select, textarea { font-size: 1rem; }
 @media (max-width: 360px) {
   .site-header { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding-inline: 10px; }
   .site-header .brand { min-width: 0; gap: 6px; }
-  .site-header .brand-mark { flex: 0 0 32px; width: 32px; height: 32px; }
+  .site-header .brand-mark { --sprite-size: 32px !important; flex: 0 0 32px; width: 32px; height: 32px; min-width: 32px; }
   .site-header .brand > span { font-size: 0.58rem; white-space: nowrap; }
   .header-tools { gap: 4px; }
   .header-tools .theme-toggle { flex: 0 0 44px; }
