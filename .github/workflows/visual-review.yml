@@ -34,8 +34,15 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run api:migrate
+        if: github.event_name == 'workflow_dispatch'
       - run: npm run visual:review
+        if: github.event_name == 'workflow_dispatch'
       - run: npm run visual:review:mobile
+        if: github.event_name == 'workflow_dispatch'
+      - run: npm run visual:review:fast
+        if: github.event_name == 'pull_request'
+      - run: npm run visual:review:mobile -- --pages=home,usage,builder
+        if: github.event_name == 'pull_request'
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -43,4 +50,5 @@ jobs:
           path: |
             artifacts/visual-review/
             artifacts/visual-review-mobile/
+            artifacts/visual-review-fast/
           retention-days: 14
