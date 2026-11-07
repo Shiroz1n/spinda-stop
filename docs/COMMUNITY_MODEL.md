@@ -56,8 +56,8 @@ SQLite não implementa usuários/GRANTs separados para a API e as migrações. O
 |---|---|---|
 | `GET /api/auth/status`, `GET /api/auth/github`, callback e `POST /api/auth/logout` | Público ou usuário atual | OAuth do GitHub e sessão |
 | `GET /api/me` | Público | Descobrir sessão sem expor token |
-| `/api/teams` | Dono | Salvar, listar, editar visibilidade e excluir cópias |
-| `GET /api/teams/public` | Público | Listar equipes que o dono publicou explicitamente |
+| `/api/teams` | Dono | Salvar, listar resumos paginados, carregar detalhe, editar visibilidade e excluir cópias |
+| `GET /api/teams/public` | Público | Listar resumos paginados de equipes publicadas; `GET /api/teams/public/:id` carrega o detalhe público |
 | `/api/rooms`, `/api/rooms/join` | Usuário autenticado | Listar salas próprias, criar ou entrar por convite |
 | `/api/rooms/:id/*` | Membro ou host, conforme a ação | Check-in, convite, início, código de amizade, compartilhar/remover equipe e cancelamento |
 | `/api/tournaments`, `/api/tournaments/join` | Usuário autenticado | Listar, criar ou entrar em torneio privado por convite |
@@ -66,6 +66,8 @@ SQLite não implementa usuários/GRANTs separados para a API e as migrações. O
 | `/api/moderation/disputes*` | Moderador | Revisar e decidir contestações |
 
 As ações mutáveis exigem `Origin` igual a `APP_ORIGIN`. A API não habilita CORS. Convite usa token aleatório no fragmento (`#...`) da URL, que o navegador não envia no pedido da página; o hash é removido e o token fica somente na aba até o login terminar. A API não registra corpo, cookie ou URL de pedido.
+
+As listas de equipes aceitam `limit` (padrão 20, máximo 50) e `offset`, e retornam metadados com até seis IDs de Pokémon; o payload completo só é enviado pelo endpoint de detalhe. Os resumos privados continuam limitados ao dono e detalhes privados consultam ID e dono no banco. O endpoint público só retorna equipes cuja visibilidade esteja explicitamente pública. A busca de paste público tem um limite por endereço no processo; em Vercel esse limite é local a cada instância e não substitui um limite global de infraestrutura.
 
 ## Autenticação e operação
 

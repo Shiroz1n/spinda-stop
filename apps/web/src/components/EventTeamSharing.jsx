@@ -26,6 +26,7 @@ export function SharedTeamPreview({ roster, ownerName }) {
 
 export function EventTeamSharing({ eventId, eventType, sharedRoster, onSaved }) {
   const [teams, setTeams] = useState([]);
+  const [nextOffset, setNextOffset] = useState(null);
   const [selectedId, setSelectedId] = useState("");
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -34,9 +35,10 @@ export function EventTeamSharing({ eventId, eventType, sharedRoster, onSaved }) 
 
   useEffect(() => {
     let active = true;
-    communityRequest("/teams").then(({ teams: savedTeams }) => {
+    communityRequest("/teams?limit=20").then(({ teams: savedTeams, nextOffset: next }) => {
       if (!active) return;
-      setTeams(savedTeams.filter((team) => team.data?.members?.some(Boolean)));
+      setTeams(savedTeams.filter((team) => team.memberCount > 0));
+      setNextOffset(next ?? null);
       setStatus("ready");
     }).catch((caught) => {
       if (!active) return;
@@ -45,6 +47,21 @@ export function EventTeamSharing({ eventId, eventType, sharedRoster, onSaved }) 
     });
     return () => { active = false; };
   }, []);
+
+  async function loadMoreTeams() {
+    if (nextOffset === null || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const page = await communityRequest(`/teams?limit=20&offset=${nextOffset}`);
+      setTeams((current) => [...current, ...page.teams.filter((team) => team.memberCount > 0)]);
+      setNextOffset(page.nextOffset ?? null);
+    } catch (caught) {
+      setError(caught.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function shareTeam(event) {
     event.preventDefault();
@@ -82,7 +99,7 @@ export function EventTeamSharing({ eventId, eventType, sharedRoster, onSaved }) 
       </div>
       {status === "loading" ? <p className="form-hint" role="status">Carregando equipes salvas…</p> : null}
       {status === "error" ? <p className="community-inline-error" role="alert">{error}</p> : null}
-      {status === "ready" && teams.length === 0 ? <p className="form-hint">Salve uma equipe no <Link to="/builder">Construtor</Link> para compartilhar os Pokémon.</p> : null}
+      {status === "ready" && teams.length === 0 ? <p className="form-hint">Salve uma equipe com Pokémon no <Link to="/builder">Construtor</Link> para compartilhar a escalação.</p> : null}
       {status === "ready" && teams.length > 0 ? (
         <form className="event-team-sharing-controls" onSubmit={shareTeam}>
           <label className="community-field" htmlFor={`shared-team-${eventId}`}>
@@ -96,6 +113,7 @@ export function EventTeamSharing({ eventId, eventType, sharedRoster, onSaved }) 
           {sharedRoster ? <button className="text-button" type="button" disabled={busy} onClick={stopSharing}>Parar de compartilhar</button> : null}
         </form>
       ) : null}
+      {status === "ready" && nextOffset !== null ? <button className="button button-outline button-small" type="button" disabled={busy} onClick={loadMoreTeams}>Carregar mais equipes</button> : null}
       {error && status !== "error" ? <p className="community-inline-error" role="alert">{error}</p> : null}
     </section>
   );
