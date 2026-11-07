@@ -579,8 +579,8 @@ export function BuilderPage() {
               <div className="builder-speed-action"><span>{recommendationText} · {remainingText}</span>{favorableNatureText && <small className="builder-speed-favorable-note">{favorableNatureText}</small>}<button className="button button-outline button-small" type="button" onClick={() => applySpeedPreview(index)} disabled={!appliedSpread.ok} aria-disabled={!appliedSpread.ok}>Aplicar ao set</button>{!appliedSpread.ok && <small role="status">{appliedSpread.error}</small>}</div>
             </article>;
           })}
-        </div> : <div className="builder-speed-hint">A prévia é separada dos sets. SP e nature só mudam a equipe ao usar “Aplicar ao set”. IV não entra neste modelo Champions. <details><summary>Sobre os limites</summary><span>Esta prévia aceita até 32 SP em Speed e confere o orçamento de 66 SP do set antes de salvar. A referência é um formato comunitário e não confirma regras oficiais.</span></details></div>}
-        {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva · Trick Room muda ordem de atuação, não Speed bruta. <details><summary>Sobre o modelo</summary><span>Fórmula Champions no nível 50 conforme o modelo do @smogon/calc. Boosts, Tailwind, paralisia, itens e habilidades ficam fora desta comparação. Aplicar uma natureza nova também pode alterar outros stats do set.</span></details></div>}
+        </div> : <div className="builder-speed-hint">Prévia separada do set; use “Aplicar ao set” para salvar SP e Nature.</div>}
+        {speedTargetPokemon && <div className="builder-speed-hint">Prévia não salva; use “Aplicar ao set” para gravar as mudanças. Trick Room altera a ordem, não a Speed exibida.</div>}
       </section>
 
       <details className="builder-tools-details">
@@ -609,10 +609,10 @@ export function BuilderPage() {
       </details>
 
       <details className="builder-rules-details">
-        <summary>Limites deste rascunho</summary>
+        <summary>Sobre cálculo e validação</summary>
         <div className="rules-warning" role="note">
           <span className="warning-mark">Regras</span>
-          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de pontos investidos.</p>
+          <p>Speed usa o modelo nível 50 com até 32 SP por atributo e 66 no set; IVs, boosts, clima, itens, habilidades e Tailwind ficam fora. O editor não confirma regulamento nem legalidade.</p>
         </div>
       </details>
 

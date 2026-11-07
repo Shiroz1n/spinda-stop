@@ -58,7 +58,7 @@
 .detail-grid { grid-template-columns: 1.15fr 0.85fr; gap: 24px; margin-top: 24px; }
 .detail-panel { padding: 0 18px 12px; border: 0; border-top: 1px solid #a61020; border-radius: 0; background: transparent; }
 .stat-list { gap: 9px; }
-.stat-row { grid-template-columns: 52px minmax(0, 1fr) 44px; gap: 10px; font-size: 0.88rem; }
+.stat-row { grid-template-columns: minmax(96px, 0.48fr) minmax(0, 1fr) 44px; gap: 10px; font-size: 1rem; }
 .stat-track { height: 10px; border-radius: 0; background: #d1cec7; }
 .stat-track > span { border-radius: 0; background: #5d8d62; }
 .stat-row:last-child .stat-track > span { background: #a61020; }
@@ -1244,6 +1244,11 @@ input, select, textarea { font-size: 1rem; }
     border-color: var(--focus);
     background-color: color-mix(in srgb, var(--blue) 12%, var(--surface));
     color: var(--ink);
+  }
+  :root[data-theme="dark"] .app-shell .picker-result:hover {
+    border-color: var(--focus);
+    background-color: color-mix(in srgb, var(--blue) 12%, var(--surface));
+    box-shadow: 2px 2px 0 var(--focus);
   }
 }
 

@@ -1364,22 +1364,31 @@ async function runViewport(viewportName, viewport) {
   if (await profileTabs.count()) {
     await profileTabs.nth(1).click();
     await safeCapture(page, viewportName, "usage-metaroll-category", { audit: true, fullPage: false });
+    await profileTabs.first().click();
   }
   if (metaRollLoaded && await page.locator(".metaroll-capture-note").count()) {
     const teammateCard = page.locator(".metaroll-profile-summary .metaroll-card").filter({ hasText: "Parceiros" }).first();
     const teammateRows = teammateCard.locator(".metaroll-list-row");
     if (await teammateRows.count()) {
-      const missingPercentage = teammateRows.first().locator(".metaroll-row-percent.is-missing");
-      if (!await missingPercentage.count()) {
-        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
-      } else if (await missingPercentage.innerText() !== "—" || await missingPercentage.getAttribute("aria-label") !== "Percentual não informado") {
-        failures.push(`${viewportName}: parceiros MetaRoll devem identificar percentual ausente sem inventar valor.`);
+      if (await teammateRows.count() > 2 || await teammateCard.locator(".metaroll-row-percent").count()) {
+        failures.push(`${viewportName}: o resumo de parceiros deve mostrar somente posições, sem percentuais.`);
+      }
+      const partnerRanks = await teammateRows.locator(".metaroll-row-rank").allTextContents();
+      if (partnerRanks.length !== await teammateRows.count() || partnerRanks.some((rank) => !/^#\d+$/.test(rank.trim()))) {
+        failures.push(`${viewportName}: cada parceiro do resumo deve ter uma posição publicada.`);
       }
       if (viewport.width <= 360) {
         const identityWidth = await teammateRows.first().locator(".metaroll-row-identity").evaluate((element) => element.getBoundingClientRect().width);
         if (identityWidth < 80) failures.push(`${viewportName}: o nome do parceiro perde espaço no cartão estreito do MetaRoll.`);
       }
     }
+    await page.getByRole("button", { name: "Parceiros", exact: true }).click();
+    const fullPartnerCard = page.locator(".metaroll-profile-grid .metaroll-card").filter({ hasText: "Parceiros" }).first();
+    const fullPartnerRows = fullPartnerCard.locator(".metaroll-list-row");
+    if (await fullPartnerRows.count() > 15 || await fullPartnerCard.locator(".metaroll-row-percent").count()) {
+      failures.push(`${viewportName}: a lista completa deve limitar parceiros ranqueados a 15 e omitir percentuais.`);
+    }
+    await profileTabs.first().click();
     await waitForEither(page, ".metaroll-mega-list, .metaroll-mega-card .usage-error, .metaroll-mega-card .metaroll-empty", 35_000);
     if (await page.locator(".metaroll-mega-list").count()) {
       const megaText = await page.locator(".metaroll-mega-list").innerText();
@@ -2059,6 +2068,44 @@ async function runFastViewport(viewportName, viewport) {
     }
     if (mainControl.overlapsMobileNav) {
       failures.push(viewportName + "/" + screen + ": o foco do conteúdo ficou sob a navegação fixa.");
+    }
+    if (screen === "builder") {
+      try {
+        await page.locator(".team-slot").first().click();
+        const search = page.locator("#species-search");
+        await search.fill("charizard");
+        const results = page.locator(".species-dialog .picker-result");
+        await results.first().waitFor({ state: "visible", timeout: 5_000 });
+        const rows = await results.evaluateAll((buttons) => buttons.map((button) => {
+          const bounds = button.getBoundingClientRect();
+          const parts = [...button.querySelectorAll(".pokemon-art, .dex-number, .picker-name, .type-list, .type-tag")];
+          return {
+            name: button.querySelector(".picker-name")?.textContent?.trim() || "",
+            horizontalOverflow: button.scrollWidth > button.clientWidth + 1,
+            outOfBounds: parts.some((part) => {
+              const rect = part.getBoundingClientRect();
+              return rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
+            }),
+            unwrappedName: (() => {
+              const name = button.querySelector(".picker-name");
+              return Boolean(name && name.scrollWidth > name.clientWidth + 1);
+            })(),
+          };
+        }));
+        if (rows.some((row) => row.horizontalOverflow || row.outOfBounds || row.unwrappedName)) {
+          failures.push(`${viewportName}/builder: um resultado do seletor ultrapassou sua caixa ou cortou o nome.`);
+        }
+        if (!rows.some((row) => row.name.length >= 16)) {
+          failures.push(`${viewportName}/builder: a busca de Charizard não expôs uma forma longa para validar o layout.`);
+        }
+        await search.press("Tab");
+        const firstResultFocused = await page.evaluate(() => document.activeElement?.matches(".species-dialog .picker-result") || false);
+        if (!firstResultFocused) failures.push(`${viewportName}/builder: o primeiro resultado não recebeu foco pelo teclado após o campo de busca.`);
+        await page.keyboard.press("Enter");
+        await page.locator(".species-dialog").waitFor({ state: "hidden", timeout: 5_000 });
+      } catch (error) {
+        failures.push(`${viewportName}/builder-species-picker: ${error.message}`);
+      }
     }
     if (screen === "calculator" && (!mobileOnly || viewport.width === 390)) {
       try {

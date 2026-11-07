@@ -60,19 +60,23 @@ function displayPercent(value) {
   return Number.isFinite(value) ? value + "%" : "não informado";
 }
 
-function DistributionCard({ title, rows, spread = false, note = "", pokemonRows = false }) {
+function DistributionCard({ title, rows, spread = false, pokemonRows = false, rowLimit = Infinity }) {
+  const visibleRows = pokemonRows
+    ? rows.filter((row) => row.name?.trim() && Number.isInteger(row.rank) && row.rank > 0).sort((left, right) => left.rank - right.rank).slice(0, rowLimit)
+    : rows.slice(0, rowLimit);
+
   return (
     <section className="metaroll-card">
       <div className="metaroll-card-heading">
         <h3>{title}</h3>
-        <span>{rows.length}</span>
+        <span>{visibleRows.length}</span>
       </div>
-      {note ? <p className="metaroll-card-note">{note}</p> : null}
-      {rows.length === 0 ? (
-        <p className="metaroll-empty">A fonte não publicou valores nesta categoria.</p>
+      {spread ? <p className="metaroll-card-note">Pontos por atributo, não stats finais nem EVs.</p> : null}
+      {visibleRows.length === 0 ? (
+        <p className="metaroll-empty">{pokemonRows ? "Esta captura não traz parceiros ranqueados." : "A fonte não publicou valores nesta categoria."}</p>
       ) : (
         <ol className="metaroll-list">
-          {rows.map((row, index) => {
+          {visibleRows.map((row, index) => {
             const hasBar = Number.isFinite(row.percentageValue);
             const barWidth = hasBar ? Math.max(0, Math.min(100, row.percentageValue)) + "%" : "0%";
             return (
@@ -94,15 +98,15 @@ function DistributionCard({ title, rows, spread = false, note = "", pokemonRows 
                       <strong>{row.name || "Nome não informado"}</strong>
                     </span>
                   )}
-                  <b
+                  {!pokemonRows ? <b
                     className={hasBar ? "metaroll-row-percent" : "metaroll-row-percent is-missing"}
                     aria-label={hasBar ? undefined : "Percentual não informado"}
                     title={hasBar ? undefined : "Percentual não informado"}
                   >
                     {hasBar ? displayPercent(row.percentageValue) : "—"}
-                  </b>
+                  </b> : null}
                 </div>
-                {hasBar ? <div className="usage-bar-track" aria-hidden="true"><span style={{ width: barWidth }} /></div> : null}
+                {hasBar && !pokemonRows ? <div className="usage-bar-track" aria-hidden="true"><span style={{ width: barWidth }} /></div> : null}
               </li>
             );
           })}
@@ -559,7 +563,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = 
                     <div className="usage-provenance usage-provenance-inline metaroll-provenance">
                       <span><strong>Temporada {entryCapture?.season || "não informada"}</strong> · captura {formatCapture(entryCapture?.capturedAt)}</span>
                       <span>Consultado {formatCapture(entryCapture?.appFetchedAt)}</span>
-                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Pontos investidos não são stats finais nem EVs; a fonte não associa cada spread a uma natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
+                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Distribuições e posições seguem a captura selecionada. A fonte não informa o tamanho da amostra; pontos investidos não são stats finais nem EVs.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
                     </div>
                     <div className="metaroll-rank-summary">
                       <div><span>Posição nesta captura</span><strong>#{entry.rank ?? "não informada"}</strong></div>
@@ -581,14 +585,14 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = 
                     {activeProfileSection === "summary" ? (
                       <div className="metaroll-profile-grid metaroll-profile-summary">
                         {distributionSections.filter(([key]) => ["moves", "items", "abilities", "teammates"].includes(key)).map(([key, label]) => (
-                          <DistributionCard key={key} title={label} rows={entry.distributions[key].slice(0, 2)} pokemonRows={key === "teammates"} note={key === "teammates" ? "Sem percentual publicado." : ""} />
+                          <DistributionCard key={key} title={label} rows={entry.distributions[key]} rowLimit={2} pokemonRows={key === "teammates"} />
                         ))}
                       </div>
                     ) : null}
 
                     {distributionSections.some(([key]) => key === activeProfileSection) ? (() => {
                       const [key, label] = distributionSections.find(([sectionKey]) => sectionKey === activeProfileSection);
-                      return <div className="metaroll-profile-grid"><DistributionCard title={label} rows={entry.distributions[key]} spread={key === "spreads"} pokemonRows={key === "teammates"} note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Pontos investidos por atributo, não os stats finais. O set distribui até 66 pontos, com até 32 por atributo; não há natureza associada ao spread." : ""} /></div>;
+                      return <div className="metaroll-profile-grid"><DistributionCard title={label} rows={entry.distributions[key]} rowLimit={key === "teammates" ? 15 : Infinity} spread={key === "spreads"} pokemonRows={key === "teammates"} /></div>;
                     })() : null}
 
                     {activeProfileSection === "mega" ? <MegaFormsCard

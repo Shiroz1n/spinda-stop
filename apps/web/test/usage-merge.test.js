@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeCategoryRows, mergeUsageCatalog } from "../src/data/usage/mergeUsageData.js";
+import { mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../src/data/usage/mergeUsageData.js";
 
 const resolvePokemon = ({ id, name }) => {
   const key = String(id || name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -116,6 +116,36 @@ test("orders unmatched distributions after the preferred capture without compari
 
   assert.deepEqual(rows.map((row) => row.name), ["Close Combat", "Protect"]);
   assert.equal(rows[1].selectedSource, "battleData");
+});
+
+test("shows up to 15 partner ranks from one capture and falls back only when the preferred capture has none", () => {
+  const rows = Array.from({ length: 18 }, (_, index) => ({
+    name: `Partner ${index + 1}`,
+    selectedSource: "metaRoll",
+    selected: { rank: index + 1 },
+    observations: {
+      metaRoll: { source: "metaRoll", rank: index + 1 },
+      battleData: { source: "battleData", rank: 18 - index },
+    },
+  }));
+  rows.push(
+    { name: "No published rank", observations: { metaRoll: { rank: null }, battleData: { rank: null } } },
+    { name: "Zero is not a position", observations: { metaRoll: { rank: 0 }, battleData: { rank: 0 } } },
+    { name: "", observations: { metaRoll: { rank: 1 }, battleData: { rank: 1 } } },
+  );
+
+  const metaRollPartners = selectRankedPartnerRows(rows);
+  assert.equal(metaRollPartners.length, 15);
+  assert.deepEqual(metaRollPartners.map((row) => row.selected.rank), Array.from({ length: 15 }, (_, index) => index + 1));
+  assert.ok(metaRollPartners.every((row) => row.selectedSource === "metaRoll"));
+
+  const battleOnly = rows.map((row) => ({
+    ...row,
+    observations: { metaRoll: { rank: null }, battleData: row.observations.battleData },
+  }));
+  const battlePartners = selectRankedPartnerRows(battleOnly);
+  assert.ok(battlePartners.every((row) => row.selectedSource === "battleData"));
+  assert.deepEqual(battlePartners.map((row) => row.selected.rank), Array.from({ length: 15 }, (_, index) => index + 1));
 });
 
 test("keeps whichever catalog responded when the other index failed", () => {

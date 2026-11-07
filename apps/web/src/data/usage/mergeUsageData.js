@@ -96,6 +96,19 @@ function mergeCategoryRows({ battleRows = [], metaRows = [], categoryId, formats
   });
 }
 
+function selectRankedPartnerRows(rows, preferredSource = "metaRoll") {
+  const fallbackSource = preferredSource === "metaRoll" ? "battleData" : "metaRoll";
+  const hasPosition = (row, source) => row.name?.trim() && Number.isInteger(row.observations?.[source]?.rank) && row.observations[source].rank > 0;
+  const hasRankedRows = (source) => rows.some((row) => hasPosition(row, source));
+  const source = hasRankedRows(preferredSource) ? preferredSource : fallbackSource;
+
+  return rows
+    .filter((row) => hasPosition(row, source))
+    .map((row) => ({ ...row, selectedSource: source, selected: row.observations[source] }))
+    .sort((left, right) => left.selected.rank - right.selected.rank)
+    .slice(0, 15);
+}
+
 export function mergeUsageCatalog(battleIndex, metaRollIndex, resolvePokemon, activeFormat = "doubles") {
   const entries = new Map();
   const add = (entry, source, indexData) => {
@@ -153,4 +166,4 @@ export function mergeUsageCatalog(battleIndex, metaRollIndex, resolvePokemon, ac
     : entry);
 }
 
-export { mergeCategoryRows };
+export { mergeCategoryRows, selectRankedPartnerRows };

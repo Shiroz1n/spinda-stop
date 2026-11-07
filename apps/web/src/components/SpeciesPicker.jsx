@@ -68,7 +68,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
               key={entry.slug}
               onClick={() => { setQuery(""); onChoose(entry); }}
             >
-              <PokemonSprite pokemon={entry} name={entry.name} size={56} decorative />
+              <PokemonSprite pokemon={entry} name={entry.name} size={48} decorative />
               <span className="dex-number">#{String(entry.speciesId).padStart(4, "0")}</span>
               <span className="picker-name">{entry.name}</span>
               <span className="type-list">

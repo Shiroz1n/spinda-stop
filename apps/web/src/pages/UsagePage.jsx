@@ -7,7 +7,7 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
-import { mergeCategoryRows, mergeUsageCatalog } from "../data/usage/mergeUsageData.js";
+import { mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -89,6 +89,7 @@ function CategoryRow({ row, category }) {
   const percentage = observation?.percentageValue !== null && observation?.percentageValue !== undefined
     ? `${observation.percentageValue}%`
     : observation?.percentage || null;
+  const partnerRank = category.id === "teammate" ? observation?.rank : null;
   const sourceLabel = observation?.source === "metaRoll" ? "MetaRoll" : "Pokémon Champions Battle Data";
   const capturedAt = observation?.source === "battleData"
     ? formatSnapshotDate(observation.capturedAt)
@@ -119,8 +120,10 @@ function CategoryRow({ row, category }) {
             </div>
           )}
         </div>
-        <div className="usage-merged-values" aria-label="Percentual publicado">
-          <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual não informado"} · ${provenance}`} title={provenance}>{percentage ?? "Não informado"}</span>
+        <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
+          {category.id === "teammate"
+            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>#{partnerRank}</span>
+            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual não informado"} · ${provenance}`} title={provenance}>{percentage ?? "Não informado"}</span>}
         </div>
       </div>
     </li>
@@ -190,7 +193,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
       {entry && detail.status === "error" ? <div className="usage-error" role="alert"><p>Os dados complementares desta espécie não responderam.</p><button className="button button-outline button-small" type="button" onClick={() => { forceNextRequest.current = true; setRetry((current) => current + 1); }}>Tentar de novo</button></div> : null}
       <div className="usage-distribution-grid">
         {visibleCategories.map((item) => {
-          const rows = mergeCategoryRows({
+          const mergedRows = mergeCategoryRows({
             categoryId: item.id,
             formats: { battleData: usage?.format || selectedPokemon.battleData?.format, metaRoll: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
             contexts: {
@@ -201,14 +204,18 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
             metaRows: metaRows(item),
             resolvePokemon: resolveCatalogPokemon,
           });
+          const rows = item.id === "teammate" ? selectRankedPartnerRows(mergedRows) : mergedRows;
+          const categoryEmptyMessage = item.id === "teammate" && !dataPending && !dataUnavailable
+            ? "Esta captura não traz parceiros com posição publicada."
+            : emptyMessage;
           return (
             <section className="usage-distribution-category" key={item.id}>
               <div className="usage-category-heading">
                 <h4>{item.label}</h4>
-                {category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{rows.length} linhas</span>}
+                {category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{item.id === "teammate" ? `${rows.length} parceiros` : `${rows.length} linhas`}</span>}
               </div>
-              {item.id === "stat_points" ? <p className="usage-stat-points-note">Pontos investidos por atributo, não os stats finais. Um set distribui até 66 pontos, com até 32 por atributo; zeros são valores publicados, e traços indicam valores ausentes.</p> : null}
-              {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{emptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} emptyMessage={emptyMessage} />}
+              {item.id === "stat_points" ? <p className="usage-stat-points-note">Pontos do set, não stats finais; até 66 no total e 32 por atributo.</p> : null}
+              {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{categoryEmptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} emptyMessage={categoryEmptyMessage} />}
             </section>
           );
         })}
@@ -460,7 +467,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
         </div>
         <details className="usage-source-details">
           <summary>Sobre os dados</summary>
-          <p>Cada linha mostra uma publicação: prioriza MetaRoll para Doubles e recorre a Pokémon Champions Battle Data quando não há registro correspondente. Os períodos e denominadores publicados não são equivalentes, então os percentuais não são somados nem calculados em média. MetaRoll descreve sua distribuição como parcela das aparições daquela espécie; Battle Data não informa o denominador. Valores ausentes não são completados.</p>
+          <p>Percentuais publicados não representam taxa de vitória. Períodos e definições podem variar; por isso, o app seleciona uma captura compatível e mantém ausências sem preenchimento.</p>
           <a className="usage-source-guide" href={provider.source.url} target="_blank" rel="noreferrer">Pokémon Champions Battle Data ↗</a>
           <a className="usage-source-guide" href={usageProviders.metaroll.source.url} target="_blank" rel="noreferrer">MetaRoll ↗</a>
         </details>
@@ -472,7 +479,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
           <button className="button button-outline button-small" type="button" disabled={indexStatus === "loading" && metaRollIndexStatus === "loading"} onClick={refreshVisibleData}>
             {indexStatus === "loading" || metaRollIndexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}
           </button>
-          <details className="usage-capture-details"><summary>Períodos e consulta</summary><span>Pokémon Champions Battle Data · {indexData?.season || "período não informado"} · consulta {formatTimestamp(indexData?.appFetchedAt)}<br />MetaRoll · {metaRollIndex?.season || "período não informado"} · captura {formatTimestamp(metaRollIndex?.capturedAt)} · consulta {formatTimestamp(metaRollIndex?.appFetchedAt)}</span></details>
         </div>
       ) : null}
 
