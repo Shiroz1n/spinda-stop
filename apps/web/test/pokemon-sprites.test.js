@@ -107,6 +107,8 @@ test("Showdown gender IDs resolve to the matching local form", () => {
   assert.equal(lookup("basculegion")?.slug, "basculegion-male");
   assert.equal(lookup("basculegionf")?.slug, "basculegion-female");
   assert.equal(lookup("indeedeef")?.slug, "indeedee-female");
+  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "basculegion", name: "Basculegion" })?.slug, "basculegion-male");
+  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "indeedeef", name: "Indeedee-F" })?.slug, "indeedee-female");
 });
 
 test("a HOME sprite can fall back to the matching static PokeAPI sprite", () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonSprite } from "../components/PokemonSprite.jsx";
+import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 import { usageProviders } from "../data/usage/registry.js";
 import { communityRequest } from "../data/communityApi.js";
 import { mergeUsageCatalog } from "../data/usage/mergeUsageData.js";
@@ -10,14 +11,14 @@ import { getCompetitionPhase, getRankedRegulationPhase, megaEvolutionBattle, ran
 const spinda = dexData.pokemon.find((pokemon) => pokemon.slug === "spinda");
 const metaRoll = usageProviders.metaroll;
 const battleData = usageProviders["pokemon-champions-battle-data"];
-function normalized(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
 
-const pokemonByName = new Map(dexData.pokemon.flatMap((pokemon) => [
-  [normalized(pokemon.name), pokemon],
-  [normalized(pokemon.slug), pokemon],
-]));
+function resolveUsagePokemon(entry) {
+  return resolveCompetitivePokemonSprite(findPokemon, {
+    id: entry.showdownId || entry.metaRollId || entry.id,
+    name: entry.name,
+  });
+}
 
 function initials(value) {
   return String(value || "?").trim().split(/\s+/).slice(0, 2).map((part) => Array.from(part)[0] || "").join("").toLocaleUpperCase("pt-BR") || "?";
@@ -150,7 +151,7 @@ function UsagePreview({ state }) {
       {state.status === "loading" ? <p className="home-data-state" role="status">Carregando o meta…</p> : null}
       {state.status === "error" ? <p className="home-data-state" role="status">Usage não respondeu. <Link to="/usage">Abrir captura</Link></p> : null}
       {state.status === "ready" && entries.length ? <ol className="home-preview-list" aria-label="Pokémon melhor posicionados na captura selecionada" tabIndex={entries.length >= 7 ? 0 : undefined}>{entries.map((entry) => {
-        const pokemon = pokemonByName.get(normalized(entry.showdownId || entry.metaRollId)) || pokemonByName.get(normalized(entry.name));
+        const pokemon = resolveUsagePokemon(entry);
         return <li key={entry.key}><span className="home-preview-rank">{entry.displayRank ?? "—"}</span>{pokemon ? <PokemonSprite pokemon={pokemon} name={entry.name} size={44} decorative /> : <span className="home-avatar" aria-hidden="true">{initials(entry.name)}</span>}<span className="home-preview-copy"><strong>{entry.name}</strong><small>{entry.displayRank ? `Posição ${entry.displayRank}` : "posição não publicada"}</small></span></li>;
       })}</ol> : null}
       {state.status === "ready" && !entries.length ? <p className="home-data-state">As capturas não publicaram espécies.</p> : null}
@@ -184,6 +185,7 @@ export function HomePage() {
       const catalog = mergeUsageCatalog(
         battleResult.status === "fulfilled" ? battleResult.value : null,
         metaResult.status === "fulfilled" ? metaResult.value : null,
+        resolveUsagePokemon,
       );
       const source = catalog.some((entry) => entry.metaRoll !== null) ? "metaRoll" : "battleData";
       const index = source === "metaRoll"
