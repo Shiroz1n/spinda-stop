@@ -64,6 +64,7 @@ Os testes de integração criam bancos SQLite temporários e não dependem de ba
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [SQLite local: esquema, migrações, backup, recuperação e hospedagem](docs/SQLITE_LOCAL.md)
 - [Direção visual](docs/DESIGN.md)
+- [Uso de Impeccable e Ponytail pelo agente](docs/AGENT_SKILLS.md)
 - [Guia geral para evitar padrões visuais genéricos](docs/UI_HUMANIZER.md)
 - [Design system do Spinda Stop e referências](docs/SPINDA_STOP_DESIGN_SYSTEM.md)
 - [Speed Tiers e fórmulas](docs/SPEED_TIERS.md)
