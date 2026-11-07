@@ -15,6 +15,9 @@ test("Elysia serves the public archive through the scoped route", async () => {
 });
 
 test("Elysia serves the public VGC agenda through the scoped route", async () => {
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const date = tomorrow.toISOString();
   const app = createApiApp({
     database: {},
     publicVgcTournamentsFetch: async () => Response.json([{
@@ -22,7 +25,7 @@ test("Elysia serves the public VGC agenda through the scoped route", async () =>
       game: "VGC",
       format: "M-C",
       name: "Copa M-C",
-      date: "2026-11-07T00:00:00.000Z",
+      date,
       players: 24,
     }]),
   });
@@ -32,8 +35,9 @@ test("Elysia serves the public VGC agenda through the scoped route", async () =>
     tournaments: [{
       id: "6aee620dc931f53978d951e6",
       name: "Copa M-C",
-      date: "2026-11-07T00:00:00.000Z",
+      date,
       players: 24,
+      scheduleStatus: "upcoming",
       url: "https://play.limitlesstcg.com/tournament/6aee620dc931f53978d951e6",
     }],
   });
