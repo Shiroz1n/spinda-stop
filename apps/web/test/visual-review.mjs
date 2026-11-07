@@ -1124,6 +1124,15 @@ async function runViewport(viewportName, viewport) {
       }],
     });
   });
+  await loadingUsagePage.route("https://metaroll.app/api/v1/all.json", async (route) => {
+    await usageIndexGate;
+    await fulfillJson(route, {
+      format: "doubles",
+      season: "M-8",
+      capturedAt: "2026-10-18T05:46:15.000Z",
+      entries: [{ id: "garchomp", name: "Garchomp", rank: 2 }],
+    });
+  });
   await loadingUsagePage.route("https://championsbattledata.com/api/battle/Doubles/**", (route) => fulfillJson(route, {
     pokemon: "Garchomp",
     showdownId: "garchomp",
@@ -1142,7 +1151,7 @@ async function runViewport(viewportName, viewport) {
   observations.push({ viewport: viewportName, name: "usage-index-loading-copy", text: loadingUsageCopy });
   await safeCapture(loadingUsagePage, viewportName, "usage-index-loading", { audit: true, fullPage: false });
   releaseUsageIndex();
-  await loadingUsagePage.locator(".usage-source-comparison").waitFor({ state: "visible", timeout: 10_000 });
+  await loadingUsagePage.locator(".usage-distributions").waitFor({ state: "visible", timeout: 10_000 });
   await loadingUsagePage.close();
 
   await page.goto(`${baseUrl}/usage?pokemon=Garchomp`, { waitUntil: "domcontentloaded" });

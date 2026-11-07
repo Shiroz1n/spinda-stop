@@ -1293,3 +1293,8 @@ input, select, textarea { font-size: 1rem; }
   .usage-species-list { grid-template-columns: minmax(0, 1fr); }
   .usage-position-pair { font-size: 1rem; }
 }
+
+@media (max-width: 360px) {
+  .evolution-list li { grid-template-columns: minmax(0, 1fr); }
+  .evolution-list li > a { grid-column: 1; grid-row: auto; }
+}
