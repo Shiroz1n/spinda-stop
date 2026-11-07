@@ -91,7 +91,7 @@ function PublicVgcTournaments() {
     {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum torneio M-C de hoje ou futuro foi publicado.</p>}
     {state.tournaments.length > 0 && <ol className="home-vgc-list">{state.tournaments.slice(0, 6).map((tournament) => <li key={tournament.id}>
       <span className="home-vgc-date">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" }).format(new Date(tournament.date))} UTC</span>
-      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.scheduleStatus === "today" ? "Começa hoje · sem estado ao vivo" : "Próximo torneio"}</small></span>
+      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.scheduleStatus === "today" ? "Agendado para hoje" : "Próximo torneio"}</small></span>
       <a href={tournament.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${tournament.name || "torneio"} no Limitless`}>Abrir ↗</a>
     </li>)}</ol>}
     <small className="home-vgc-credit">Fonte: <a href="https://docs.limitlesstcg.com/developer/tournaments.html" target="_blank" rel="noreferrer">API pública Limitless VGC</a>.</small>

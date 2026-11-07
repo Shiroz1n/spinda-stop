@@ -7,7 +7,7 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
-import { mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -101,14 +101,14 @@ function CategoryRow({ row, category }) {
       <div className="usage-row-main">
         <div className="usage-row-title">
           {category.id === "stat_points" ? (
-            <div className="usage-spread" aria-label="Pontos investidos por atributo">
+            hasPublishedStatPoints(row.statPoints) ? <div className="usage-spread" aria-label="Pontos investidos por atributo">
               {statPointLabels.map(([key, label]) => (
                 <span key={key}>
                   <small>{label}</small>
                   <b>{displayValue(row.statPoints?.[key])}</b>
                 </span>
               ))}
-            </div>
+            </div> : <span className="stat-points-empty">SP não publicados</span>
           ) : (
             <div className="usage-row-copy">
               <span className="usage-row-asset">
@@ -186,7 +186,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
         <h3>Distribuições</h3>
         {selectedPokemon.metaRollId ? <button className="text-button" type="button" onClick={() => onOpenDetails("summary")}>Histórico e confrontos</button> : null}
       </div>
-      <p className="usage-distributions-note">Cada linha mostra um percentual publicado para a distribuição. Ele não representa taxa de vitória.</p>
+      <p className="usage-distributions-note">Uso publicado; não é taxa de vitória.</p>
       {indexStatus === "loading" && !indexData ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Atualizando dados competitivos…</p> : null}
       {indexStatus === "error" ? <div className="usage-error" role="alert"><p>Não foi possível atualizar todos os dados competitivos.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
       {entry && (detail.status === "loading" || detail.status === "idle") ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando os dados de {selectedPokemon.name}…</p> : null}

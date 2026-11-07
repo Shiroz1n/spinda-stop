@@ -5,6 +5,7 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
+import { hasPublishedStatPoints } from "../data/usage/mergeUsageData.js";
 import { MetaRollLadderView } from "./MetaRollLadderView.jsx";
 
 const distributionSections = [
@@ -83,14 +84,14 @@ function DistributionCard({ title, rows, spread = false, pokemonRows = false, ro
                 <div className="metaroll-row-top">
                   <span className="metaroll-row-rank">#{row.rank}</span>
                   {spread ? (
-                    <div className="usage-spread" aria-label="Pontos investidos por atributo">
+                    hasPublishedStatPoints(row.statPoints) ? <div className="usage-spread" aria-label="Pontos investidos por atributo">
                       {statLabels.map(([key, label]) => (
                         <span key={key}>
                           <small>{label}</small>
                           <b>{row.statPoints?.[key] ?? "—"}</b>
                         </span>
                       ))}
-                    </div>
+                    </div> : <span className="stat-points-empty">SP não publicados</span>
                   ) : (
                     <span className="metaroll-row-identity">
                       {pokemonRows && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={44} decorative /> : null}

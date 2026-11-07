@@ -4,7 +4,7 @@ import { PokemonSprite } from "./PokemonSprite.jsx";
 import { usageProviders } from "../data/usage/registry.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
 import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
-import { mergeCategoryRows, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
 
 const sources = usageProviders;
 const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
@@ -34,13 +34,13 @@ function rowsFor(detail, source, categoryId) {
   return detail.entry.distributions[key] || [];
 }
 
-function Distribution({ row }) {
+function Distribution({ row, showStatPoints = false }) {
   const value = row.selected?.percentageValue;
   const stats = row.statPoints;
   const pokemon = findPokemon(row.name);
   return <li className="builder-meta-row">
     <span className="builder-meta-name">{pokemon && <PokemonSprite pokemon={pokemon} name={row.name} size={28} decorative />}{row.name || "Sem nome publicado"}</span>
-    {stats && <span className="builder-meta-spread">{statLabels.map(([key, label]) => <span key={key}><small>{label}</small><b>{Number.isFinite(stats[key]) ? stats[key] : "—"}</b></span>)}</span>}
+    {showStatPoints ? hasPublishedStatPoints(stats) ? <span className="builder-meta-spread">{statLabels.map(([key, label]) => <span key={key}><small>{label}</small><b>{Number.isFinite(stats[key]) ? stats[key] : "—"}</b></span>)}</span> : <span className="stat-points-empty">SP não publicados</span> : null}
     <span className="builder-meta-value">{Number.isFinite(value) ? `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"}</span>
   </li>;
 }
@@ -99,7 +99,7 @@ export function BuilderMetaPanel({ pokemon }) {
       {state.failedSources > 0 && <p className="builder-meta-partial" role="status">Uma fonte não respondeu; os dados disponíveis continuam visíveis.</p>}
       <div className="builder-meta-grid">{distributions.map(([key, title, rows]) => <section className="builder-meta-category" key={key}>
         <div><h3>{title}</h3><span>{rows.length || "—"}</span></div>
-        {rows.length ? <ol>{rows.map((row) => <Distribution key={row.key} row={row} />)}</ol> : <p>Sem distribuição publicada.</p>}
+        {rows.length ? <ol>{rows.map((row) => <Distribution key={row.key} row={row} showStatPoints={key === "spreads"} />)}</ol> : <p>Sem distribuição publicada.</p>}
       </section>)}</div>
       <details className="builder-meta-about"><summary>Fontes e capturas</summary>
         <p>Cada métrica usa uma captura; períodos diferentes não são calculados em média.</p>

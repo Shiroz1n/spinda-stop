@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../src/data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../src/data/usage/mergeUsageData.js";
+
+test("distinguishes published zero points from missing stat points", () => {
+  assert.equal(hasPublishedStatPoints({ hp: 0, attack: null }), true);
+  assert.equal(hasPublishedStatPoints({ hp: null, attack: undefined }), false);
+  assert.equal(hasPublishedStatPoints(null), false);
+});
 
 const resolvePokemon = ({ id, name }) => {
   const key = String(id || name || "").toLowerCase().replace(/[^a-z0-9]/g, "");

@@ -5,7 +5,7 @@ import { PokemonSprite } from "./PokemonSprite.jsx";
 import { communityRequest } from "../data/communityApi.js";
 
 function errorMessage(error) {
-  return error.code === "persistent_storage_required" ? "Equipes da conta indisponíveis nesta hospedagem." : error.message;
+  return error.code === "persistent_storage_required" ? "Salvar na conta indisponível neste preview." : error.message;
 }
 
 export function TeamAccountPanel({ onLoad, onSave }) {

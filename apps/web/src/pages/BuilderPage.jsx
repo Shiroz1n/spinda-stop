@@ -506,6 +506,10 @@ export function BuilderPage() {
 
       <section className="builder-workspace">
         <div className="builder-center-column">
+        <div className="builder-workbench-tabs" role="group" aria-label="Área de trabalho da equipe">
+          {[["team", "Equipe"], ["meta", "Meta"], ["paste", "Poképaste"]].map(([key, label]) => <button type="button" key={key} aria-pressed={builderTab === key} onClick={() => setBuilderTab(key)}>{label}</button>)}
+        </div>
+
         <div className="slot-column">
           <div className="section-heading"><h2>Integrantes</h2><span>Duplas</span></div>
           <div className="team-slots" role="group" aria-label="Seis posições da equipe">
@@ -528,10 +532,6 @@ export function BuilderPage() {
               );
             })}
           </div>
-        </div>
-
-        <div className="builder-workbench-tabs" role="group" aria-label="Área de trabalho da equipe">
-          {[["team", "Equipe"], ["meta", "Meta"], ["paste", "Poképaste"]].map(([key, label]) => <button type="button" key={key} aria-pressed={builderTab === key} onClick={() => setBuilderTab(key)}>{label}</button>)}
         </div>
 
         {builderTab === "team" && <div className="editor-column">
@@ -602,11 +602,11 @@ export function BuilderPage() {
                     <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
                   </label>
                 ))}
-                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p></details>
+                <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>Golpes gerais; legalidade não verificada.</p></details>
 
                 <details className="points-section field-wide">
                   <summary>Conferir pontos investidos <span>{pointTotal} distribuídos</span></summary>
-                  <p className="form-hint">Limite usado pelo formato comunitário: 32 pontos por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} pontos.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} pontos.`}</p>
+                  <p className="form-hint">Até 32 SP por atributo e 66 no set; legalidade não verificada. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `Excede o limite em ${Math.abs(pointRemaining)} SP.`}</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>
@@ -641,7 +641,7 @@ export function BuilderPage() {
               <label className="builder-paste-label" htmlFor="builder-showdown-export">Texto Showdown</label>
               <textarea id="builder-showdown-export" className="text-input builder-paste-input" value={showdownExport} readOnly placeholder="Prepare a equipe para copiar." />
               <button className="button button-outline" type="button" onClick={copyShowdownPaste}>Preparar e copiar</button>
-              <details className="builder-format-details"><summary>Formato e limites</summary><p>O formato Champions do Showdown usa o campo EVs para os Stat Points deste editor. O texto não verifica legalidade no regulamento. <a href="https://github.com/smogon/pokemon-showdown/blob/master/sim/TEAMS.md" target="_blank" rel="noreferrer">Formato oficial ↗</a></p></details>
+              <details className="builder-format-details"><summary>Formato e limites</summary><p>Showdown guarda SP no campo EVs; legalidade não é verificada. <a href="https://github.com/smogon/pokemon-showdown/blob/master/sim/TEAMS.md" target="_blank" rel="noreferrer">Formato ↗</a></p></details>
             </section>
           </div>
           <details className="builder-json-details"><summary>Importar ou exportar JSON</summary><div className="builder-actions builder-json-actions"><button className="button button-outline" type="button" onClick={() => importRef.current?.click()}>Importar JSON</button><button className="button button-outline" type="button" onClick={exportTeam}>Exportar JSON</button><input ref={importRef} className="sr-only" type="file" accept="application/json,.json" onChange={importTeam} aria-label="Selecionar arquivo de equipe JSON" /></div></details>

@@ -18,6 +18,10 @@ function mergeFilterValues(left = {}, right = {}) {
   ]));
 }
 
+export function hasPublishedStatPoints(statPoints) {
+  return Boolean(statPoints && Object.values(statPoints).some(Number.isFinite));
+}
+
 function sourceObservation(row, source, context = {}) {
   return {
     source,
