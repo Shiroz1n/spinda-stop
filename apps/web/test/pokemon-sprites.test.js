@@ -5,6 +5,8 @@ import {
   itemSpriteUrl,
   POKEAPI_SPRITES_BASE,
   POKEAPI_HOME_FORM_SPRITES,
+  resolvePokemonSpriteFallbackUrl,
+  resolvePokemonSpriteCandidate,
   resolvePokemonSpriteUrl,
   resolveCompetitivePokemonSprite,
   typeIconUrl,
@@ -92,6 +94,39 @@ test("Showdown and MetaRoll Paldean Tauros IDs resolve to the exact breed", () =
     expected,
   );
   assert.equal(lookup("tauros")?.slug, "tauros");
+});
+
+test("Showdown gender IDs resolve to the matching local form", () => {
+  const lookup = createPokemonSpriteLookup([
+    { slug: "basculegion-male", name: "Male Basculegion", speciesSlug: "basculegion", speciesName: "Basculegion", formId: "male", spriteId: 902 },
+    { slug: "basculegion-female", name: "Female Basculegion", speciesSlug: "basculegion", speciesName: "Basculegion", formId: "female", spriteId: 10248 },
+    { slug: "indeedee-male", name: "Male Indeedee", speciesSlug: "indeedee", speciesName: "Indeedee", formId: "male", spriteId: 876 },
+    { slug: "indeedee-female", name: "Female Indeedee", speciesSlug: "indeedee", speciesName: "Indeedee", formId: "female", spriteId: 10186 },
+  ]);
+
+  assert.equal(lookup("basculegion")?.slug, "basculegion-male");
+  assert.equal(lookup("basculegionf")?.slug, "basculegion-female");
+  assert.equal(lookup("indeedeef")?.slug, "indeedee-female");
+});
+
+test("a HOME sprite can fall back to the matching static PokeAPI sprite", () => {
+  assert.equal(
+    resolvePokemonSpriteFallbackUrl({ spriteId: 10248 }),
+    `${POKEAPI_SPRITES_BASE}/pokemon/10248.png`,
+  );
+  assert.equal(resolvePokemonSpriteFallbackUrl({}), null);
+});
+
+test("a failed fallback stays unavailable and a new form starts from its own HOME sprite", () => {
+  const src = resolvePokemonSpriteUrl({ slug: "pikachu", spriteId: 25 });
+  const fallback = resolvePokemonSpriteFallbackUrl({ spriteId: 25 });
+  const failedPrimary = { primaryUrl: src, fallbackFailed: false };
+  const failedFallback = { primaryUrl: src, fallbackFailed: true };
+  const nextForm = resolvePokemonSpriteUrl({ slug: "raichu", spriteId: 26 });
+
+  assert.equal(resolvePokemonSpriteCandidate(src, fallback, failedPrimary), fallback);
+  assert.equal(resolvePokemonSpriteCandidate(src, fallback, failedFallback), null);
+  assert.equal(resolvePokemonSpriteCandidate(nextForm, resolvePokemonSpriteFallbackUrl({ spriteId: 26 }), failedFallback), nextForm);
 });
 
 test("type and item assets point to the pinned PokeAPI sprite revision", () => {

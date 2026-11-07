@@ -11,6 +11,7 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { BuilderMetaPanel } from "../components/BuilderMetaPanel.jsx";
 import { PublicTournamentTeams } from "../components/PublicTournamentTeams.jsx";
+import { applyBuilderMetaOption } from "../data/builderMeta.js";
 import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
 import { getPokepasteRawUrl } from "../data/pokepaste.js";
 import { getNature, getNatureSpeedClass } from "../data/natures.js";
@@ -46,13 +47,25 @@ function pokemonWithDetails(slug) {
   return summary ? { ...summary, ...detailData.pokemonBySlug[slug] } : null;
 }
 
-function createInitialDraft(pokemonSlug) {
+function createInitialDraft(pokemonSlug, metaOption) {
   const saved = readSavedTeam();
   const team = saved.team;
   const pokemon = pokemonWithDetails(pokemonSlug);
   if (!pokemon) return { team, selectedSlot: 0, message: saved.message, preserveStored: saved.preserveStored };
 
   const result = addPokemonToDraft(team, pokemon);
+  let nextTeam = result.team;
+  let metaMessage = "";
+  if (metaOption && result.status !== "full") {
+    const applied = applyBuilderMetaOption(nextTeam.members[result.selectedSlot], metaOption.category, metaOption.row);
+    if (applied.ok && applied.changed) {
+      const members = [...nextTeam.members];
+      members[result.selectedSlot] = applied.member;
+      nextTeam = { ...nextTeam, members };
+      metaMessage = applied.message;
+    } else if (!applied.ok) metaMessage = applied.error;
+    else metaMessage = applied.message;
+  }
   const slotLabel = result.selectedSlot + 1;
   const messages = {
     added: `${pokemon.name} adicionado à posição ${slotLabel}.`,
@@ -61,9 +74,9 @@ function createInitialDraft(pokemonSlug) {
   };
 
   return {
-    team: result.team,
+    team: nextTeam,
     selectedSlot: result.selectedSlot,
-    message: [saved.message, messages[result.status]].filter(Boolean).join(" "),
+    message: [saved.message, messages[result.status], metaMessage].filter(Boolean).join(" "),
     preserveStored: saved.preserveStored,
   };
 }
@@ -73,7 +86,7 @@ export function BuilderPage() {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const accountDetailsRef = useRef(null);
-  const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug));
+  const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug, location.state?.metaOption));
   const [team, setTeam] = useState(initialDraft.team);
   const [showdownInput, setShowdownInput] = useState("");
   const [showdownExport, setShowdownExport] = useState("");
@@ -93,10 +106,8 @@ export function BuilderPage() {
   const [message, setMessage] = useState(initialDraft.message);
   const selectedMember = team.members[selectedSlot];
   const teamAnalysis = useMemo(() => calculateTeamAnalysis(team, dexData.pokemon, moveData.moves), [team]);
-  const selectedPokemon = useMemo(
-    () => selectedMember ? pokemonWithDetails(selectedMember.pokemonId) : null,
-    [selectedMember],
-  );
+  const selectedPokemonId = selectedMember?.pokemonId;
+  const selectedPokemon = useMemo(() => selectedPokemonId ? pokemonWithDetails(selectedPokemonId) : null, [selectedPokemonId]);
   const teamReferencePokemon = useMemo(() => selectedPokemon || pokemonWithDetails(team.members.find(Boolean)?.pokemonId), [selectedPokemon, team.members]);
   const selectedComputedStats = useMemo(() => {
     if (!selectedPokemon || !selectedMember) return null;
@@ -165,8 +176,8 @@ export function BuilderPage() {
   }
 
   useEffect(() => {
-    if (location.state?.pokemonSlug) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state?.pokemonSlug, navigate]);
+    if (location.state?.pokemonSlug || location.state?.metaOption) navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, navigate]);
 
   useEffect(() => {
     if (initialDraft.preserveStored) return;
@@ -189,6 +200,18 @@ export function BuilderPage() {
     const members = [...team.members];
     members[selectedSlot] = { ...members[selectedSlot], ...update };
     commitTeam({ ...team, members });
+  }
+
+  function applyMetaOption(category, row) {
+    const applied = applyBuilderMetaOption(selectedMember, category, row);
+    if (!applied.ok || !applied.changed) {
+      setMessage(applied.error || applied.message);
+      return;
+    }
+    const members = [...team.members];
+    members[selectedSlot] = applied.member;
+    const saved = commitTeam({ ...team, members });
+    setMessage(saved ? applied.message : `${applied.message} Não foi possível salvar neste navegador.`);
   }
 
   function chooseForSlot(slot) {
@@ -265,8 +288,8 @@ export function BuilderPage() {
     setMessage(saved ? "Equipe importada e salva neste navegador." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
   }
 
-  function importShowdownText(text) {
-    const result = importShowdownTeam(text, dexData.pokemon);
+  function importShowdownText(text, options = {}) {
+    const result = importShowdownTeam(text, dexData.pokemon, options);
     if (!result.ok) {
       setMessage(result.error);
       return;
@@ -622,7 +645,7 @@ export function BuilderPage() {
         </div>}
 
         {builderTab === "meta" && (selectedPokemon
-          ? <BuilderMetaPanel key={selectedPokemon.slug} pokemon={selectedPokemon} />
+          ? <BuilderMetaPanel key={selectedPokemon.slug} pokemon={selectedPokemon} member={selectedMember} onApplyOption={applyMetaOption} />
           : <section className="builder-meta-empty"><h2>Meta da equipe</h2><p>Adicione um Pokémon para consultar suas distribuições.</p></section>)}
 
         {builderTab === "paste" && <section className="builder-paste-panel" aria-labelledby="builder-paste-title">

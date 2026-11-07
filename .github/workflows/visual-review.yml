@@ -39,7 +39,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
       - run: npm run visual:review:mobile
         if: github.event_name == 'workflow_dispatch'
-      - run: npm run visual:review:fast -- --pages=home,pokemon,usage,builder,speed
+      - run: npm run visual:review:fast -- --pages=pokemon,usage,builder,speed
         if: github.event_name == 'pull_request'
       - run: npm run visual:review:mobile -- --pages=builder --narrow-only
         if: github.event_name == 'pull_request'

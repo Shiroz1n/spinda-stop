@@ -125,7 +125,7 @@ export function serializeTeam(team) {
   return JSON.stringify(team, null, 2);
 }
 
-export function importShowdownTeam(text, pokemon = []) {
+export function importShowdownTeam(text, pokemon = [], { allowPartial = false } = {}) {
   if (typeof text !== "string" || new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES) {
     return { ok: false, error: "O texto passou de 128 KB." };
   }
@@ -136,6 +136,8 @@ export function importShowdownTeam(text, pokemon = []) {
     if (entry.speciesSlug && entry.slug.startsWith(`${entry.speciesSlug}-`)) {
       aliases.push(`${entry.speciesName || entry.speciesSlug}-${entry.slug.slice(entry.speciesSlug.length + 1)}`);
     }
+    if (entry.formId === "male") aliases.push(entry.speciesName || entry.speciesSlug);
+    if (entry.formId === "female") aliases.push(`${entry.speciesName || entry.speciesSlug}-F`);
     const taurosBreed = entry.slug.match(/^tauros-paldea-(combat|blaze|aqua)-breed$/);
     if (taurosBreed) aliases.push(`Tauros-Paldea-${taurosBreed[1]}`);
     for (const alias of aliases) {
@@ -174,7 +176,12 @@ export function importShowdownTeam(text, pokemon = []) {
     }
     const pokemonEntry = matches.length === 1 ? matches[0] : null;
     if (!pokemonEntry) {
-      return { ok: false, error: `Pokémon ${index + 1}: “${speciesName}” ${matches.length ? "corresponde a mais de uma forma" : "não foi encontrado no catálogo atual"}.` };
+      const error = `Pokémon ${index + 1}: “${speciesName}” ${matches.length ? "corresponde a mais de uma forma" : "não foi encontrado no catálogo atual"}.`;
+      if (allowPartial) {
+        warnings.push(`${error} Foi ignorado.`);
+        continue;
+      }
+      return { ok: false, error };
     }
 
     if (resolvedNickname) warnings.push(`Pokémon ${index + 1}: o apelido “${nicknameMatch[1]}” não é preservado no rascunho.`);
@@ -234,9 +241,10 @@ export function importShowdownTeam(text, pokemon = []) {
         warnings.push(`Pokémon ${index + 1}: campo “${rawKey}” não foi importado.`);
       }
     }
-    team.members[index] = member;
+    team.members[allowPartial ? team.members.findIndex((entry) => entry === null) : index] = member;
   }
 
+  if (!team.members.some(Boolean)) return { ok: false, error: "Nenhum Pokémon do paste foi reconhecido no catálogo atual." };
   return { ok: true, value: team, warnings: [...new Set(warnings)] };
 }
 

@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { usageProviders } from "../data/usage/registry.js";
-import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
+import { findUsagePokemonForCatalogEntry } from "../data/usage/pokemonQuery.js";
 import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 import { hasPublishedStatPoints, mergeCategoryRows, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { applyBuilderMetaOption } from "../data/builderMeta.js";
 
 const sources = usageProviders;
 const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
@@ -17,13 +18,15 @@ const categories = [
   ["teammates", "Parceiros", "teammate"],
 ];
 const statLabels = [["hp", "HP"], ["attack", "Atk"], ["defense", "Def"], ["spAttack", "SpA"], ["spDefense", "SpD"], ["speed", "Spe"]];
+const statFields = [["hp", "hp"], ["attack", "atk"], ["defense", "def"], ["spAttack", "spa"], ["spDefense", "spd"], ["speed", "spe"]];
+const categoryIds = Object.fromEntries(categories.map(([key, , id]) => [key, id]));
 
-function loadDetails(provider, index, reference, source) {
+function loadDetails(provider, index, pokemon, source) {
   if (source === "battleData") {
-    const entry = findUsagePokemonByReference(index?.pokemon, reference);
+    const entry = findUsagePokemonForCatalogEntry(index?.pokemon, pokemon);
     return entry ? provider.loadPokemonUsage({ showdownId: entry.showdownId, season: index.season }) : null;
   }
-  const entry = findUsagePokemonByReference(index?.entries, reference);
+  const entry = findUsagePokemonForCatalogEntry(index?.entries, pokemon);
   return entry ? provider.loadPokemonUsage({ id: entry.id, season: index.season }) : null;
 }
 
@@ -34,19 +37,40 @@ function rowsFor(detail, source, categoryId) {
   return detail.entry.distributions[key] || [];
 }
 
-function Distribution({ row, showStatPoints = false }) {
+function sameValue(left, right) {
+  return String(left || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    === String(right || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function hasPublishedRows(detail, source) {
+  return source === "battleData"
+    ? Boolean(detail?.rows?.length)
+    : Object.values(detail?.entry?.distributions || {}).some((rows) => rows.length > 0);
+}
+
+function Distribution({ row, category, member, onApplyOption }) {
   const value = row.selected?.percentageValue;
   const stats = row.statPoints;
   const pokemon = findPokemon(row.name);
-  return <li className="builder-meta-row">
-    <span className="builder-meta-name">{pokemon && <PokemonSprite pokemon={pokemon} name={row.name} size={28} decorative />}{row.name || "Sem nome publicado"}</span>
-    {showStatPoints ? hasPublishedStatPoints(stats) ? <span className="builder-meta-spread">{statLabels.map(([key, label]) => <span key={key}><small>{label}</small><b>{Number.isFinite(stats[key]) ? stats[key] : "—"}</b></span>)}</span> : <span className="stat-points-empty">SP não publicados</span> : null}
-    <span className="builder-meta-value">{Number.isFinite(value) ? `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"}</span>
+  const application = category === "teammate" ? null : applyBuilderMetaOption(member, category, row);
+  const applied = category === "move" ? member?.moves?.some((move) => move && sameValue(move, row.name))
+    : category === "held_item" ? sameValue(member?.item, row.name)
+      : category === "ability" ? sameValue(member?.ability, row.name)
+        : category === "stat_alignment" ? sameValue(member?.nature, row.name)
+          : category === "stat_points" && statFields.every(([source, target]) => Number.isInteger(stats?.[source]) && member?.statPoints?.[target] === stats[source]);
+  const rank = row.selected?.rank;
+  const contents = <>
+    <span className="builder-meta-line"><span className="builder-meta-name">{pokemon && <PokemonSprite pokemon={pokemon} name={row.name} size={28} decorative />}{row.name || "Sem nome publicado"}</span>{category === "teammate" && Number.isInteger(rank) && rank > 0 && <span className="builder-meta-rank">Posição {rank}</span>}<span className="builder-meta-value">{Number.isFinite(value) ? `${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"}</span></span>
+    {category === "stat_points" ? hasPublishedStatPoints(stats) ? <span className="builder-meta-spread">{statLabels.map(([key, label]) => <span key={key}><small>{label}</small><b>{Number.isFinite(stats[key]) ? stats[key] : "—"}</b></span>)}</span> : <span className="stat-points-empty">Distribuição incompleta</span> : null}
+  </>;
+  return <li className={`builder-meta-row${applied ? " is-applied" : ""}`}>
+    {category === "teammate" ? <div className="builder-meta-option is-readonly">{contents}</div> : <button className="builder-meta-option" type="button" aria-pressed={Boolean(applied)} disabled={!application?.ok} onClick={() => onApplyOption(category, row)}>{contents}<span className="builder-meta-action">{applied ? "Aplicado" : application?.ok ? "Aplicar" : "Indisponível"}</span>{!application?.ok && application?.error && <span className="builder-meta-apply-error">{application.error}</span>}</button>}
   </li>;
 }
 
-export function BuilderMetaPanel({ pokemon }) {
+export function BuilderMetaPanel({ pokemon, member, onApplyOption }) {
   const [state, setState] = useState({ status: "loading", battle: null, metaRoll: null, contexts: {} });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -55,16 +79,22 @@ export function BuilderMetaPanel({ pokemon }) {
         battleData: battleIndex.status === "fulfilled" ? battleIndex.value : null,
         metaRoll: metaIndex.status === "fulfilled" ? metaIndex.value : null,
       };
+      const matches = {
+        battleData: findUsagePokemonForCatalogEntry(indexes.battleData?.pokemon, pokemon),
+        metaRoll: findUsagePokemonForCatalogEntry(indexes.metaRoll?.entries, pokemon),
+      };
       const details = await Promise.allSettled([
-        indexes.battleData && loadDetails(sources["pokemon-champions-battle-data"], indexes.battleData, pokemon.name, "battleData"),
-        indexes.metaRoll && loadDetails(sources.metaroll, indexes.metaRoll, pokemon.name, "metaRoll"),
+        indexes.battleData && matches.battleData ? loadDetails(sources["pokemon-champions-battle-data"], indexes.battleData, pokemon, "battleData") : null,
+        indexes.metaRoll && matches.metaRoll ? loadDetails(sources.metaroll, indexes.metaRoll, pokemon, "metaRoll") : null,
       ]);
       if (!active) return;
       const battle = details[0].status === "fulfilled" ? details[0].value : null;
       const metaRoll = details[1].status === "fulfilled" ? details[1].value : null;
-      const available = battle || metaRoll;
+      const failedSources = [battleIndex, metaIndex, ...details].filter((result) => result.status === "rejected").length;
+      const published = hasPublishedRows(battle, "battleData") || hasPublishedRows(metaRoll, "metaRoll");
+      const hasMatch = Boolean(matches.battleData || matches.metaRoll);
       setState({
-        status: available ? "ready" : "error",
+        status: published ? "ready" : failedSources ? "error" : hasMatch ? "no-sets" : "not-indexed",
         battle,
         metaRoll,
         contexts: {
@@ -72,11 +102,11 @@ export function BuilderMetaPanel({ pokemon }) {
           metaRoll: { format: metaRoll?.format || indexes.metaRoll?.format, season: metaRoll?.season || indexes.metaRoll?.season, capturedAt: metaRoll?.capturedAt || indexes.metaRoll?.capturedAt },
         },
         indexes,
-        failedSources: [battleIndex, metaIndex, ...details.filter((result) => result.status === "rejected")].filter((result) => result.status === "rejected").length,
+        failedSources,
       });
     }).catch(() => { if (active) setState({ status: "error", battle: null, metaRoll: null, contexts: {} }); });
     return () => { active = false; };
-  }, [pokemon.slug, pokemon.name]);
+  }, [pokemon, attempt]);
 
   const distributions = useMemo(() => categories.map(([key, title, categoryId]) => {
     const rows = mergeCategoryRows({
@@ -92,17 +122,21 @@ export function BuilderMetaPanel({ pokemon }) {
 
   const contexts = Object.entries(state.contexts).filter(([, context]) => context?.season || context?.capturedAt).map(([source, context]) => ({ source, ...context }));
   return <section className="builder-meta-panel" aria-labelledby="builder-meta-title">
-    <div className="builder-meta-heading"><div><p className="page-label">Doubles · Pokémon Champions</p><h2 id="builder-meta-title">Meta de {pokemon.name}</h2></div><span>Capturas disponíveis</span></div>
+    <div className="builder-meta-heading"><div><p className="page-label">Doubles · Pokémon Champions</p><h2 id="builder-meta-title">Meta de {pokemon.name}</h2></div></div>
     {state.status === "loading" && <p role="status">Carregando as distribuições…</p>}
-    {state.status === "error" && <p role="status">O meta desta espécie não está disponível agora.</p>}
+    {state.status === "error" && <div role="status"><p>Não foi possível carregar o meta agora.</p><button className="button button-outline button-small" type="button" onClick={() => { setState({ status: "loading", battle: null, metaRoll: null, contexts: {} }); setAttempt((value) => value + 1); }}>Tentar novamente</button></div>}
+    {state.status === "not-indexed" && <p role="status">Esta forma não consta no índice de uso atual de Doubles.</p>}
+    {state.status === "no-sets" && <p role="status">Sem sets publicados para esta espécie neste recorte.</p>}
     {state.status === "ready" && <>
-      {state.failedSources > 0 && <p className="builder-meta-partial" role="status">Uma fonte não respondeu; os dados disponíveis continuam visíveis.</p>}
+      {state.failedSources > 0 && <p className="builder-meta-partial" role="status">Parte do meta está indisponível; os dados recebidos continuam visíveis.</p>}
+      {onApplyOption && <p className="builder-meta-apply-hint">Selecione uma opção para aplicar ao Pokémon da posição ativa.</p>}
       <div className="builder-meta-grid">{distributions.map(([key, title, rows]) => <section className="builder-meta-category" key={key}>
         <div><h3>{title}</h3><span>{rows.length || "—"}</span></div>
-        {rows.length ? <ol>{rows.map((row) => <Distribution key={row.key} row={row} showStatPoints={key === "spreads"} />)}</ol> : <p>Sem distribuição publicada.</p>}
+        {rows.length ? <ol>{rows.map((row) => <Distribution key={row.key} row={row} category={categoryIds[key]} member={member} onApplyOption={onApplyOption} />)}</ol> : <p>Sem dados publicados.</p>}
       </section>)}</div>
-      <details className="builder-meta-about"><summary>Fontes e capturas</summary>
-        <p>Cada métrica usa uma captura; períodos diferentes não são calculados em média.</p>
+      {onApplyOption && <p className="builder-meta-apply-status" role="status" aria-live="polite">Seleções alteram apenas esta posição.</p>}
+      <details className="builder-meta-about"><summary>Sobre os dados</summary>
+        <p>Uma porcentagem por opção; recortes diferentes não são calculados em média.</p>
         <ul>{contexts.map(({ source, format, season, capturedAt }) => <li key={source}><a href={sources[source === "metaRoll" ? "metaroll" : "pokemon-champions-battle-data"].source.url} target="_blank" rel="noreferrer">{sources[source === "metaRoll" ? "metaroll" : "pokemon-champions-battle-data"].source.label}</a>{format ? ` · ${format}` : ""}{season ? ` · ${season}` : ""}{capturedAt ? ` · ${capturedAt}` : ""}</li>)}</ul>
       </details>
     </>}

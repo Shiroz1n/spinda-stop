@@ -157,9 +157,11 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
   const currentLearnsetData = currentLearnset?.data || null;
   const versions = currentLearnsetData?.versionGroups || [];
   const defaultVersionId = getDefaultLearnsetVersionGroupId(versions);
-  const selectedVersionId = versions.some((version) => String(version.id) === String(versionGroupId))
-    ? String(versionGroupId)
-    : String(defaultVersionId ?? versions[0]?.id ?? "");
+  const selectedVersionId = versionGroupId === ""
+    ? ""
+    : versions.some((version) => String(version.id) === String(versionGroupId))
+      ? String(versionGroupId)
+      : String(defaultVersionId ?? "");
   const selectedVersion = versions.find((version) => String(version.id) === selectedVersionId);
 
   useEffect(() => {
@@ -172,10 +174,10 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
   }, [pokemonId]);
 
   const learnedMoves = useMemo(() => {
-    if (currentLearnsetStatus !== "ready" || !currentLearnsetData || !selectedVersionId) return [];
+    if (currentLearnsetStatus !== "ready" || !currentLearnsetData) return [];
     const names = new Map();
     for (const [moveId, versionId] of currentLearnsetData.rows) {
-      if (String(versionId) !== selectedVersionId) continue;
+      if (selectedVersionId && String(versionId) !== selectedVersionId) continue;
       const move = moveById.get(moveId);
       if (move) names.set(toCatalogId(move.name), move.name);
     }
@@ -216,7 +218,7 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
           <button type="button" aria-pressed={catalogMode === "engine"} onClick={() => setCatalogMode("engine")}>Catálogo do motor</button>
         </div>
         {currentLearnsetStatus === "ready" ? (
-          <label className="damage-version-select"><span>Jogo consultado</span><select value={selectedVersionId} onChange={(event) => onVersionChange(event.target.value)}>
+          <label className="damage-version-select"><span>Jogo consultado</span><select value={selectedVersionId} onChange={(event) => onVersionChange(event.target.value)}><option value="">Todos os jogos</option>
             {versions.map((version) => <option key={version.id} value={version.id}>{formatVersionGroup(version.name)}</option>)}
           </select></label>
         ) : null}
@@ -226,7 +228,7 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
         {catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note">Golpes listados pela PokéAPI · legalidade em Champions não verificada.</p> : null}
         {catalogMode === "engine" ? <p className="damage-library-note">Golpes conhecidos por @smogon/calc 0.12.0 no conjunto Champions. O catálogo do motor não prova que um Pokémon os aprende ou que são legais.</p> : null}
         {catalogMode === "learned" && currentLearnsetStatus !== "ready" ? <p className="damage-library-note is-limited">Aprendibilidade geral indisponível para esta forma; escolha a aba de catálogo do motor. A legalidade em Champions não foi verificada.</p> : null}
-        {catalogMoves.length === 0 && catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note is-limited">Nenhum golpe registrado para {formatVersionGroup(selectedVersion?.name)} nesta forma.</p> : null}
+        {catalogMoves.length === 0 && catalogMode === "learned" && currentLearnsetStatus === "ready" ? <p className="damage-library-note is-limited">Nenhum golpe registrado para {selectedVersion ? formatVersionGroup(selectedVersion.name) : "todos os jogos"} nesta forma.</p> : null}
         {filteredMoves.length ? (
           <ul className="damage-move-options" aria-label={`Golpes encontrados para ${side.species || positionName}`}>
             {filteredMoves.map((name) => {
@@ -562,7 +564,7 @@ export function DamageCalculatorPage() {
   const [targetMode, setTargetMode] = useState("one");
   const [activeSide, setActiveSide] = useState("attacker");
   const [activeMoveSlot, setActiveMoveSlot] = useState(0);
-  const [learnsetVersionId, setLearnsetVersionId] = useState("");
+  const [learnsetVersionId, setLearnsetVersionId] = useState(null);
   const [multiTargets, setMultiTargets] = useState([]);
   const [comparisonAspect, setComparisonAspect] = useState("move");
   const [builderTeamState, setBuilderTeamState] = useState(readBuilderTeam);

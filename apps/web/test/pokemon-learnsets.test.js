@@ -11,6 +11,7 @@ const learnsets = [
   [1, 25, 4, 0, 1, 0],
   [2, 25, 1, 18, 2, 0],
   [3, 26, 1, 12, 1, 1],
+  [1, 32, 4, 0, 1, 0],
 ];
 
 test("filters form learnsets by game version, method, move type and category", () => {
@@ -27,10 +28,12 @@ test("uses readable game and method labels while keeping unknown source terms in
   assert.equal(formatMoveLearnMethod("level-up"), "Nível");
 });
 
-test("prefers Scarlet/Violet as a compact default while keeping all versions selectable", () => {
-  const versions = [{ id: 1, name: "red-blue" }, { id: 25, name: "scarlet-violet" }, { id: 32, name: "legends-za" }];
-  assert.equal(getDefaultLearnsetVersionGroupId(versions), 25);
+test("prefers Pokémon Champions when that learnset exists and otherwise leaves the choice open", () => {
+  const versions = [{ id: 1, name: "red-blue" }, { id: 25, name: "scarlet-violet" }, { id: 32, name: "champions" }];
+  assert.equal(getDefaultLearnsetVersionGroupId(versions), 32);
+  assert.deepEqual(filterPokemonLearnsets(learnsets, moves, { versionGroupId: getDefaultLearnsetVersionGroupId(versions) }).map(({ move }) => move.name), ["Thunderbolt"]);
   assert.equal(getDefaultLearnsetVersionGroupId([{ id: 1, name: "red-blue" }]), null);
+  assert.equal(formatVersionGroup("champions"), "Pokémon Champions");
 });
 
 test("resolves direct evolutionary neighbors by species rather than duplicating forms", () => {

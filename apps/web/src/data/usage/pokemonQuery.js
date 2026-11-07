@@ -19,3 +19,12 @@ export function findUsagePokemonByReference(entries, reference) {
       || (targetId && [entry.id, entry.showdownId].some((candidate) => normalizePokemonId(candidate) === targetId));
   }) || null;
 }
+
+export function findUsagePokemonForCatalogEntry(entries, pokemon) {
+  if (!pokemon) return null;
+  const species = pokemon.speciesName || pokemon.speciesSlug || "";
+  const references = [pokemon.showdownId, pokemon.name, pokemon.slug];
+  if (pokemon.formId === "male") references.push(species, `${species}-M`);
+  if (pokemon.formId === "female") references.push(`${species}-F`, `${species}f`);
+  return references.map((reference) => findUsagePokemonByReference(entries, reference)).find(Boolean) || null;
+}

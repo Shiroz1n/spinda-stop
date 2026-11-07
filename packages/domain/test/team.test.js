@@ -180,6 +180,26 @@ test("resolves nicknames and gender while warning that the draft cannot preserve
   assert.ok(gendered.warnings.some((warning) => warning.includes("gênero do set não é preservado")));
 });
 
+test("partial public imports skip unknown Pokémon and resolve Showdown female form IDs", () => {
+  const indeedee = {
+    ...catalog[0],
+    slug: "indeedee-female",
+    name: "Female Indeedee",
+    speciesSlug: "indeedee",
+    speciesName: "Indeedee",
+    speciesId: 876,
+    formId: "female",
+  };
+  const paste = "Unknownmon\n- Protect\n\nPikachu @ Light Ball\n- Thunderbolt\n\nIndeedee-F @ Psychic Seed\n- Psychic";
+
+  assert.match(importShowdownTeam(paste, [catalog[0]]).error, /não foi encontrado/);
+  const imported = importShowdownTeam(paste, [catalog[0], indeedee], { allowPartial: true });
+  assert.equal(imported.ok, true);
+  assert.deepEqual(imported.value.members.filter(Boolean).map((member) => member.pokemonId), ["pikachu", "indeedee-female"]);
+  assert.ok(imported.warnings.some((warning) => warning.includes("Unknownmon") && warning.includes("Foi ignorado")));
+  assert.match(importShowdownTeam("Unknownmon", [catalog[0]], { allowPartial: true }).error, /Nenhum Pokémon/);
+});
+
 test("round trips Paldean Tauros breed forms through Showdown species IDs", () => {
   const tauros = {
     ...catalog[0],

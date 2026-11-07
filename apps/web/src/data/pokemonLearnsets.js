@@ -21,6 +21,7 @@ const VERSION_LABELS = {
   "legends-arceus": "Legends: Arceus",
   "scarlet-violet": "Scarlet / Violet",
   "legends-za": "Legends: Z-A",
+  champions: "Pokémon Champions",
 };
 
 const METHOD_LABELS = {
@@ -51,7 +52,7 @@ export function formatMoveLearnMethod(name) {
 }
 
 export function getDefaultLearnsetVersionGroupId(versionGroups) {
-  return versionGroups?.find((version) => version.name === "scarlet-violet")?.id ?? null;
+  return versionGroups?.find((version) => version.name === "champions")?.id ?? null;
 }
 
 export function filterPokemonLearnsets(rows, moves, filters = {}) {

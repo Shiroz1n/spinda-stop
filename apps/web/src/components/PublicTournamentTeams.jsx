@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { importShowdownTeam } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import { PokemonSprite } from "./PokemonSprite.jsx";
+import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
 
 const pokemonBySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
+const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
 
 function normalized(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -19,11 +21,11 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
     fetch(`/api/public/teams?pokemon=${encodeURIComponent(pokemon.name)}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload?.error?.message || "Busca indisponível.");
+        if (!response.ok) throw new Error("Não foi possível carregar equipes públicas agora.");
         return payload;
       })
       .then((payload) => setState({ status: "ready", teams: Array.isArray(payload.teams) ? payload.teams : [] }))
-      .catch((error) => { if (!controller.signal.aborted) setState({ status: "error", teams: [], message: error.message }); });
+      .catch(() => { if (!controller.signal.aborted) setState({ status: "error", teams: [], message: "Não foi possível carregar equipes públicas agora." }); });
     return () => controller.abort();
   }, [pokemon.slug, pokemon.name]);
 
@@ -33,14 +35,14 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
     try {
       const response = await fetch(`/api/public/teams/${encodeURIComponent(team.id)}/paste`);
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || typeof payload.text !== "string") throw new Error(payload?.error?.message || "Este paste não está disponível.");
-      const parsed = importShowdownTeam(payload.text, dexData.pokemon);
+      if (!response.ok || typeof payload.text !== "string") throw new Error("Este paste não está disponível agora.");
+      const parsed = importShowdownTeam(payload.text, dexData.pokemon, { allowPartial: true });
       if (!parsed.ok) throw new Error(parsed.error);
-      const value = { status: "ready", text: payload.text, team: parsed.value, sourceUrl: payload.sourceUrl };
+      const value = { status: "ready", text: payload.text, team: parsed.value, warnings: parsed.warnings, sourceUrl: payload.sourceUrl };
       setPastes((current) => ({ ...current, [team.id]: value }));
       return value;
     } catch (error) {
-      const value = { status: "error", message: error.message };
+      const value = { status: "error", message: error.message || "Este paste não está disponível agora." };
       setPastes((current) => ({ ...current, [team.id]: value }));
       return value;
     }
@@ -53,8 +55,9 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
   }
 
   async function importTeam(team) {
+    setOpened(team.id);
     const paste = await loadPaste(team);
-    if (paste.status === "ready") onImport(paste.text);
+    if (paste.status === "ready") onImport(paste.text, { allowPartial: true });
   }
 
   async function applySet(team) {
@@ -77,10 +80,11 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
         <div className="builder-public-card-heading"><strong>{team.player || "Jogador sem nome publicado"}</strong><time>{team.date || "Data não publicada"}</time></div>
         <p>{team.event || "Evento sem nome publicado"}{team.placement ? ` · ${team.placement}` : ""}</p>
         <div className="builder-public-sprites" aria-label="Pokémon da equipe">{team.pokemon.map((member, index) => {
-          const local = dexData.pokemon.find((entry) => normalized(entry.name) === normalized(member.name) || normalized(entry.slug) === normalized(member.name));
+          const local = resolveCompetitivePokemonSprite(findPokemon, { id: member.showdownId || member.pokemonId || member.id, name: member.name })
+            || dexData.pokemon.find((entry) => normalized(entry.name) === normalized(member.name) || normalized(entry.slug) === normalized(member.name));
           return local ? <PokemonSprite key={`${team.id}-${index}`} pokemon={local} name={member.name} size={36} /> : <span className="builder-public-fallback" key={`${team.id}-${index}`} aria-label={member.name}>{member.name.slice(0, 2).toUpperCase()}</span>;
         })}</div>
-        <div className="builder-public-actions"><button type="button" className="button button-outline button-small" aria-expanded={opened === team.id} onClick={() => toggleDetails(team)}>{opened === team.id ? "Ocultar set" : "Ver set"}</button>{team.sourceUrl && <a className="button button-quiet button-small" href={team.sourceUrl} target="_blank" rel="noreferrer">Fonte ↗</a>}<button type="button" className="button button-quiet button-small" onClick={() => importTeam(team)}>Importar equipe</button></div>
+        <div className="builder-public-actions"><button type="button" className="button button-outline button-small" aria-expanded={opened === team.id} onClick={() => toggleDetails(team)}>{opened === team.id ? "Ocultar set" : "Ver set"}</button>{team.sourceUrl && <a className="button button-quiet button-small" href={team.sourceUrl} target="_blank" rel="noreferrer">Fonte ↗</a>}<button type="button" className="button button-quiet button-small" disabled={paste?.status === "loading"} onClick={() => importTeam(team)}>{paste?.status === "loading" ? "Carregando…" : "Importar equipe"}</button></div>
         {opened === team.id && <div className="builder-public-details">
           {paste?.status === "loading" && <p role="status">Carregando paste…</p>}
           {paste?.status === "error" && <p role="status">{paste.message}</p>}
@@ -89,6 +93,7 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
               const entry = pokemonBySlug.get(member.pokemonId);
               return <li key={member.pokemonId}><strong>{entry?.name || member.pokemonId}</strong><span>{[member.item, member.ability, member.nature].filter(Boolean).join(" · ") || "Set parcial"}</span><small>{member.moves.filter(Boolean).join(" · ") || "Sem golpes publicados"}</small></li>;
             })}</ul>
+            {paste.warnings.length > 0 && <ul className="builder-public-warnings">{paste.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
             {matchingMember && <button className="button button-primary button-small" type="button" onClick={() => applySet(team)}>Aplicar set de {selectedPokemon.name}</button>}
             {paste.sourceUrl && <a href={paste.sourceUrl} target="_blank" rel="noreferrer">Abrir Poképaste ↗</a>}
           </>}

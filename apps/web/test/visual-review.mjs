@@ -39,6 +39,30 @@ const quickScreenRegistry = {
   rooms: "/rooms",
   tournaments: "/tournaments",
 };
+const visualBattleIndex = {
+  defaultSeason: "M-C",
+  generatedAt: "2026-11-07T00:00:00.000Z",
+  pokemon: [
+    { name: "Charizard", showdownId: "charizard", summary: { types: ["Fire", "Flying"], battleSummary: { "M-C": { Doubles: { position: 1 } } } } },
+    { name: "Mega Charizard X", showdownId: "charizard", summary: { types: ["Fire", "Dragon"], battleSummary: { "M-C": { Doubles: { position: 2 } } } } },
+    { name: "Gigantamax Charizard", showdownId: "charizard", summary: { types: ["Fire", "Flying"], battleSummary: { "M-C": { Doubles: { position: 3 } } } } },
+    { name: "Mega Garchomp Z", showdownId: "garchomp-megaz", summary: { types: ["Dragon", "Ground"], battleSummary: { "M-C": { Doubles: { position: 4 } } } } },
+    { name: "Regieleki", showdownId: "regieleki", summary: { types: ["Electric"], battleSummary: { "M-C": { Doubles: { position: null } } } } },
+    { name: "Deoxys", showdownId: "deoxys", summary: { types: ["Psychic"], battleSummary: { "M-C": { Doubles: { position: null } } } } },
+  ],
+};
+const visualBattleRows = [
+  ["move", "Heat Wave", 65], ["move", "Protect", 55], ["move", "Earthquake", 45],
+  ["move", "Flamethrower", 35], ["move", "Overheat", 25],
+  ["held_item", "Life Orb", 40], ["ability", "Blaze", 70],
+  ["stat_alignment", "Modest", 35], ["stat_points", "Balanced", 30],
+].map(([category, name, percentage_value], index) => ({
+  category,
+  name,
+  rank: index + 1,
+  percentage_value,
+  ...(category === "stat_points" ? { hp_points: 2, attack_points: 0, defense_points: 0, sp_atk_points: 32, sp_def_points: 0, speed_points: 32 } : {}),
+}));
 const quickAliases = { pokedex: "dex", detail: "pokemon", "dex-detail": "pokemon", "speed-tiers": "speed" };
 const requestedQuickPages = requestedPageList
   ? requestedPageList.split(",").map((page) => quickAliases[page.trim()] || page.trim()).filter(Boolean)
@@ -584,6 +608,7 @@ async function runViewport(viewportName, viewport) {
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
   await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/other/home/25.png`, (route) => route.abort());
+  await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/25.png`, (route) => route.abort());
   await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
   const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
   await missingSprite.waitFor({ state: "visible", timeout: 10_000 });
@@ -1979,6 +2004,14 @@ async function runFastViewport(viewportName, viewport) {
         body: JSON.stringify(payload),
       });
     });
+    await page.route("https://championsbattledata.com/api", (route) => fulfillJson(route, visualBattleIndex));
+    await page.route("https://championsbattledata.com/api/battle/**", (route) => {
+      const request = new URL(route.request().url());
+      const showdownId = decodeURIComponent(request.pathname.split("/").at(-1));
+      const pokemon = visualBattleIndex.pokemon.find((entry) => entry.showdownId === showdownId)?.name || showdownId;
+      return fulfillJson(route, { pokemon, showdownId, format: "Doubles", season: "M-C", date: "2026-11-07", source: "visual-fixture.csv", rows: visualBattleRows, daily: [] });
+    });
+    await page.route("https://metaroll.app/api/v1/**", (route) => fulfillJson(route, { format: "doubles", season: "M-C", entries: [] }));
 
     const path = quickScreenRegistry[screen];
     await page.goto(baseUrl + path, { waitUntil: "domcontentloaded" });
@@ -2076,6 +2109,14 @@ async function runFastViewport(viewportName, viewport) {
       try {
         await page.locator(".team-slot").first().click();
         const search = page.locator("#species-search");
+        if (await page.getByRole("button", { name: "Champions", exact: true }).getAttribute("aria-pressed") !== "true") {
+          failures.push(`${viewportName}/builder: Champions não foi aberto como catálogo padrão do seletor.`);
+        }
+        await search.fill("Regieleki");
+        await page.getByText("Nenhum resultado no índice atual de Doubles.").waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByRole("button", { name: "Pokédex geral", exact: true }).click();
+        await page.locator(".species-dialog .picker-result").filter({ hasText: "Regieleki" }).waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByRole("button", { name: "Champions", exact: true }).click();
         await search.fill("charizard");
         const results = page.locator(".species-dialog .picker-result");
         await results.first().waitFor({ state: "visible", timeout: 5_000 });
@@ -2106,6 +2147,37 @@ async function runFastViewport(viewportName, viewport) {
         if (!firstResultFocused) failures.push(`${viewportName}/builder: o primeiro resultado não recebeu foco pelo teclado após o campo de busca.`);
         await page.keyboard.press("Enter");
         await page.locator('.species-dialog[aria-labelledby="species-dialog-title"]').waitFor({ state: "hidden", timeout: 5_000 });
+        await page.getByRole("heading", { name: "Charizard", exact: true }).waitFor({ state: "visible", timeout: 5_000 });
+
+        await page.getByRole("button", { name: "Meta", exact: true }).click();
+        await page.getByRole("heading", { name: "Meta de Charizard" }).waitFor({ state: "visible", timeout: 10_000 });
+        const metaCategory = (index) => page.locator(".builder-meta-category").nth(index);
+        await metaCategory(0).getByRole("button", { name: /Heat Wave/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Protect/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Earthquake/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Flamethrower/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Heat Wave/ }).click();
+        await metaCategory(0).getByRole("button", { name: /Overheat/ }).click();
+        await metaCategory(1).getByRole("button", { name: /Life Orb/ }).click();
+        await metaCategory(2).getByRole("button", { name: /Blaze/ }).click();
+        await metaCategory(3).getByRole("button", { name: /Modest/ }).click();
+        await metaCategory(4).getByRole("button", { name: /Balanced/ }).click();
+        await page.getByRole("button", { name: "Equipe", exact: true }).click();
+        const appliedSet = {
+          moves: await page.locator("#move-0, #move-1, #move-2, #move-3").evaluateAll((inputs) => inputs.map((input) => input.value)),
+          item: await page.getByLabel("Item", { exact: true }).inputValue(),
+          ability: await page.getByLabel("Habilidade", { exact: true }).inputValue(),
+          nature: (await page.locator("#member-nature").innerText()).trim(),
+          spa: await page.locator("#stat-spa").inputValue(),
+          speed: await page.locator("#stat-spe").inputValue(),
+          otherSlotEmpty: await page.locator(".team-slot").nth(1).innerText(),
+        };
+        observations.push({ mode: "fast", viewport: viewportName, name: "builder-meta-options-applied", ...appliedSet });
+        if (JSON.stringify(appliedSet.moves) !== JSON.stringify(["Protect", "Earthquake", "Flamethrower", "Overheat"])
+          || appliedSet.item !== "Life Orb" || appliedSet.ability !== "Blaze" || !appliedSet.nature.includes("Modest")
+          || appliedSet.spa !== "32" || appliedSet.speed !== "32" || !appliedSet.otherSlotEmpty.includes("Vazio")) {
+          failures.push(`${viewportName}/builder: o meta não aplicou as opções ao slot ativo com rotação FIFO de quatro golpes.`);
+        }
       } catch (error) {
         failures.push(`${viewportName}/builder-species-picker: ${error.message}`);
       }
@@ -2115,6 +2187,15 @@ async function runFastViewport(viewportName, viewport) {
         await runQuickCalculatorInteraction(page, viewportName);
       } catch (error) {
         failures.push(viewportName + "/calculator-interaction: " + error.message);
+      }
+    }
+
+    if (screen === "speed") {
+      await page.locator(".speed-results-list .speed-result-row").first().waitFor({ state: "visible", timeout: 10_000 }).catch(() => {});
+      const speedNames = await page.locator(".speed-results-list .speed-result-pokemon strong").allTextContents();
+      observations.push({ mode: "fast", viewport: viewportName, name: "speed-champions-index-filter", names: speedNames });
+      if (!speedNames.length || speedNames.some((name) => /Regieleki|Deoxys/i.test(name))) {
+        failures.push(`${viewportName}/speed: Champions mostrou formas fora do índice atual de Doubles.`);
       }
     }
 

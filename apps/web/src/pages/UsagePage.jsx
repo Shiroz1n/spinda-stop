@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
@@ -80,7 +80,7 @@ function snapshotKey(snapshot) {
   return [snapshot.season || "", snapshot.date || "", snapshot.sourceFile || ""].join("|");
 }
 
-function CategoryRow({ row, category }) {
+function CategoryRow({ row, category, pokemonSlug }) {
   const statAlignment = category.id === "stat_alignment";
   const observation = row.selected;
   const natureEffects = statAlignment
@@ -122,15 +122,16 @@ function CategoryRow({ row, category }) {
         </div>
         <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
           {category.id === "teammate"
-            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>#{partnerRank}</span>
+            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>Posição {partnerRank}</span>
             : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
+          {pokemonSlug && category.id !== "teammate" && <Link className="button button-outline button-small usage-apply-option" to="/builder" state={{ pokemonSlug, metaOption: { category: category.id, row } }}>Aplicar</Link>}
         </div>
       </div>
     </li>
   );
 }
 
-function CategoryRows({ rows, category }) {
+function CategoryRows({ rows, category, pokemonSlug }) {
   return (
     <ol className="usage-row-list">
       {rows.map((row, index) => (
@@ -138,6 +139,7 @@ function CategoryRows({ rows, category }) {
           key={row.key || `${category.id}-${index}`}
           row={row}
           category={category}
+          pokemonSlug={pokemonSlug}
         />
       ))}
     </ol>
@@ -172,6 +174,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
     : [category];
   const battleRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
   const metaRows = (item) => metaEntry?.distributions?.[metaRollCategoryByBattleData[item.id]] || [];
+  const pokemonSlug = resolveCatalogPokemon(selectedPokemon)?.slug || "";
   const dataPending = !usage && !metaEntry && ((status === "loading" || status === "idle") || indexStatus === "loading" || detail.status === "loading");
   const dataUnavailable = !usage && !metaEntry && (status === "error" || indexStatus === "error" || detail.status === "error");
   const emptyMessage = dataPending
@@ -214,7 +217,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
                 <h4>{item.label}</h4>
                 {category.id === "profile" ? <button className="text-button" type="button" onClick={() => onOpenDetails(item.id)}>Ver detalhes</button> : <span>{item.id === "teammate" ? `${rows.length} parceiros` : `${rows.length} linhas`}</span>}
               </div>
-              {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{categoryEmptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} emptyMessage={categoryEmptyMessage} />}
+              {!rows.length ? <div className="usage-empty usage-empty-compact"><p>{categoryEmptyMessage}</p></div> : <CategoryRows rows={category.id === "profile" ? rows.slice(0, 3) : rows} category={item} pokemonSlug={pokemonSlug} />}
             </section>
           );
         })}

@@ -89,6 +89,8 @@ function formAliases(entry) {
   const species = toId(entry.speciesSlug || entry.speciesName);
   if (!species || !form || form === "default") return aliases;
 
+  if (form === "male") aliases.push(species);
+  if (form === "female") aliases.push(`${species}f`, `${species}female`);
   if (form.startsWith("mega")) aliases.push(`${species}${form}`);
   if (form === "mega") aliases.push(`${species}mega`);
   const regionalForm = form.match(/^(alola|galar|hisui|paldea)(.*)$/);
@@ -145,6 +147,19 @@ export function resolvePokemonSpriteUrl(pokemon) {
   const spriteId = Number(pokemon.spriteId);
   if (!Number.isInteger(spriteId) || spriteId < 1) return null;
   return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${spriteId}.png`;
+}
+
+export function resolvePokemonSpriteFallbackUrl(pokemon) {
+  const spriteId = Number(pokemon?.spriteId);
+  return Number.isInteger(spriteId) && spriteId > 0
+    ? `${POKEAPI_SPRITES_BASE}/pokemon/${spriteId}.png`
+    : null;
+}
+
+export function resolvePokemonSpriteCandidate(primaryUrl, fallbackUrl, failure) {
+  if (!primaryUrl) return null;
+  if (failure?.primaryUrl !== primaryUrl) return primaryUrl;
+  return failure.fallbackFailed ? null : fallbackUrl || null;
 }
 
 export function typeIconUrl(type) {

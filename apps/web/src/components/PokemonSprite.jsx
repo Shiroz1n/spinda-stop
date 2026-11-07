@@ -1,28 +1,30 @@
 import { useState } from "react";
-import { itemSpriteUrl, resolvePokemonSpriteUrl } from "../data/pokemonSprites.js";
+import { itemSpriteUrl, resolvePokemonSpriteCandidate, resolvePokemonSpriteFallbackUrl, resolvePokemonSpriteUrl } from "../data/pokemonSprites.js";
 
 export function PokemonSprite({ pokemon, name, size = 72, priority = false, decorative = false, className = "" }) {
   const label = name || pokemon?.name || pokemon?.speciesName || "Pokémon";
   const fallbackLabel = pokemon?.speciesName || pokemon?.baseSpecies || pokemon?.name || label;
   const src = resolvePokemonSpriteUrl(pokemon);
-  const [failedSrc, setFailedSrc] = useState("");
+  const staticFallbackSrc = resolvePokemonSpriteFallbackUrl(pokemon);
+  const [spriteFailure, setSpriteFailure] = useState(null);
   const [loadedSrc, setLoadedSrc] = useState("");
-  const failed = !src || failedSrc === src;
-  const loading = Boolean(src) && !failed && loadedSrc !== src;
+  const activeSrc = resolvePokemonSpriteCandidate(src, staticFallbackSrc, spriteFailure);
+  const failed = !activeSrc;
+  const loading = Boolean(activeSrc) && loadedSrc !== activeSrc;
 
   return (
     <span
       className={`pokemon-art${failed ? " is-fallback" : loading ? " is-loading" : ""}${className ? ` ${className}` : ""}`}
       style={{ "--sprite-size": `${size}px` }}
       data-pokemon-slug={pokemon?.slug || undefined}
-      data-sprite-url={src || undefined}
+      data-sprite-url={activeSrc || undefined}
       role={decorative ? undefined : "img"}
       aria-label={decorative ? undefined : (failed ? `${label}, sprite indisponível` : label)}
       aria-hidden={decorative || undefined}
     >
       {!failed ? (
         <img
-          src={src}
+          src={activeSrc}
           alt=""
           aria-hidden="true"
           width={size}
@@ -31,8 +33,8 @@ export function PokemonSprite({ pokemon, name, size = 72, priority = false, deco
           decoding="async"
           fetchPriority={priority ? "high" : "auto"}
           className={loading ? "is-loading" : "is-loaded"}
-          onLoad={() => setLoadedSrc(src)}
-          onError={() => setFailedSrc(src)}
+          onLoad={() => setLoadedSrc(activeSrc)}
+          onError={() => setSpriteFailure({ primaryUrl: src, fallbackFailed: activeSrc !== src })}
         />
       ) : null}
       {(failed || loading) && <span className="pokemon-art-fallback" aria-hidden="true">{fallbackLabel.slice(0, 2).toLocaleUpperCase("pt-BR")}</span>}
