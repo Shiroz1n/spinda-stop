@@ -2126,6 +2126,7 @@ async function runFastViewport(viewportName, viewport) {
         await page.getByRole("button", { name: "Importar texto" }).click();
         await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
         await capture(page, viewportName, "builder-showdown-imported", { audit: false, fullPage: false });
+        await page.getByRole("button", { name: "Poképaste", exact: true }).click();
         await page.getByRole("button", { name: "Preparar e copiar" }).click();
         const copiedTeam = await page.evaluate(() => navigator.clipboard.readText());
         if (!copiedTeam.includes("Garchomp @ Life Orb") || !copiedTeam.includes("EVs: 4 HP / 32 SpA / 30 Spe")) {
@@ -2134,6 +2135,7 @@ async function runFastViewport(viewportName, viewport) {
         await page.locator("#builder-showdown-input").fill("Pikachu\nEVs: 252 Atk");
         await page.getByRole("button", { name: "Importar texto" }).click();
         await page.getByRole("status").filter({ hasText: "excede o limite Champions" }).waitFor({ state: "visible", timeout: 10_000 });
+        await page.getByRole("button", { name: "Equipe", exact: true }).click();
         if (await page.locator("#active-member-title").innerText() !== "Garchomp") {
           failures.push(viewportName + "/builder: uma importação inválida substituiu o set existente.");
         }

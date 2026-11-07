@@ -280,6 +280,7 @@ export function BuilderPage() {
     setSelectedSlot(Math.max(0, result.value.members.findIndex(Boolean)));
     setSpeedPreviews({});
     setShowdownInput("");
+    setBuilderTab("team");
     setMessage(saved ? "Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
   }
 
