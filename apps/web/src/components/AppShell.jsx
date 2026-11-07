@@ -125,7 +125,7 @@ export function AppShell({ children }) {
           <button className="theme-toggle" type="button" aria-label={themeLabel} title={themeLabel} onClick={cycleTheme}>
             <ThemeIcon theme={activeTheme} />
           </button>
-          <span className="visually-hidden" aria-live="polite">Tema {theme === "system" ? `automático, ${activeTheme === "dark" ? "escuro" : "claro"}` : theme === "dark" ? "escuro" : "claro"}</span>
+          <span className="sr-only" aria-live="polite">Tema {theme === "system" ? `automático, ${activeTheme === "dark" ? "escuro" : "claro"}` : theme === "dark" ? "escuro" : "claro"}</span>
           <Link className="button button-small button-primary header-action" to="/builder">Montar time</Link>
         </div>
       </header>

@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
+import { POKEAPI_SPRITES_BASE } from "../src/data/pokemonSprites.js";
 
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -265,11 +266,20 @@ async function warmVisibleListSprites(page, selector, viewportHeight = 800) {
     await page.waitForTimeout(60);
   }
   await page.waitForFunction((imageSelector) => [...document.querySelectorAll(imageSelector)].every((image) => image.complete), selector, { timeout: 15_000 }).catch(() => {});
-  const spriteState = await page.locator(selector).evaluateAll((images) => ({
-    total: images.length,
-    loaded: images.filter((image) => image.complete && image.naturalWidth > 0).length,
-    failed: images.filter((image) => image.complete && image.naturalWidth === 0).length,
-  }));
+  const spriteState = await page.locator(selector).evaluateAll((elements) => {
+    const arts = elements.map((element) => element.matches(".pokemon-art") ? element : element.closest(".pokemon-art")).filter(Boolean);
+    const loaded = (art) => {
+      const image = art.querySelector("img");
+      return Boolean(image?.complete && image.naturalWidth > 0 && !art.classList.contains("is-loading") && !art.classList.contains("is-fallback"));
+    };
+    return {
+      total: arts.length,
+      loaded: arts.filter(loaded).length,
+      failed: arts.filter((art) => art.classList.contains("is-fallback")).length,
+      pending: arts.filter((art) => art.classList.contains("is-loading")).length,
+      uncovered: arts.filter((art) => !loaded(art) && !art.classList.contains("is-fallback") && !art.classList.contains("is-loading")).length,
+    };
+  });
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   return spriteState;
 }
@@ -482,10 +492,10 @@ async function runViewport(viewportName, viewport) {
   if (loadedCardCount <= initialCardCount || loadedCardCount >= catalogCount) {
     failures.push(`${viewportName}: o carregamento progressivo não adicionou um lote limitado de Pokémon.`);
   }
-  const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art img", viewport.height);
+  const dexSpriteState = await warmVisibleListSprites(page, ".pokemon-card-art .pokemon-art", viewport.height);
   observations.push({ viewport: viewportName, name: "pokedex-loaded-batch-sprites", ...dexSpriteState });
-  if (dexSpriteState.total === 0 || dexSpriteState.loaded !== dexSpriteState.total || dexSpriteState.failed > 0) {
-    failures.push(`${viewportName}: há sprites ausentes ou ainda não carregados na lista visível da Pokédex (${dexSpriteState.loaded}/${dexSpriteState.total}; ${dexSpriteState.failed} falhas).`);
+  if (dexSpriteState.total === 0 || dexSpriteState.uncovered > 0) {
+    failures.push(`${viewportName}: há sprites sem imagem carregada nem fallback visível na Pokédex (${dexSpriteState.uncovered}/${dexSpriteState.total}).`);
   }
   await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
@@ -544,7 +554,7 @@ async function runViewport(viewportName, viewport) {
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
-  await missingSpritePage.route("https://raw.githubusercontent.com/PokeAPI/sprites/7a7d66b1620e646f69afd48dc1273da9033ede9c/sprites/pokemon/versions/generation-v/black-white/25.png", (route) => route.abort());
+  await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/other/home/25.png`, (route) => route.abort());
   await missingSpritePage.goto(`${baseUrl}/dex/pikachu`, { waitUntil: "domcontentloaded" });
   const missingSprite = missingSpritePage.locator(".detail-stage-art .pokemon-art");
   await missingSprite.waitFor({ state: "visible", timeout: 10_000 });

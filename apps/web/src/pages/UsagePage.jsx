@@ -159,7 +159,6 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
   useEffect(() => {
     if (indexStatus !== "success" || !entry) return undefined;
     let active = true;
-    setDetailState({ key: requestKey, status: "loading" });
     provider.loadPokemonUsage({ id: entry.id, force: retry > 0 }).then((result) => {
       if (active) setDetailState({ key: requestKey, status: "success", result });
     }).catch(() => {
@@ -328,9 +327,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const [historySeason, setHistorySeason] = useState("all");
   const [historyDays, setHistoryDays] = useState(7);
   const [selectedSnapshotKey, setSelectedSnapshotKey] = useState("");
-  const [usage, setUsage] = useState(null);
-  const [usageStatus, setUsageStatus] = useState("idle");
-  const [usageError, setUsageError] = useState("");
+  const [usageState, setUsageState] = useState({ key: "", status: "idle", result: null, error: "" });
   const [usageRetry, setUsageRetry] = useState(0);
   const usageForceKey = useRef("");
   const catalog = useMemo(
@@ -340,6 +337,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const selectedPokemon = catalog.find((entry) => entry.key === selectedId) || null;
   const selectedPokemonKey = selectedPokemon?.key;
   const selectedShowdownId = selectedPokemon?.showdownId;
+  const usageRequestKey = [periodMode, historySeason, historyDays, selectedPokemonKey, usageRetry].join("|");
+  const usageStateIsCurrent = usageState.key === usageRequestKey;
+  const usage = usageStateIsCurrent ? usageState.result : null;
+  const usageStatus = usageStateIsCurrent ? usageState.status : selectedShowdownId ? "loading" : selectedPokemonKey ? "success" : "idle";
+  const usageError = usageStateIsCurrent ? usageState.error : "";
 
   function refreshIndex(force = false) {
     const nextRetry = indexRetry + 1;
@@ -354,8 +356,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
     usageForceKey.current = force
       ? [periodMode, historySeason, historyDays, selectedPokemon.key, nextRetry].join("|")
       : "";
-    setUsageStatus("loading");
-    setUsageError("");
     setUsageRetry(nextRetry);
   }
 
@@ -406,15 +406,10 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   }, [catalog]);
 
   useEffect(() => {
-    if (!selectedShowdownId) {
-      setUsage(null);
-      setUsageStatus(selectedPokemonKey ? "success" : "idle");
-      setUsageError("");
-      return undefined;
-    }
+    if (!selectedShowdownId) return undefined;
 
     let active = true;
-    const requestKey = [periodMode, historySeason, historyDays, selectedPokemonKey, usageRetry].join("|");
+    const requestKey = usageRequestKey;
     const force = usageForceKey.current === requestKey;
     if (force) usageForceKey.current = "";
     const request = { showdownId: selectedShowdownId, force };
@@ -425,19 +420,17 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
 
     provider.loadPokemonUsage(request).then((result) => {
       if (!active) return;
-      setUsage(result);
+      setUsageState({ key: requestKey, status: "success", result, error: "" });
       setSelectedSnapshotKey((current) => result.daily.some((snapshot) => snapshotKey(snapshot) === current)
         ? current
         : result.daily[0] ? snapshotKey(result.daily[0]) : "");
-      setUsageStatus("success");
     }).catch(() => {
       if (!active) return;
-      setUsageStatus("error");
-      setUsageError("A API pode estar temporariamente fora do ar. Nenhum dado local foi substituído.");
+      setUsageState({ key: requestKey, status: "error", result: null, error: "A API pode estar temporariamente fora do ar. Nenhum dado local foi substituído." });
     });
 
     return () => { active = false; };
-  }, [provider, selectedPokemonKey, selectedShowdownId, periodMode, historySeason, historyDays, usageRetry]);
+  }, [provider, selectedShowdownId, usageRequestKey]);
 
   const requestedPokemon = initialPokemonName
     ? findUsagePokemonByReference(catalog, initialPokemonName)
@@ -593,9 +586,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                   onChange={(event) => {
                     setPeriodMode(event.target.value);
                     setSelectedSnapshotKey("");
-                    setUsage(null);
-                    setUsageStatus("loading");
-                    setUsageError("");
                     setUsageRetry(0);
                   }}
                 >
@@ -613,9 +603,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                       onChange={(event) => {
                         setHistorySeason(event.target.value);
                         setSelectedSnapshotKey("");
-                        setUsage(null);
-                        setUsageStatus("loading");
-                        setUsageError("");
                         setUsageRetry(0);
                       }}
                     >
@@ -632,9 +619,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                       onChange={(event) => {
                         setHistoryDays(Number(event.target.value));
                         setSelectedSnapshotKey("");
-                        setUsage(null);
-                        setUsageStatus("loading");
-                        setUsageError("");
                         setUsageRetry(0);
                       }}
                     >
@@ -682,9 +666,6 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                           setSelectedId(entry.key);
                           onPokemonSelect?.(entry.name);
                           setUsageRetry(0);
-                          setUsage(null);
-                          setUsageStatus(entry.showdownId ? "loading" : "success");
-                          setUsageError("");
                         }
                       }}
                     >
