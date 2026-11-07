@@ -11,7 +11,9 @@ import { POKEAPI_SPRITES_BASE } from "../src/data/pokemonSprites.js";
 const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const args = process.argv.slice(2);
 const mobileOnly = args.includes("--mobile-only");
+const narrowMobileOnly = args.includes("--narrow-only");
 const fastMode = mobileOnly || args.includes("--fast") || args.includes("--quick");
+if (narrowMobileOnly && !mobileOnly) throw new Error("--narrow-only requires --mobile-only.");
 const pageFlagIndex = args.findIndex((argument) => argument === "--pages" || argument === "--screens");
 const pageFlag = args.find((argument) => argument.startsWith("--pages=") || argument.startsWith("--screens="));
 const requestedPageList = process.env.VISUAL_REVIEW_PAGES
@@ -2115,10 +2117,11 @@ async function runFastViewport(viewportName, viewport) {
       }
     }
 
-    if (mobileOnly && viewport.width === 390 && screen === "builder") {
+    if (mobileOnly && screen === "builder" && (viewport.width === 390 || narrowMobileOnly && viewport.width === 320)) {
       try {
         await page.locator(".builder-tools-details > summary").click();
         await page.locator("#builder-showdown-input").fill("Garchomp @ Life Orb\nAbility: Rough Skin\nLevel: 50\nEVs: 4 HP / 32 SpA / 30 Spe\nTimid Nature\n- Earthquake\n- Protect");
+        page.once("dialog", (dialog) => dialog.accept());
         await page.getByRole("button", { name: "Importar texto" }).click();
         await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
         await capture(page, viewportName, "builder-showdown-imported", { audit: false, fullPage: false });
@@ -2294,10 +2297,12 @@ try {
     ["desktop", { width: 1440, height: 960 }],
     ["mobile", { width: 390, height: 844 }],
   ];
-  const mobileViewports = [
-    ["mobile", { width: 390, height: 844 }],
-    ["mobile-320", { width: 320, height: 760 }],
-  ];
+  const mobileViewports = narrowMobileOnly
+    ? [["mobile-320", { width: 320, height: 760 }]]
+    : [
+      ["mobile", { width: 390, height: 844 }],
+      ["mobile-320", { width: 320, height: 760 }],
+    ];
   const viewports = mobileOnly ? mobileViewports : fastMode ? quickViewports : fullViewports;
   for (const [name, viewport] of viewports) {
     try {
@@ -2313,7 +2318,9 @@ try {
     generatedAt: new Date().toISOString(),
     mode: mobileOnly ? "targeted-mobile" : fastMode ? "fast-development-subset" : "full-desktop-gate",
     scope: mobileOnly
-      ? "All nine routes at 390 and 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check at 390 px."
+      ? narrowMobileOnly
+        ? "Selected screens at 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check."
+        : "All nine routes at 390 and 320 CSS px with first-fold and full-page home/builder screenshots, axe, focus/keyboard, overflow, runtime errors, and a builder paste/export check at 390 px."
       : fastMode
       ? "Selected screens at 1440 and 390 CSS px with screenshots, overflow, runtime errors, and keyboard focus checks. Not equivalent to the complete review."
       : "All existing scenarios at 1440 and 900 CSS px, with axe and community flows against SQLite when SPINDA_DB_PATH is set. Targeted responsive and mobile accessibility checks run separately at 390 and 320 CSS px.",
