@@ -589,7 +589,7 @@ button, summary, .nav-link, .mobile-nav-link, .home-action, .pokemon-card-link, 
   -webkit-tap-highlight-color: transparent;
 }
 button:active:not(:disabled), .button:active:not(:disabled) { transform: translateY(1px); }
-:focus-visible { outline: 3px solid #005fcc; outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 input, select, textarea { font-size: 1rem; }
 .app-shell .text-input, .app-shell .search-field, .app-shell .search-field input,
 .app-shell .home-search input, .app-shell .filter-field select,
@@ -1038,6 +1038,239 @@ input, select, textarea { font-size: 1rem; }
 .usage-species-button.is-selected .usage-position-pair { color: var(--blue-dark); font-weight: 800; }
 .builder-nature-stats > div { align-content: center; }
 
+/* One competitive catalog keeps each published capture visible without implying a shared sample. */
+.usage-source-banner { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; }
+.usage-source-copy { display: grid; gap: 2px; }
+.usage-source-copy > strong { font-size: 1rem; }
+.usage-source-copy > span, .usage-source-details > p { color: var(--ink-soft); font-size: 1rem; }
+.usage-source-details > summary { min-height: 44px; }
+.usage-source-details[open] { grid-column: 1 / -1; justify-self: stretch; }
+.usage-source-guide { width: fit-content; margin: 4px 8px 0 0; }
+.usage-index-note { display: flex; align-items: center; gap: 12px; }
+.usage-index-note .usage-period-summary { margin-right: auto; }
+.usage-capture-details > summary { min-height: 44px; }
+.usage-layout { grid-template-columns: minmax(270px, 0.68fr) minmax(0, 1.72fr); gap: 22px; }
+.usage-row-title { grid-template-columns: minmax(0, 1fr); }
+.usage-merged-values { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-variant-numeric: tabular-nums; }
+.usage-source-observation { min-width: 0; display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px; color: var(--ink); font-size: 1rem; }
+.usage-source-observation b { color: var(--ink-soft); font-size: 1rem; }
+.usage-source-observation > span { color: var(--ink); font-size: 1rem; overflow-wrap: anywhere; }
+.usage-source-observation.is-missing { color: var(--ink-soft); }
+.usage-distributions { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.usage-distributions-heading, .usage-category-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.usage-distributions-heading h3 { margin: 0; font-size: 1.12rem; }
+.usage-distributions-heading .text-button { min-height: 44px; }
+.usage-distributions-note { max-width: 76ch; margin: 6px 0 10px; color: var(--ink-soft); font-size: 1rem; }
+.usage-observation-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; padding-block: 8px; border-block: 1px solid var(--line); color: var(--ink-soft); font-size: 1rem; }
+.usage-observation-context details { grid-column: 1 / -1; }
+.usage-observation-context summary { min-height: 44px; color: var(--blue-dark); font-weight: 750; }
+.usage-observation-context details > p { margin: 4px 0; }
+.usage-observation-context details > a { display: inline-flex; min-height: 44px; align-items: center; margin-right: 12px; }
+.usage-distribution-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.usage-distribution-category { min-width: 0; padding-block: 11px; border-bottom: 1px solid var(--line); }
+.usage-distribution-category .usage-category-heading { min-height: 42px; margin: 0; }
+.usage-distribution-category h4 { margin: 0; font-size: 1rem; }
+.usage-distribution-category .usage-row-main { grid-template-columns: minmax(0, 1fr) minmax(170px, 0.95fr); gap: 8px; }
+.usage-distribution-category .usage-data-row { padding-block: 7px; border-color: var(--line); }
+.usage-distribution-category .usage-spread { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.usage-stat-points-note { margin: 2px 0 8px; color: var(--ink-soft); font-size: 1rem; }
+.usage-distribution-category .usage-empty-compact { min-height: 54px; }
+.metaroll-page .metaroll-layout { grid-template-columns: minmax(0, 1fr); }
+.metaroll-page .metaroll-layout > .usage-browser-panel { display: none; }
+.app-shell .page-intro, .app-shell .hero-intro, .app-shell .usage-no-results p { font-size: 1rem; }
+.theme-toggle { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid currentColor; border-radius: 50%; background: transparent; color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle:active { transform: translateY(1px); }
+.header-tools { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 9px; }
+.header-tools .header-action { justify-self: auto; }
+
+@media (max-width: 900px) {
+  .header-tools { grid-column: 2; grid-row: 1; }
+  .usage-layout, .usage-distribution-grid { grid-template-columns: minmax(0, 1fr); }
+  .usage-distribution-category .usage-row-main { grid-template-columns: minmax(0, 1fr) minmax(170px, 0.8fr); }
+}
+
+@media (max-width: 760px) {
+  .header-tools { grid-column: 2; grid-row: 1; }
+  .usage-source-banner { grid-template-columns: minmax(0, 1fr) auto; padding-block: 6px; }
+  .usage-source-copy > span { font-size: 1rem; }
+  .usage-source-details[open] { grid-column: 1 / -1; }
+  .usage-index-note { flex-wrap: wrap; }
+  .usage-index-note .usage-period-summary { flex-basis: 100%; }
+  .usage-observation-context { grid-template-columns: minmax(0, 1fr); }
+  .usage-observation-context details { grid-column: auto; }
+  .usage-distribution-category .usage-row-main { grid-template-columns: minmax(0, 1fr) minmax(150px, 0.8fr); gap: 6px; }
+  .usage-merged-values { gap: 4px 8px; }
+  .usage-source-observation { gap: 4px; }
+  .usage-source-observation > span { font-size: 1rem; }
+}
+
+@media (max-width: 420px) {
+  .usage-distribution-category .usage-row-main { grid-template-columns: minmax(0, 1fr); }
+  .usage-merged-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .theme-toggle { width: 44px; height: 44px; }
+  .header-tools { gap: 4px; }
+}
+
+/* A semantic palette covers the full product without filter-based color inversion. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #111318;
+  --paper-shadow: #080a0e;
+  --surface: #1a1d24;
+  --surface-alt: #232731;
+  --surface-quiet: #292e39;
+  --field: #15181e;
+  --sky: #2b3c4d;
+  --grass: #2a3d33;
+  --selection: #3c252c;
+  --ink: #f1f1ed;
+  --muted: #c3c7ce;
+  --ink-soft: #c3c7ce;
+  --line: #4a505c;
+  --blue: #80aee7;
+  --blue-dark: #a7c9f8;
+  --coral: #ed6674;
+  --coral-dark: #ff9aa2;
+  --green: #8bc99e;
+  --gold: #ddbd68;
+  --fire-ink: #ff9aa2;
+  --focus: #8cc8ff;
+  --signal-red: #ed6674;
+  --signal-red-strong: #ff9aa2;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] .app-shell { background: var(--paper); color: var(--ink); }
+:root[data-theme="dark"] .site-header { background: #15171d; color: var(--ink); }
+:root[data-theme="dark"] .site-header .brand,
+:root[data-theme="dark"] .site-header .nav-link,
+:root[data-theme="dark"] .site-header .theme-toggle { color: var(--ink); }
+:root[data-theme="dark"] .site-header .nav-link.is-active { background: color-mix(in srgb, var(--signal-red) 20%, transparent); color: var(--ink); }
+:root[data-theme="dark"] .site-footer { background: var(--surface-alt); color: var(--muted); }
+:root[data-theme="dark"] .site-footer a { color: var(--blue-dark); }
+:root[data-theme="dark"] a { color: var(--blue-dark); }
+:root[data-theme="dark"] ::selection { color: var(--ink); background: color-mix(in srgb, var(--signal-red) 40%, var(--surface)); }
+
+:root[data-theme="dark"] .app-shell :is(
+  .home-hero, .home-action, .pokemon-card, .empty-state-panel, .detail-panel, .type-relation-group,
+  .usage-source-banner, .usage-browser-panel, .usage-detail-panel, .usage-profile-section,
+  .metaroll-card, .metaroll-ladder-row, .metaroll-mega-list li, .metaroll-capture-note,
+  .metaroll-rank-summary > div, .metaroll-mega-provenance, .set-editor, .team-slot,
+  .nature-picker-options, .nature-picker-option, .speed-settings, .speed-target-banner,
+  .speed-result-row, .damage-result, .damage-result-empty, .damage-move-picker, .damage-move-panel,
+  .damage-field-deck, .damage-comparison-empty, .damage-multi-results, .damage-team-results-heading,
+  .community-auth-card, .community-create-card, .community-rooms-card, .community-state-card,
+  .community-room-panel, .community-room-card, .team-account-panel, .tournament-overview,
+  .tournament-round, .tournament-bracket-card, .account-team-row, .species-dialog, .dialog-content
+) { background-color: var(--surface); border-color: var(--line); box-shadow: none; color: var(--ink); }
+:root[data-theme="dark"] .app-shell .home-hero { background-color: var(--surface-alt); }
+:root[data-theme="dark"] .app-shell :is(
+  .dex-toolbar, .dex-stat-filter-fields, .detail-section-nav a, .stat-track, .usage-selected-rank,
+  .usage-spread > span, .metaroll-capture-note, .metaroll-rank-summary > div, .metaroll-mega-provenance,
+  .damage-calculated-stats, .damage-quickbar, .damage-quickbar-move, .damage-field-strip,
+  .builder-speed-panel, .builder-nature-stats, .speed-workbench, .mobile-more-menu,
+  .usage-source-observation, .damage-item-context, .community-next-step, .tournament-match-status
+) { background-color: var(--surface-quiet); border-color: var(--line); color: var(--ink); }
+:root[data-theme="dark"] .app-shell :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, .text-input, .nature-picker-trigger) {
+  border-color: var(--line);
+  background-color: var(--field);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+:root[data-theme="dark"] .app-shell :is(.mobile-more-menu, .mobile-more-menu a) { border-color: var(--line); background-color: var(--surface); color: var(--ink); }
+:root[data-theme="dark"] .app-shell :is(.detail-heading, .detail-stage-art, .home-signature-art, .pokemon-card-art, .usage-species-art, .usage-detail-art, .team-slot-art, .set-editor-art, .damage-side-art.pokemon-art, .speed-target-banner > .pokemon-art, .damage-team-target-portrait, .damage-team-member-heading .pokemon-art) {
+  border-color: var(--line);
+  background: linear-gradient(180deg, var(--sky) 0 64%, var(--grass) 64%);
+}
+:root[data-theme="dark"] .app-shell :is(.usage-species-button, .team-slot, .usage-category-tab, .metaroll-view-switch button, .form-option, .damage-target-mode button) { color: var(--ink); }
+:root[data-theme="dark"] .app-shell :is(.usage-species-button.is-selected, .team-slot.is-selected, .form-option.is-current, .damage-target-mode button.is-selected) {
+  border-color: var(--focus);
+  background-color: color-mix(in srgb, var(--signal-red) 20%, var(--surface));
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell .type-tag {
+  border-color: color-mix(in srgb, var(--type-bg, var(--line)) 50%, var(--line));
+  background-color: color-mix(in srgb, var(--type-bg, var(--line)) 30%, var(--surface));
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell :is(.usage-row-list > li, .usage-data-row, .usage-profile-section, .metaroll-card, .metaroll-list-row, .metaroll-ladder-row, .metaroll-rating-table-wrap, table, th, td) { border-color: var(--line); }
+:root[data-theme="dark"] .app-shell :is(.usage-data-row, .metaroll-list-row, .metaroll-ladder-row, tbody tr:nth-child(even)) { background-color: var(--surface); color: var(--ink); }
+:root[data-theme="dark"] .app-shell :is(dialog, .dialog-content) { background: var(--surface); color: var(--ink); }
+:root[data-theme="dark"] dialog::backdrop { background: rgb(5 7 11 / 76%); }
+:root[data-theme="dark"] .app-shell :is(.usage-error, .community-error, .community-inline-error, .damage-result-error, .damage-rules-note, .damage-engine-limit, .nature-picker-warning, .nature-picker-error, .builder-rules-warning) {
+  border-color: color-mix(in srgb, var(--coral-dark) 55%, var(--line));
+  background-color: color-mix(in srgb, var(--coral) 20%, var(--surface));
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell :is(.usage-error p, .community-error p, .damage-rules-note p, .damage-engine-limit, .usage-filter-note, .community-muted, .community-empty) { color: var(--muted); }
+:root[data-theme="dark"] .app-shell :is(.usage-empty, .usage-no-results, .metaroll-empty, .community-empty) {
+  border-color: var(--line);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell .usage-index-state { border-color: var(--line); background-color: var(--surface); color: var(--ink); }
+:root[data-theme="dark"] .app-shell .button-primary {
+  border-color: var(--coral-dark);
+  background-color: var(--coral);
+  color: #171217;
+}
+:root[data-theme="dark"] .app-shell .button-outline {
+  border-color: var(--line);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell .button:disabled {
+  border-color: var(--line);
+  background-color: var(--surface-alt);
+  color: var(--muted);
+}
+:root[data-theme="dark"] .app-shell :is(.unknown-chip, .community-state-chip, .community-account-chip) {
+  border-color: color-mix(in srgb, var(--gold) 50%, var(--line));
+  background-color: color-mix(in srgb, var(--gold) 20%, var(--surface));
+  color: var(--ink);
+}
+:root[data-theme="dark"] .app-shell .stat-track > span { background: var(--blue); }
+:root[data-theme="dark"] .app-shell :is(.usage-source-observation.is-missing, .usage-source-observation.is-missing > span) { color: var(--muted); }
+:root[data-theme="dark"] .site-header .button-primary { border-color: var(--coral-dark); background: var(--coral); color: #171217; }
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-theme="dark"] .app-shell :is(.button-outline:hover:not(:disabled), .usage-species-button:hover, .pokemon-card:hover, .mobile-more-menu a:hover) {
+    border-color: var(--focus);
+    background-color: color-mix(in srgb, var(--blue) 12%, var(--surface));
+    color: var(--ink);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  :root[data-theme="dark"] .app-shell .button-primary:hover:not(:disabled):not(:focus-visible) {
+    border-color: var(--coral-dark);
+    background-color: var(--coral);
+    color: #171217;
+  }
+  :root[data-theme="dark"] .app-shell .button-outline:hover:not(:disabled):not(:focus-visible) {
+    border-color: var(--line);
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+  :root[data-theme="dark"] .app-shell :is(.icon-button:hover:not(:focus-visible), .picker-result:hover:not(:focus-visible), .form-option:hover:not(.is-current):not(:focus-visible)) {
+    border-color: var(--line);
+    background-color: var(--surface);
+    color: var(--ink);
+  }
+  :root[data-theme="dark"] .app-shell :is(.home-action:active, .pokemon-card-link:active, .usage-species-link:active, .usage-species-button:active, .team-slot:active, .damage-move-slot-select:active) {
+    border-color: var(--focus);
+    background-color: color-mix(in srgb, var(--signal-red) 20%, var(--surface));
+    color: var(--ink);
+  }
+}
+
+@media (max-width: 760px) {
+  .header-tools .header-action { grid-column: auto; grid-row: auto; }
+}
+
 @media (max-width: 900px) {
   .usage-comparison-sources { grid-template-columns: minmax(0, 1fr); }
   .usage-comparison-sources > div + div { padding-top: 8px; border-top: 1px solid var(--line); }
@@ -1048,6 +1281,7 @@ input, select, textarea { font-size: 1rem; }
   .usage-comparison-grid { grid-template-columns: minmax(0, 1fr); }
   .usage-comparison-sources { gap: 8px; }
   .usage-species-button { grid-template-columns: 48px minmax(0, 1fr) 76px; }
+  .usage-species-list { grid-template-columns: minmax(0, 1fr); }
   .usage-position-pair { min-width: 62px; }
   .builder-nature-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 }

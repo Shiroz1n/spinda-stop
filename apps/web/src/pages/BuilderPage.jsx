@@ -454,7 +454,7 @@ export function BuilderPage() {
                 </div>
 
                 <NaturePicker id="member-nature" label="Nature do set" value={selectedMember.nature || "Serious"} onChange={(nature) => updateMember({ nature })} className="field-wide" />
-                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os Stat Points">
+                {selectedComputedStats ? <dl className="builder-nature-stats field-wide" aria-label="Stats calculados conforme a Nature e os pontos investidos">
                   {[["hp", "HP"], ["atk", "Atk"], ["def", "Def"], ["spa", "SpA"], ["spd", "SpD"], ["spe", "Spe"]].map(([key, label]) => <div key={key} data-stat={key}><dt>{label}</dt><dd>{selectedComputedStats[key]}</dd></div>)}
                 </dl> : <p className="builder-nature-stats-note field-wide" role="status">Os stats deste set não podem ser calculados até a distribuição e a Nature serem válidas.</p>}
 
@@ -472,8 +472,8 @@ export function BuilderPage() {
                 <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>A lista contém golpes gerais. Compatibilidade do Pokémon e do regulamento não é verificada.</p></details>
 
                 <details className="points-section field-wide">
-                  <summary>Conferir Stat Points <span>{pointTotal} distribuídos</span></summary>
-                  <p className="form-hint">Limite usado pelo formato comunitário: 32 SP por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} SP.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} SP.`}</p>
+                  <summary>Conferir pontos investidos <span>{pointTotal} distribuídos</span></summary>
+                  <p className="form-hint">Limite usado pelo formato comunitário: 32 pontos por atributo e 66 no set. Isso não confirma uma regra oficial do jogo. {pointRemaining >= 0 ? `Restam ${pointRemaining} pontos.` : `O set excede o orçamento em ${Math.abs(pointRemaining)} pontos.`}</p>
                   <div className="points-grid">
                     {STAT_FIELDS.map(([key, label]) => (
                       <label key={key} htmlFor={`stat-${key}`}>
@@ -555,7 +555,7 @@ export function BuilderPage() {
         <summary>Limites deste rascunho</summary>
         <div className="rules-warning" role="note">
           <span className="warning-mark">Regras</span>
-          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de Stat Points.</p>
+          <p>O editor não valida regulamento, legalidade de golpes/habilidades nem limites oficiais de pontos investidos.</p>
         </div>
       </details>
 

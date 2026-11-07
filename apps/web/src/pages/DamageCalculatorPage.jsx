@@ -296,10 +296,10 @@ function SideEditor({ title, side, onChange, sideName, showSpecies = true, compa
   const stats = calculatedStats ? <dl className="damage-calculated-stats" aria-live="polite" aria-label={`Stats calculados de ${side.species} com ${side.nature || "Serious"}`}>
     {statFields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{calculatedStats[key]}</dd></div>)}
   </dl> : null;
-  const advancedStats = <details className="damage-advanced"><summary>SP, status e estágios <span>{statPointTotal} SP</span></summary>
-    <fieldset className="damage-stat-fieldset"><legend>Stat Points</legend><div className="damage-stat-grid">
+  const advancedStats = <details className="damage-advanced"><summary>Pontos, status e estágios <span>{statPointTotal} pontos</span></summary>
+    <fieldset className="damage-stat-fieldset"><legend>Pontos investidos</legend><div className="damage-stat-grid">
       {statFields.map(([key, label]) => <label className="damage-field" key={key}><span>{label}</span><input className="text-input" type="number" min="0" step="1" value={side.statPoints[key]} onChange={(event) => updateNested("statPoints", key, event.target.value === "" ? 0 : Number(event.target.value))} /></label>)}
-    </div><p className="form-hint" role="status" aria-live="polite">Total informado: {statPointTotal} SP. Limites oficiais e legalidade de SP não estão verificados.</p></fieldset>
+    </div><p className="form-hint" role="status" aria-live="polite">Total informado: {statPointTotal} pontos investidos. Limites e legalidade oficiais não estão verificados.</p></fieldset>
     <div className="damage-boost-grid">{boostFields.map(([key, label]) => <label className="damage-field" key={key}><span>{label} (−6 a +6)</span><input className="text-input" type="number" min="-6" max="6" step="1" value={side.boosts[key]} onChange={(event) => updateNested("boosts", key, event.target.value === "" ? 0 : Number(event.target.value))} /></label>)}</div>
   </details>;
 
@@ -851,7 +851,7 @@ export function DamageCalculatorPage() {
           <details className="damage-edit-task" open={!calculationReady && targetMode !== "many"}>
             <summary>{targetMode === "team" ? "Set do alvo" : "Pokémon e sets"}<span>{targetMode === "team" ? "defesa compartilhada" : "nature · habilidade · item · SP"}</span></summary>
             <section className="damage-input-grid" aria-label="Pokémon e parâmetros dos sets">
-              {targetMode === "team" ? <div className="damage-team-source"><div className="section-heading"><h2>Atacantes do builder</h2><span>{builderTeamState.team?.members.filter(Boolean).length || 0}/6 sets</span></div><p>Nature, habilidade, item, Stat Points e golpes vêm do rascunho salvo. Sets vazios ou inválidos ficam identificados em cada posição.</p><Link className="button button-outline button-small" to="/builder">Editar time</Link></div> : <SideEditor title="Atacante" sideName="attacker" side={form.attacker} onChange={(value) => updateSide("attacker", value)} />}
+              {targetMode === "team" ? <div className="damage-team-source"><div className="section-heading"><h2>Atacantes do builder</h2><span>{builderTeamState.team?.members.filter(Boolean).length || 0}/6 sets</span></div><p>Nature, habilidade, item, pontos investidos e golpes vêm do rascunho salvo. Sets vazios ou inválidos ficam identificados em cada posição.</p><Link className="button button-outline button-small" to="/builder">Editar time</Link></div> : <SideEditor title="Atacante" sideName="attacker" side={form.attacker} onChange={(value) => updateSide("attacker", value)} />}
               <SideEditor title={targetMode === "many" ? "Set defensivo compartilhado" : "Alvo"} sideName="defender" side={form.defender} onChange={(value) => updateSide("defender", value)} showSpecies={targetMode !== "many"} />
             </section>
           </details>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { BrandMark } from "./BrandMark.jsx";
 
@@ -41,10 +41,32 @@ function CommunityMenu() {
   );
 }
 
+function ThemeIcon({ theme }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      {theme === "dark" ? (
+        <path d="M16.8 12.1A7 7 0 0 1 7.9 3.2 7.1 7.1 0 1 0 16.8 12Z" />
+      ) : (
+        <><circle cx="10" cy="10" r="3.5" /><path d="M10 1.5v2m0 13v2m8.5-8.5h-2m-13 0h-2m14.5-6-1.4 1.4m-9.2 9.2L3.5 16m13 0-1.4-1.4M3.5 4l1.4 1.4" /></>
+      )}
+    </svg>
+  );
+}
+
 export function AppShell({ children }) {
   const location = useLocation();
   const mainRef = useRef(null);
   const previousPath = useRef(location.pathname);
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem("spinda-theme");
+      return saved === "light" || saved === "dark" ? saved : "system";
+    } catch {
+      return "system";
+    }
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const activeTheme = theme === "system" ? (systemPrefersDark ? "dark" : "light") : theme;
 
   useEffect(() => {
     if (previousPath.current !== location.pathname) {
@@ -52,6 +74,35 @@ export function AppShell({ children }) {
       mainRef.current?.focus();
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateSystemPreference = (event) => setSystemPrefersDark(event.matches);
+    media.addEventListener("change", updateSystemPreference);
+    return () => media.removeEventListener("change", updateSystemPreference);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = activeTheme;
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) themeColor.content = activeTheme === "dark" ? "#15171d" : "#111111";
+    try {
+      if (theme === "system") localStorage.removeItem("spinda-theme");
+      else localStorage.setItem("spinda-theme", theme);
+    } catch {
+      // The in-memory theme still works when storage is unavailable.
+    }
+  }, [activeTheme, theme]);
+
+  function cycleTheme() {
+    setTheme((current) => current === "system"
+      ? (systemPrefersDark ? "light" : "dark")
+      : current === "light" ? "dark" : "system");
+  }
+
+  const themeLabel = theme === "system"
+    ? `Tema automático, atualmente ${activeTheme === "dark" ? "escuro" : "claro"}. Clique para personalizar.`
+    : theme === "light" ? "Tema claro. Clique para escuro." : "Tema escuro. Clique para automático.";
 
   return (
     <div className="app-shell">
@@ -70,7 +121,13 @@ export function AppShell({ children }) {
           <NavLink to="/rooms" className={({ isActive }) => `nav-link${isActive ? " is-active" : ""}`}>Salas</NavLink>
           <NavLink to="/tournaments" className={({ isActive }) => `nav-link${isActive ? " is-active" : ""}`}>Torneios</NavLink>
         </nav>
-        <Link className="button button-small button-primary header-action" to="/builder">Montar time</Link>
+        <div className="header-tools">
+          <button className="theme-toggle" type="button" aria-label={themeLabel} title={themeLabel} onClick={cycleTheme}>
+            <ThemeIcon theme={activeTheme} />
+          </button>
+          <span className="visually-hidden" aria-live="polite">Tema {theme === "system" ? `automático, ${activeTheme === "dark" ? "escuro" : "claro"}` : theme === "dark" ? "escuro" : "claro"}</span>
+          <Link className="button button-small button-primary header-action" to="/builder">Montar time</Link>
+        </div>
       </header>
 
       <main ref={mainRef} id="main-content" className="main-content" tabIndex={-1}>{children}</main>

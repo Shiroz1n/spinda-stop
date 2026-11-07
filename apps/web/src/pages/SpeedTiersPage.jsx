@@ -164,7 +164,7 @@ export function SpeedTiersPage() {
             <div className="speed-target-value"><strong>{targetSpeed ?? "—"}</strong><span>Speed</span><small>calculada · nível {candidate.level}</small></div>
           </section>
           <details className="speed-assumptions-disclosure">
-            <summary>Nature e pontos de Speed <span>Comparados: {candidate.nature} · {model === "champions" ? `${candidate.sp} SP` : `${candidate.ev} EV`} | Alvo: {target.nature} · {model === "champions" ? `${target.sp} SP` : `${target.ev} EV`}</span></summary>
+            <summary>Nature e pontos de Speed <span>Comparados: {candidate.nature} · {model === "champions" ? `${candidate.sp} pontos` : `${candidate.ev} EV`} | Alvo: {target.nature} · {model === "champions" ? `${target.sp} pontos` : `${target.ev} EV`}</span></summary>
             <div className="speed-assumptions">
               <SpeedSettings label="Pokémon comparados" model={model} values={candidate} onChange={updateCandidate} />
               <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />

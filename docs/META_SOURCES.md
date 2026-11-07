@@ -1,12 +1,14 @@
 # APIs de dados competitivos
 
-Revisão feita em 18/10/2026. Usage começa em Doubles e compara Battle Data com MetaRoll na ficha da mesma espécie. Adaptadores, períodos, capturas e atribuições continuam separados. Percentuais não devem ser somados, receber média ou ser tratados como uma única amostra.
+Revisão original feita em 18/10/2026; a estratégia de apresentação foi reavaliada em 06/11/2026. Usage começa em Doubles e reúne as espécies e distribuições das duas APIs em um catálogo e uma ficha. Cada posição, percentual, período e atribuição continua vinculado à captura que o publicou. Percentuais não devem ser somados, receber média ou ser tratados como uma única amostra.
 
 Para o inventário campo a campo das respostas consultadas, o que já aparece no Spinda Stop e a sequência de PRs proposta, veja [Matriz de cobertura competitiva](COMPETITIVE_COVERAGE.md).
 
 ## Decisão
 
-Pokémon Champions Battle Data e MetaRoll têm adaptadores separados. A tela de Usage compara suas posições e distribuições lado a lado; cada coluna conserva a captura, temporada, período e atribuição daquela fonte. Históricos, matchups, formas Mega e ladder continuam acessíveis na ficha detalhada MetaRoll. Nada passa por uma API pública do Spinda Stop.
+Pokémon Champions Battle Data e MetaRoll têm adaptadores separados, pois seus contratos, períodos e significados não coincidem. A tela de Usage une o catálogo por forma e apresenta uma linha por identidade de golpe, item, habilidade, natureza, parceiro ou spread. Quando as formas e categorias são compatíveis, as observações ficam na mesma linha, cada uma identificada por sua captura; registros ausentes permanecem ausentes. Histórico, matchups, formas Mega e ladder continuam disponíveis como dados complementares. Nada passa por uma API pública do Spinda Stop.
+
+**Auditoria da união em 06/11/2026.** Os índices consultados tinham 263 entradas de Battle Data (`Current`, `Doubles`, sem data de snapshot informada) e 254 entradas MetaRoll (`M-8`, `doubles`, capturada em 06/11/2026 22:01 UTC). A normalização dos identificadores encontrou 253 formas em comum, dez exclusivas do Battle Data e uma exclusiva do MetaRoll. A contagem conjunta é 264. A forma faz parte da identidade; nomes semelhantes não bastam para unir registros. As duas temporadas não têm regulamento oficial confirmado e os denominadores não foram publicados em comum. A tela conserva ambas as posições e percentuais; não calcula ranking ou percentual médio.
 
 ## Pokémon Champions Battle Data
 
@@ -52,7 +54,7 @@ O Spinda Stop consulta `all.json` para espécies e fichas e `ladder.json` só na
 
 **Resposta real de `all.json`.** Consultada em 18/10/2026 às 09:46:20 UTC: `season: M-7`, `format: doubles`, `count: 262`, `comparedTo: 2026-10-17T09:46:15Z` e 262 entradas em um arquivo de 1.562.938 bytes. As entradas observadas tinham `id`, `name`, `rank`, `previousRank`, `abilities`, `items`, `moves`, `natures`, `teammates`, `spreads`, `matchups` e `confidence`; nenhuma tinha `rankHistory` ou `usageHistory`. Esses históricos só vieram em `pokemon/{id}.json`. A contagem é de entradas ranqueadas, não de partidas nem de uma amostra estatística.
 
-**Amostra e limites dos campos.** Os percentuais de golpes, itens, habilidades, nature, parceiros e spreads representam uma proporção das aparições daquele Pokémon. A API não informa quantas partidas ou aparições compõem esses percentuais. Os parceiros vêm com `percent: null`. Nature e Stat Point spread são distribuições separadas: não dá para afirmar qual nature acompanha qual spread. Stat Points não são EVs. A tela de matchups mostra apenas as listas que a fonte publica: nomes associados a vitórias/derrotas e contagens alinhadas quando presentes. Isso não equivale ao total de jogos do confronto; percentuais de golpes no matchup também não são taxa de vitória. `ladder.json` conta jogadores, então seus números nunca devem ser usados como amostra das distribuições de Pokémon.
+**Amostra e limites dos campos.** Os percentuais de golpes, itens, habilidades, nature, parceiros e spreads representam uma proporção das aparições daquele Pokémon. A API não informa quantas partidas ou aparições compõem esses percentuais. Os parceiros vêm com `percent: null`. Nature e spread de pontos investidos são distribuições separadas: não dá para afirmar qual natureza acompanha qual spread. Esses pontos não são stats finais nem EVs. A tela de matchups mostra apenas as listas que a fonte publica: nomes associados a vitórias/derrotas e contagens alinhadas quando presentes. Isso não equivale ao total de jogos do confronto; percentuais de golpes no matchup também não são taxa de vitória. `ladder.json` conta jogadores, então seus números nunca devem ser usados como amostra das distribuições de Pokémon.
 
 **Histórico de rating da ladder.** O campo `ratingHistory[]` vem dentro de `ladder.json`, não de uma rota separada. Na captura real de 18/10/2026 às 09:46:20 UTC havia 104 pontos entre 14/10 e 18/10; cada ponto trazia `at`, `avg`, `n` e `ranks`, com `n: 1000` e chaves de posição 1, 100, 300, 500 e 1000. No ponto atual, `avg` coincide com a média dos ratings das mil entradas arredondada a três casas e cada valor em `ranks` coincide com a entrada da mesma posição. A interface mostra os valores publicados e conserva `n` como contagem do ladder; não chama isso de amostra de partidas. A regra histórica de cálculo não está formalizada no guia.
 
@@ -64,7 +66,7 @@ O Spinda Stop consulta `all.json` para espécies e fichas e `ladder.json` só na
 
 Cada observação futura deve carregar, no mínimo, `sourceId`, `sourceUrl`, formato, temporada, data de captura ou snapshot, métrica, valor e unidade. Guardar também tamanho da amostra e denominador quando a fonte os fornecer. Quando não fornecer, manter como desconhecido (`null`) e deixar isso visível. Nunca preencher lacunas com zero.
 
-Uma tela pode comparar fontes lado a lado, com seus rótulos e períodos, mas não deve juntá-las num único percentual. Não associar nature e spread do MetaRoll, nem derivar uma taxa de vitória de percentuais de uso.
+O catálogo unificado é uma projeção em memória dos índices; os adaptadores e caches não mudam os payloads originais. Uma linha compartilhada pode apresentar observações de capturas diferentes lado a lado, mas não deve juntá-las num único percentual ou posição. Não associar natureza e spread do MetaRoll, nem derivar uma taxa de vitória de percentuais de uso.
 
 ## O que falta
 

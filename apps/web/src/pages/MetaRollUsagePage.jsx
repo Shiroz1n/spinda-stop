@@ -13,7 +13,7 @@ const distributionSections = [
   ["abilities", "Habilidades"],
   ["natures", "Naturezas"],
   ["teammates", "Parceiros"],
-  ["spreads", "Stat Points"],
+  ["spreads", "Pontos investidos"],
 ];
 
 const profileTabs = [
@@ -80,7 +80,7 @@ function DistributionCard({ title, rows, spread = false, note = "", pokemonRows 
                 <div className="metaroll-row-top">
                   <span className="metaroll-row-rank">#{row.rank}</span>
                   {spread ? (
-                    <div className="usage-spread" aria-label="Distribuição de Stat Points">
+                    <div className="usage-spread" aria-label="Pontos investidos por atributo">
                       {statLabels.map(([key, label]) => (
                         <span key={key}>
                           <small>{label}</small>
@@ -200,7 +200,7 @@ function MatchupMoveCard({ title, rows, outcomeLabel }) {
   );
 }
 
-export function MetaRollUsagePage({ initialPokemonName = "", initialView = "species", initialSection = "summary", onPokemonSelect }) {
+export function MetaRollUsagePage({ initialPokemonName = "", initialPokemonId = "", initialView = "species", initialSection = "summary", onPokemonSelect }) {
   const [indexData, setIndexData] = useState(null);
   const [seasonOptions, setSeasonOptions] = useState([]);
   const [season, setSeason] = useState("");
@@ -283,6 +283,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
       setIndexStatus("success");
       setSeasonOptions((current) => current.length > 0 ? current : result.pastSeasons);
       setSelectedId((current) => {
+        if (initialPokemonId && result.entries.some((item) => item.id === initialPokemonId)) return initialPokemonId;
         if (result.entries.some((item) => item.id === current)) return current;
         if (initialPokemonNameRef.current) {
           return findUsagePokemonByReference(result.entries, initialPokemonNameRef.current)?.id || null;
@@ -300,7 +301,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
     });
 
     return () => { active = false; };
-  }, [season, indexRetry]);
+  }, [season, indexRetry, initialPokemonId]);
 
   useEffect(() => {
     if (view !== "species" || !selectedId) return undefined;
@@ -394,12 +395,12 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
       <div className="usage-source-banner metaroll-source-banner">
         <span className="usage-source-icon" aria-hidden="true">MR</span>
         <div className="usage-source-copy">
-          <a href={metaRollSource.url} target="_blank" rel="noreferrer">{metaRollSource.attribution}</a>
-          <span>Doubles · fonte e temporada preservadas</span>
+          <a href={metaRollSource.url} target="_blank" rel="noreferrer">Dados publicados por MetaRoll</a>
+          <span>Período e captura informados pela fonte</span>
         </div>
         <details className="usage-source-details">
-          <summary>Sobre os dados</summary>
-          <p>Esta ficha detalhada preserva os campos e a captura MetaRoll. Use a comparação de Usage para consultar as duas fontes lado a lado.</p>
+          <summary>Atribuição e limites</summary>
+          <p>As distribuições são parcelas das aparições desta espécie. O tamanho da amostra não foi publicado.</p>
           <a className="usage-source-guide" href={metaRollSource.guideUrl} target="_blank" rel="noreferrer">Guia da API ↗</a>
         </details>
       </div>
@@ -413,12 +414,12 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
       ) : null}
       {view === "species" && indexData ? <button className="button button-outline button-small metaroll-refresh" type="button" disabled={indexStatus === "loading"} onClick={refreshVisibleData}>{indexStatus === "loading" ? "Atualizando…" : "Atualizar agora"}</button> : null}
 
-      <div className="metaroll-view-switch" role="group" aria-label="Seção da fonte MetaRoll">
+      <div className="metaroll-view-switch" role="group" aria-label="Dados complementares">
         <button className={view === "species" ? "is-active" : ""} type="button" aria-pressed={view === "species"} onClick={() => {
           if (view === "species") return;
           setView("species");
           setEntryState({ key: "", status: "loading" });
-        }}>Espécies</button>
+        }}>Ficha</button>
         <button className={view === "trainers" ? "is-active" : ""} type="button" aria-pressed={view === "trainers"} onClick={() => {
           if (view === "trainers") return;
           setView("trainers");
@@ -556,10 +557,9 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
                 {entry ? (
                   <>
                     <div className="usage-provenance usage-provenance-inline metaroll-provenance">
-                      <a className="usage-provenance-source" href={metaRollSource.url} target="_blank" rel="noreferrer">Dados competitivos: MetaRoll</a>
                       <span><strong>Temporada {entryCapture?.season || "não informada"}</strong> · captura {formatCapture(entryCapture?.capturedAt)}</span>
                       <span>Consultado {formatCapture(entryCapture?.appFetchedAt)}</span>
-                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Stat Points não são EVs e a fonte não pareia spread com natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
+                      <details className="usage-source-help usage-provenance-notes"><summary>Sobre esta captura</summary><p>Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições deste Pokémon. Parceiros não têm percentual publicado; o tamanho da amostra não foi informado. Pontos investidos não são stats finais nem EVs; a fonte não associa cada spread a uma natureza.{entryCapture?.comparedTo ? ` Posição anterior comparada com a captura de ${formatCapture(entryCapture.comparedTo)}.` : ""}</p></details>
                     </div>
                     <div className="metaroll-rank-summary">
                       <div><span>Posição nesta captura</span><strong>#{entry.rank ?? "não informada"}</strong></div>
@@ -588,7 +588,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
 
                     {distributionSections.some(([key]) => key === activeProfileSection) ? (() => {
                       const [key, label] = distributionSections.find(([sectionKey]) => sectionKey === activeProfileSection);
-                      return <div className="metaroll-profile-grid"><DistributionCard title={label} rows={entry.distributions[key]} spread={key === "spreads"} pokemonRows={key === "teammates"} note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Distribuição de Stat Points, sem natureza associada." : ""} /></div>;
+                      return <div className="metaroll-profile-grid"><DistributionCard title={label} rows={entry.distributions[key]} spread={key === "spreads"} pokemonRows={key === "teammates"} note={key === "teammates" ? "A fonte lista parceiros sem percentual." : key === "spreads" ? "Pontos investidos por atributo, não os stats finais. O set distribui até 66 pontos, com até 32 por atributo; não há natureza associada ao spread." : ""} /></div>;
                     })() : null}
 
                     {activeProfileSection === "mega" ? <MegaFormsCard
@@ -602,7 +602,7 @@ export function MetaRollUsagePage({ initialPokemonName = "", initialView = "spec
                     /> : null}
 
                     {activeProfileSection === "matchups" ? <section className="metaroll-matchups-section">
-                      <div className="usage-category-heading"><div><h3>Matchups</h3></div><span>MetaRoll</span></div>
+                      <div className="usage-category-heading"><div><h3>Matchups</h3></div></div>
                       {entry.matchups ? (
                         <>
                           <div className="metaroll-matchups-grid">

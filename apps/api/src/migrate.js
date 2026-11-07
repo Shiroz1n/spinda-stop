@@ -13,23 +13,22 @@ export async function migrateDatabase(database) {
     applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   )`);
 
-  const appliedRows = await database.query("SELECT version, checksum FROM schema_migrations");
-  const applied = new Map(appliedRows.rows.map(({ version, checksum }) => [version, checksum]));
   const migrations = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
 
   for (const version of migrations) {
     const sql = await readFile(join(directory, version), "utf8");
     const checksum = createHash("sha256").update(sql).digest("hex");
-    if (applied.has(version)) {
-      if (applied.get(version) !== checksum) throw new Error(`A migração SQLite ${version} foi alterada depois de aplicada; crie uma nova versão de migração.`);
-      continue;
-    }
-
-    await database.transaction(async (tx) => {
+    const didApply = await database.transaction(async (tx) => {
+      const existing = (await tx.query("SELECT checksum FROM schema_migrations WHERE version = ?1", [version])).rows[0];
+      if (existing) {
+        if (existing.checksum !== checksum) throw new Error(`A migração SQLite ${version} foi alterada depois de aplicada; crie uma nova versão de migração.`);
+        return false;
+      }
       await tx.exec(sql);
       await tx.query("INSERT INTO schema_migrations (version, checksum) VALUES (?1, ?2)", [version, checksum]);
+      return true;
     });
-    process.stdout.write(`Migração SQLite aplicada: ${version}\n`);
+    if (didApply) process.stdout.write(`Migração SQLite aplicada: ${version}\n`);
   }
 
   const violations = await database.query("PRAGMA foreign_key_check");
