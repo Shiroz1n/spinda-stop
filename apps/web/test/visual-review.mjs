@@ -60,7 +60,7 @@ const representativeCaptures = new Set([
   "usage-index-loading",
   "usage-empty",
   "usage-battle-data-error",
-  "usage-metaroll-species",
+  "usage-metaroll-return",
   "usage-metaroll-error",
   "usage-metaroll-mega-error",
   "usage-ladder",
@@ -1369,9 +1369,9 @@ async function runViewport(viewportName, viewport) {
     await waitForEither(page, ".metaroll-ladder-about > summary, .usage-error", 35_000);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     await safeCapture(page, viewportName, "usage-ladder", { audit: true, fullPage: false });
-    await page.getByRole("button", { name: "Espécies" }).click();
-    await waitForEither(page, ".metaroll-capture-note, .usage-error", 35_000);
-    await safeCapture(page, viewportName, "usage-metaroll-species", { audit: true, fullPage: false });
+    await page.getByRole("button", { name: "Voltar ao catálogo" }).click();
+    await page.getByRole("heading", { name: "Usage" }).waitFor({ state: "visible", timeout: 15_000 });
+    await safeCapture(page, viewportName, "usage-metaroll-return", { audit: true, fullPage: false });
   }
 
   const errorPage = await context.newPage();
