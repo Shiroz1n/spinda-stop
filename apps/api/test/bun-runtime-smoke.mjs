@@ -85,7 +85,7 @@ try {
 
   const teams = await fetch(`${origin}/api/teams`, { headers: { Cookie: cookie } });
   assert.equal(teams.status, 200);
-  assert.deepEqual(await teams.json(), { teams: [] });
+  assert.deepEqual(await teams.json(), { teams: [], nextOffset: null });
 
   await stopApi();
   startApi();

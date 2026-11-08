@@ -41,7 +41,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
       - run: npm run visual:review:fast -- --pages=pokemon,usage,builder,speed
         if: github.event_name == 'pull_request'
-      - run: npm run visual:review:mobile -- --pages=builder --narrow-only
+      - run: npm run visual:review:mobile -- --pages=home,dex,usage,builder,tournaments
         if: github.event_name == 'pull_request'
       - uses: actions/upload-artifact@v5
         if: always()

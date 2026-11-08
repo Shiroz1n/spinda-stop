@@ -1676,15 +1676,47 @@ input, select, textarea { font-size: 1rem; }
 @media (max-width: 700px) {
   .home-vgc-list > li {
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "date action" "name action";
+    grid-template-areas: "date date" "name action";
     gap: 2px 8px;
     min-height: 72px;
     padding-block: 8px;
   }
-  .home-vgc-date { grid-area: date; }
+  .home-vgc-date { grid-area: date; white-space: nowrap; }
   .home-vgc-name { grid-area: name; }
   .home-vgc-list a { grid-area: action; align-self: center; }
   .builder-action-toolbar > button:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .builder-heading { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .builder-heading > div { min-width: 0; }
+  .builder-heading .page-label { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .builder-heading .builder-speed-jump { align-self: center; }
+  .usage-heading { gap: 6px; margin-bottom: 10px; }
+  .usage-heading > .button { width: fit-content; max-width: 100%; min-height: 44px; }
+  .usage-index-note { align-items: center; justify-content: space-between; }
+  .usage-index-note .button { min-height: 44px; }
+  .dex-page .pokemon-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .dex-page .pokemon-card-link { min-height: 84px; grid-template-columns: 70px minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 0 8px; padding: 5px 8px; }
+  .dex-page .pokemon-card-art { grid-column: 1; grid-row: 1; min-height: 72px; }
+  .dex-page .pokemon-card-art .pokemon-art { --sprite-size: 68px !important; }
+  .dex-page .pokemon-card-copy { grid-column: 2; grid-row: 1; gap: 4px; }
+  .dex-page .pokemon-card-title { font-size: 1rem; }
+  .dex-page .pokemon-card-number { font-size: 0.75rem; }
+  .dex-page .pokemon-card .type-tag { min-height: 24px; padding-inline: 5px; font-size: 0.75rem; }
+  .builder-center-column .team-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .builder-center-column .team-slot { min-width: 0; min-height: 116px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 58px auto auto; gap: 2px; padding: 7px; }
+  .builder-center-column .team-slot-art { grid-column: 1; grid-row: 1; width: 56px; min-height: 56px; }
+  .builder-center-column .team-slot-art .pokemon-art { --sprite-size: 54px !important; }
+  .builder-center-column .slot-number { top: 7px; left: 8px; }
+  .builder-center-column .slot-copy { min-width: 0; }
+  .builder-center-column .slot-copy b { overflow-wrap: anywhere; word-break: normal; font-size: 1rem; line-height: 1.15; }
+  .builder-center-column .slot-types .type-tag { min-height: 24px; font-size: 0.75rem; }
+}
+
+@media (max-width: 380px) {
+  .builder-heading { grid-template-columns: minmax(0, 1fr); }
+  .builder-heading .builder-speed-jump { justify-self: start; max-width: none; }
 }
 .app-shell .species-dialog .picker-identity, .app-shell .species-dialog .picker-name { min-width: 0; }
 .app-shell .species-dialog .picker-name { overflow-wrap: anywhere; }
