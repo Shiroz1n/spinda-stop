@@ -426,7 +426,7 @@ export async function publishGeneratedSnapshot(files, destination) {
           await rename(backup, destination);
           backedUp = false;
         } catch (restoreError) {
-          throw new AggregateError([error, restoreError], `A publicação falhou; o snapshot anterior está preservado em ${backup}.`);
+          throw new AggregateError([error, restoreError], `A publicação falhou; o snapshot anterior está preservado em ${backup}.`, { cause: error });
         }
       }
       throw error;
