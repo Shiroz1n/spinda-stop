@@ -1613,7 +1613,7 @@ input, select, textarea { font-size: 1rem; }
 .home-official-dates { justify-content: start; }
 .home-official-dates p { display: grid; gap: 3px; margin: 0; padding: 9px 12px; border: 1px solid var(--line); background: var(--surface); }
 .home-official-format, .home-official-competition > small { margin: 0; color: var(--muted); }
-.home-official-competition a { color: var(--blue-dark); }
+.home-official-competition a { color: var(--blue-dark); font-weight: 700; text-decoration: underline; text-underline-offset: .15em; }
 @media (min-width: 701px) and (max-width: 1360px) {
   .app-shell .builder-workspace { grid-template-columns: minmax(215px, .78fr) minmax(0, 1.7fr); }
   .builder-workspace > .builder-public-teams { grid-column: 1 / -1; grid-row: 2; }
