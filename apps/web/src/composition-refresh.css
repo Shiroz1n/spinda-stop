@@ -1723,6 +1723,8 @@ input, select, textarea { font-size: 1rem; }
   .header-action-compact { display: inline; }
   .mobile-primary-nav > :not(:first-child) { border-left: 1px solid rgb(242 240 235 / 25%); }
   .mobile-nav-link, .mobile-more-nav > summary { padding-inline: 1px; }
+  .dex-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .dex-toolbar .filter-field select { min-height: 44px; font-size: 1rem; }
   .builder-heading { grid-template-columns: minmax(0, 1fr); }
   .builder-heading .builder-speed-jump { justify-self: start; max-width: none; }
 }
