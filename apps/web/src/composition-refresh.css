@@ -539,6 +539,7 @@ a { color: var(--blue-dark); text-underline-offset: 0.2em; }
 .site-header .nav-link.is-active { border-bottom-color: var(--signal-red-strong); background: color-mix(in srgb, var(--signal-red) 20%, transparent); color: #fff; }
 .site-header .button { min-height: 44px; border-color: var(--signal-red-strong); background: var(--signal-red); color: #fff; }
 .site-header .button:active { background: #a61020; }
+.header-action-compact { display: none; }
 .mobile-primary-nav { border-top: 2px solid var(--signal-red); background: #111; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
 .mobile-nav-link, .mobile-more-nav > summary { min-height: 48px; color: #f2f0eb; font-size: 1rem; }
 .mobile-nav-link.is-active { border-radius: 0; background: color-mix(in srgb, var(--signal-red) 20%, transparent); color: #fff; }
@@ -1613,7 +1614,7 @@ input, select, textarea { font-size: 1rem; }
 .home-official-dates { justify-content: start; }
 .home-official-dates p { display: grid; gap: 3px; margin: 0; padding: 9px 12px; border: 1px solid var(--line); background: var(--surface); }
 .home-official-format, .home-official-competition > small { margin: 0; color: var(--muted); }
-.home-official-competition a { color: var(--blue-dark); }
+.home-official-competition a { color: var(--blue-dark); font-weight: 700; text-decoration: underline; text-underline-offset: .15em; }
 @media (min-width: 701px) and (max-width: 1360px) {
   .app-shell .builder-workspace { grid-template-columns: minmax(215px, .78fr) minmax(0, 1.7fr); }
   .builder-workspace > .builder-public-teams { grid-column: 1 / -1; grid-row: 2; }
@@ -1676,15 +1677,56 @@ input, select, textarea { font-size: 1rem; }
 @media (max-width: 700px) {
   .home-vgc-list > li {
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "date action" "name action";
+    grid-template-areas: "date date" "name action";
     gap: 2px 8px;
     min-height: 72px;
     padding-block: 8px;
   }
-  .home-vgc-date { grid-area: date; }
+  .home-vgc-date { grid-area: date; white-space: nowrap; }
   .home-vgc-name { grid-area: name; }
   .home-vgc-list a { grid-area: action; align-self: center; }
   .builder-action-toolbar > button:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .builder-heading { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .builder-heading > div { min-width: 0; }
+  .builder-heading .page-label { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .builder-heading .builder-speed-jump { align-self: center; }
+  .usage-heading { gap: 6px; margin-bottom: 10px; }
+  .usage-heading > .button { width: fit-content; max-width: 100%; min-height: 44px; }
+  .usage-index-note { align-items: center; justify-content: space-between; }
+  .usage-index-note .button { min-height: 44px; }
+  .dex-page .pokemon-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .dex-page .pokemon-card-link { min-height: 84px; grid-template-columns: 70px minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 0 8px; padding: 5px 8px; }
+  .dex-page .pokemon-card-art { grid-column: 1; grid-row: 1; min-height: 72px; }
+  .dex-page .pokemon-card-art .pokemon-art { --sprite-size: 68px !important; }
+  .dex-page .pokemon-card-copy { grid-column: 2; grid-row: 1; gap: 4px; }
+  .dex-page .pokemon-card-title { font-size: 1rem; }
+  .dex-page .pokemon-card-number { font-size: 0.75rem; }
+  .dex-page .pokemon-card .type-tag { min-height: 24px; padding-inline: 5px; font-size: 0.75rem; }
+  .builder-center-column .team-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .builder-center-column .team-slot { min-width: 0; min-height: 116px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 58px auto auto; gap: 2px; padding: 7px; }
+  .builder-center-column .team-slot-art { grid-column: 1; grid-row: 1; width: 56px; min-height: 56px; }
+  .builder-center-column .team-slot-art .pokemon-art { --sprite-size: 54px !important; }
+  .builder-center-column .slot-number { top: 7px; left: 8px; }
+  .builder-center-column .slot-copy { min-width: 0; }
+  .builder-center-column .slot-copy b { overflow-wrap: anywhere; word-break: normal; font-size: 1rem; line-height: 1.15; }
+  .builder-center-column .slot-types .type-tag { min-height: 24px; font-size: 0.75rem; }
+}
+
+@media (max-width: 380px) {
+  .site-header { gap: 4px; padding-inline: 8px; }
+  .site-header .brand { gap: 4px; }
+  .site-header .brand-mark { --sprite-size: 28px !important; flex-basis: 28px; width: 28px; height: 28px; min-width: 28px; }
+  .header-action-wide { display: none; }
+  .header-action-compact { display: inline; }
+  .mobile-primary-nav > :not(:first-child) { border-left: 1px solid rgb(242 240 235 / 25%); }
+  .mobile-nav-link, .mobile-more-nav > summary { padding-inline: 1px; }
+  .dex-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .dex-toolbar .filter-field select { min-height: 44px; font-size: 1rem; }
+  .builder-heading { grid-template-columns: minmax(0, 1fr); }
+  .builder-heading .builder-speed-jump { justify-self: start; max-width: none; }
 }
 .app-shell .species-dialog .picker-identity, .app-shell .species-dialog .picker-name { min-width: 0; }
 .app-shell .species-dialog .picker-name { overflow-wrap: anywhere; }
