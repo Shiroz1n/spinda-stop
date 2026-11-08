@@ -1756,3 +1756,44 @@ input, select, textarea { font-size: 1rem; }
   .usage-distribution-category .usage-row-main { grid-template-columns: minmax(0, 1fr); }
   .usage-merged-values { justify-content: space-between; }
 }
+
+/* Keep form sprites inside their own columns on narrow screens. */
+@media (max-width: 560px) {
+  .dex-page .pokemon-grid { grid-template-columns: minmax(0, 1fr); }
+  .dex-page .pokemon-card-link { grid-template-columns: 80px minmax(0, 1fr); }
+  .dex-page .pokemon-card-art { width: 80px; min-width: 80px; max-width: 80px; height: 80px; min-height: 80px; overflow: hidden; }
+  .dex-page .pokemon-card-art .pokemon-art { --sprite-size: 72px !important; width: 72px; height: 72px; min-width: 72px; }
+  .dex-page .pokemon-card-copy, .dex-page .pokemon-card-title { min-width: 0; overflow-wrap: anywhere; }
+  .detail-heading { grid-template-columns: minmax(0, 84px) minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .detail-stage-art { width: 100%; min-width: 0; min-height: 88px; overflow: hidden; }
+  .detail-stage-art > .pokemon-art { --sprite-size: 76px !important; width: 76px; height: 76px; min-width: 76px; }
+  .detail-title, .detail-title h1 { min-width: 0; overflow-wrap: anywhere; }
+  .detail-hero-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .detail-hero-actions .button { min-width: 0; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 380px) {
+  .dex-page .pokemon-card-link { grid-template-columns: 72px minmax(0, 1fr); gap: 0 6px; padding-inline: 5px; }
+  .dex-page .pokemon-card-art { width: 72px; min-width: 72px; max-width: 72px; height: 72px; min-height: 72px; }
+  .dex-page .pokemon-card-art .pokemon-art { --sprite-size: 64px !important; width: 64px; height: 64px; min-width: 64px; }
+  .detail-heading { grid-template-columns: minmax(0, 72px) minmax(0, 1fr); gap: 6px; padding: 8px; }
+  .detail-stage-art { min-height: 76px; }
+  .detail-stage-art > .pokemon-art { --sprite-size: 66px !important; width: 66px; height: 66px; min-width: 66px; }
+}
+
+.usage-active-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.usage-filter-chip { min-width: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 2px; background: var(--surface-alt); color: var(--ink); font: inherit; font-size: 1rem; text-align: left; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.usage-filter-chip span { color: var(--muted); font-size: 1rem; line-height: 1; }
+.usage-filter-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.usage-filter-chip:active { transform: translateY(1px); }
+@media (hover: hover) and (pointer: fine) {
+  .usage-filter-chip:hover { border-color: var(--blue-dark); }
+}
+
+.speed-result-number { display: grid; justify-items: center; gap: 2px; }
+.speed-result-number > strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.speed-result-number > small { max-width: 100%; color: var(--muted); font-size: 1rem; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .speed-result-number { grid-column: 2; grid-row: 2; }
+  .speed-result-number::before { content: "Na ordem "; color: var(--muted); font-size: 1rem; font-weight: 600; }
+}

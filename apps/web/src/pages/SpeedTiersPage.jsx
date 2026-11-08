@@ -6,7 +6,7 @@ import { PokemonSprite } from "../components/PokemonSprite.jsx";
 import { NaturePicker } from "../components/NaturePicker.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
 import { getNatureForStat, getNatureSpeedClass } from "../data/natures.js";
-import { calculateChampionsSpeed, calculateStandardSpeed, compareSpeed, compareSpeedOrder, minimumTrainingToOutspeed } from "../data/speedTiers.js";
+import { applySpeedModifiers, calculateChampionsSpeed, calculateStandardSpeed, compareSpeed, compareSpeedOrder, minimumTrainingToOutspeed } from "../data/speedTiers.js";
 import { usageProviders } from "../data/usage/registry.js";
 import { getChampionsIndexedMegaPokemon, getChampionsIndexedPokemon } from "../data/pokemonChampionsRoster.js";
 const bySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
@@ -48,6 +48,8 @@ function SpeedSettings({ label, model, values, onChange, target = false }) {
           <label className="speed-setting-field"><span>EV de Speed</span><input className="text-input" type="number" min="0" max="252" step="4" value={values.ev} onChange={(event) => onChange("ev", Math.min(252, Math.max(0, Number(event.target.value) || 0)))} /></label>
         </>
       )}
+      <label className="speed-setting-toggle"><input type="checkbox" checked={Boolean(values.tailwind)} onChange={(event) => onChange("tailwind", event.target.checked)} /><span>Tailwind ativo</span></label>
+      {model === "standard" && <label className="speed-setting-toggle"><input type="checkbox" checked={Boolean(values.choiceScarf)} onChange={(event) => onChange("choiceScarf", event.target.checked)} /><span>Choice Scarf (hipótese)</span></label>}
     </fieldset>
   );
 }
@@ -66,8 +68,8 @@ export function SpeedTiersPage() {
   const [sort, setSort] = useState("fastest");
   const [trickRoom, setTrickRoom] = useState(false);
   const [visibleCount, setVisibleCount] = useState(90);
-  const [candidate, setCandidate] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0 });
-  const [target, setTarget] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0 });
+  const [candidate, setCandidate] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0, tailwind: false, choiceScarf: false });
+  const [target, setTarget] = useState({ nature: "Serious", sp: 0, level: 50, iv: 31, ev: 0, tailwind: false, choiceScarf: false });
   useEffect(() => {
     let active = true;
     usageProviders["pokemon-champions-battle-data"].loadIndex()
@@ -92,25 +94,28 @@ export function SpeedTiersPage() {
     return availablePokemon.filter((pokemon) => normalizedSearch(`${pokemon.name} ${pokemon.speciesName} ${pokemon.slug} ${pokemon.speciesId}`).includes(query)).slice(0, 10);
   }, [availablePokemon, selectedTarget?.name, targetQuery]);
 
-  const targetSpeed = useMemo(() => selectedTarget ? safeSpeedFor(selectedTarget, model, { ...target, level: candidate.level }) : null, [selectedTarget, model, candidate.level, target]);
+  const rawTargetSpeed = useMemo(() => selectedTarget ? safeSpeedFor(selectedTarget, model, { ...target, level: candidate.level }) : null, [selectedTarget, model, candidate.level, target]);
+  const targetSpeed = applySpeedModifiers(rawTargetSpeed, { tailwind: target.tailwind, choiceScarf: model === "standard" && target.choiceScarf });
   const ranked = useMemo(() => {
     if (!selectedTarget || targetSpeed === null) return [];
     const query = normalizedSearch(candidateQuery.trim());
     return availablePokemon
       .filter((pokemon) => !query || normalizedSearch(`${pokemon.name} ${pokemon.speciesName} ${pokemon.slug} ${pokemon.speciesId}`).includes(query))
       .map((pokemon) => {
-        const value = safeSpeedFor(pokemon, model, { ...candidate, level: candidate.level });
+        const rawValue = safeSpeedFor(pokemon, model, { ...candidate, level: candidate.level });
+        const modifiers = { tailwind: candidate.tailwind, choiceScarf: model === "standard" && candidate.choiceScarf };
+        const value = applySpeedModifiers(rawValue, modifiers);
         const relation = compareSpeed(value, targetSpeed);
         const pokemonBaseSpeed = baseSpeed(pokemon);
         const required = !Number.isFinite(pokemonBaseSpeed) ? null : model === "champions"
-          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature })
-          : minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature, level: candidate.level, iv: candidate.iv });
+          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature, modifiers })
+          : minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: candidate.nature, level: candidate.level, iv: candidate.iv, modifiers });
         const favorableNature = getNatureForStat("spe", "up")?.name || "Timid";
         const favorableRequired = required === null && getNatureSpeedClass(candidate.nature) !== "favorable" && Number.isFinite(pokemonBaseSpeed)
-          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: favorableNature, level: candidate.level, iv: candidate.iv })
+          ? minimumTrainingToOutspeed({ model, baseSpeed: pokemonBaseSpeed, targetSpeed, nature: favorableNature, level: candidate.level, iv: candidate.iv, modifiers })
           : null;
         const order = compareSpeedOrder(value, targetSpeed, trickRoom);
-        return { pokemon, value, relation, order, required, favorableRequired, favorableNature };
+        return { pokemon, pokemonBaseSpeed, rawValue, value, relation, order, required, favorableRequired, favorableNature };
       })
       .sort((left, right) => {
         if (left.value === null && right.value !== null) return 1;
@@ -192,10 +197,10 @@ export function SpeedTiersPage() {
           <section className="speed-target-banner" aria-label={`Alvo ${selectedTarget.name}`}>
             <PokemonSprite pokemon={selectedTarget} name={selectedTarget.name} size={76} priority decorative />
             <div className="speed-target-copy"><p className="page-label">Alvo · {selectedTarget.formId === "default" ? "forma base" : selectedTarget.formId}</p><h2>{selectedTarget.name}</h2><div className="type-list">{selectedTarget.types.map((type) => <TypeTag type={type} key={type} />)}</div></div>
-            <div className="speed-target-value"><strong>{targetSpeed ?? "—"}</strong><span>Speed</span><small>calculada · nível {candidate.level}</small></div>
+            <div className="speed-target-value"><strong>{targetSpeed ?? "—"}</strong><span>Speed na ordem</span><small>Base {baseSpeed(selectedTarget) ?? "—"} · bruta {rawTargetSpeed ?? "—"} · nível {candidate.level}</small></div>
           </section>
           <details className="speed-assumptions-disclosure">
-            <summary>Nature e pontos de Speed <span>Comparados: {candidate.nature} · {model === "champions" ? `${candidate.sp} pontos` : `${candidate.ev} EV`} | Alvo: {target.nature} · {model === "champions" ? `${target.sp} pontos` : `${target.ev} EV`}</span></summary>
+            <summary>Hipóteses de Speed <span>Comparados: {candidate.nature} · {model === "champions" ? `${candidate.sp} SP` : `${candidate.ev} EV`} | Alvo: {target.nature} · {model === "champions" ? `${target.sp} SP` : `${target.ev} EV`}</span></summary>
             <div className="speed-assumptions">
               <SpeedSettings label="Pokémon comparados" model={model} values={candidate} onChange={updateCandidate} />
               <SpeedSettings label="Alvo" model={model} values={{ ...target, level: candidate.level }} onChange={updateTarget} target />
@@ -209,12 +214,12 @@ export function SpeedTiersPage() {
             </div>
           </div>
           {model === "champions" && megaRoster.status === "error" && <p className="speed-mega-unavailable" role="status">As formas Mega não estão disponíveis agora.</p>}
-          <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
+          <div className="speed-results-head" aria-hidden="true"><span>Pokémon</span><span>Speed na ordem</span><span>Contra o alvo</span><span>{model === "champions" ? "SP para passar" : "EV para passar"}</span></div>
           <div className="speed-results-list" aria-live="polite">
-            {visibleRows.map(({ pokemon, value, relation, order, required, favorableRequired, favorableNature }) => (
+            {visibleRows.map(({ pokemon, pokemonBaseSpeed, rawValue, value, relation, order, required, favorableRequired, favorableNature }) => (
               <article className={`speed-result-row is-${relation}`} key={pokemon.slug}>
                 <div className="speed-result-pokemon"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={48} decorative /><div><strong>{pokemon.name}</strong><small>#{pokemon.speciesId} · {pokemon.formId === "default" ? "forma base" : pokemon.formId}</small><span className="type-list">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</span></div></div>
-                <strong className="speed-result-number">{value ?? "—"}</strong>
+                <span className="speed-result-number"><strong>{value ?? "—"}</strong><small>Base {pokemonBaseSpeed ?? "—"} · bruta {rawValue ?? "—"}</small></span>
                 <span className={`speed-relation speed-relation-${relation}`}>{relation === "faster" ? "Ultrapassa" : relation === "tie" ? "Empata" : relation === "slower" ? "Abaixo" : "Sem dado"}{order === "first" ? " · atua antes" : order === "second" ? " · atua depois" : ""}</span>
                 <span className="speed-threshold">
                   <span>{relation === "faster" ? "—" : required === null ? (model === "champions" ? (candidate.nature === "favorable" ? "Não passa com natureza favorável e 32 SP" : "Não passa com até 32 SP") : "Não alcança no modelo") : `${required} ${model === "champions" ? "SP" : "EV"}`}</span>
@@ -228,7 +233,7 @@ export function SpeedTiersPage() {
           {visibleCount < ranked.length ? <button className="button button-outline speed-load-more" type="button" onClick={() => setVisibleCount((count) => Math.min(ranked.length, count + 90))}>Mostrar mais {Math.min(90, ranked.length - visibleCount)}</button> : <p className="speed-end">Fim da lista · {ranked.length.toLocaleString("pt-BR")} entradas</p>}
         </>
       )}
-      <details className="speed-about"><summary>Sobre o cálculo e os dados</summary><p>Champions usa o índice atual de Doubles. As Megas adicionadas vêm dos registros de Doubles publicados pela MetaRoll{megaRoster.season ? ` (${megaRoster.season})` : ""}, limitadas a espécies presentes no índice. A lista não confirma legalidade oficial. O cálculo usa nível 50, base, Stat Points e Nature; Trick Room inverte a ordem, sem outros efeitos de batalha.</p><p>Outros jogos usam base, IV, EV e nível como hipótese. Espécies e formas vêm da PokéAPI.</p></details>
+      <details className="speed-about"><summary>Sobre o cálculo e os dados</summary><p>Champions usa o índice atual de Doubles. As Megas adicionadas vêm dos registros de Doubles publicados pela MetaRoll{megaRoster.season ? ` (${megaRoster.season})` : ""}, limitadas a espécies presentes no índice. A lista não confirma legalidade oficial. O cálculo usa nível 50, base, Stat Points e Nature. Tailwind é aplicado como hipótese de ordem; Trick Room só inverte a ordem, sem alterar Speed bruta.</p><p>Outros jogos usam base, IV, EV e nível; Choice Scarf é uma hipótese disponível nesse modelo. Espécies e formas vêm da PokéAPI.</p></details>
     </div>
   );
 }

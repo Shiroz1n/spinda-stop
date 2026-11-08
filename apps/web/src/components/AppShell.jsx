@@ -71,7 +71,7 @@ export function AppShell({ children }) {
   useEffect(() => {
     if (previousPath.current !== location.pathname) {
       previousPath.current = location.pathname;
-      mainRef.current?.focus();
+      mainRef.current?.focus({ preventScroll: true });
     }
   }, [location.pathname]);
 

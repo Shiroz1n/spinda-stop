@@ -80,7 +80,7 @@ function PublicVgcTournaments() {
         return payload;
       })
       .then((payload) => setState({ status: "ready", tournaments: Array.isArray(payload.tournaments) ? payload.tournaments : [] }))
-      .catch((error) => { if (!controller.signal.aborted) setState({ status: "error", tournaments: [], message: error.message }); });
+      .catch(() => { if (!controller.signal.aborted) setState({ status: "error", tournaments: [], message: "A agenda não está disponível agora. Consulte a fonte dos torneios." }); });
     return () => controller.abort();
   }, []);
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
@@ -46,7 +47,10 @@ const statPointLabels = [
 const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
 
 function resolveCatalogPokemon(entry) {
-  return findPokemonSprite(entry.name) || findPokemonSprite(entry.showdownId || entry.id);
+  return resolveCompetitivePokemonSprite(findPokemonSprite, {
+    id: entry.showdownId || entry.id,
+    name: entry.name,
+  });
 }
 
 function normalizeSearch(value) {
@@ -89,6 +93,9 @@ function snapshotKey(snapshot) {
 function CategoryRow({ row, category }) {
   const statAlignment = category.id === "stat_alignment";
   const observation = row.selected;
+  const teammate = category.id === "teammate"
+    ? resolveCompetitivePokemonSprite(findPokemonSprite, { id: row.showdownId || row.id, name: row.name })
+    : null;
   const natureEffects = statAlignment
     ? [observation?.statUp ? "↑ " + observation.statUp : "", observation?.statDown ? "↓ " + observation.statDown : ""].filter(Boolean).join(" · ")
     : "";
@@ -96,6 +103,11 @@ function CategoryRow({ row, category }) {
     ? `${observation.percentageValue}%`
     : observation?.percentage || null;
   const partnerRank = category.id === "teammate" ? observation?.rank : null;
+  const metricLabel = category.id === "teammate"
+    ? "Posição publicada"
+    : observation?.source === "metaRoll"
+      ? category.id === "stat_points" ? "Proporção publicada deste spread" : "Proporção das aparições"
+      : "Percentual publicado; definição não informada";
   const sourceLabel = observation?.source === "metaRoll" ? "MetaRoll" : "Pokémon Champions Battle Data";
   const capturedAt = observation?.source === "battleData"
     ? formatSnapshotDate(observation.capturedAt)
@@ -119,17 +131,17 @@ function CategoryRow({ row, category }) {
             <div className="usage-row-copy">
               <span className="usage-row-asset">
                 {category.id === "held_item" ? <ItemSprite name={row.name} size={28} /> : null}
-                {category.id === "teammate" && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={38} decorative /> : null}
+                {teammate ? <PokemonSprite pokemon={teammate} name={row.name} size={38} decorative /> : null}
               </span>
               <strong>{row.name || (category.id === "stat_points" ? "Distribuição" : "Nome não informado")}</strong>
               {natureEffects ? <small className="usage-nature-effects">{natureEffects}</small> : null}
             </div>
           )}
         </div>
-        <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
+        <div className="usage-merged-values" aria-label={metricLabel}>
           {category.id === "teammate"
-            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>Posição {partnerRank}</span>
-            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
+            ? <span className="usage-source-observation" aria-label={`${metricLabel}: ${partnerRank}`} title={provenance}>Posição {partnerRank}</span>
+            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${metricLabel}: ${percentage ?? "indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
         </div>
       </div>
     </li>
@@ -201,7 +213,13 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, periodMo
         <h3>Distribuições</h3>
         {selectedPokemon.metaRollId ? <button className="text-button" type="button" onClick={() => onOpenDetails("summary")}>Histórico e confrontos</button> : null}
       </div>
-      <p className="usage-distributions-note">Uso publicado; não é taxa de vitória.</p>
+      <p className="usage-distributions-note">
+        {selectedCapture === "metaRoll"
+          ? "Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições; a amostra não é publicada. Não é win rate."
+          : selectedCapture === "battleData"
+            ? "Percentuais publicados sem métrica ou denominador identificados; não são interpretados como win rate."
+            : "Percentuais publicados não são interpretados como taxa de vitória."}
+      </p>
       {selectedCapture ? <p className="usage-provenance usage-provenance-inline">{captureSummary(selectedCapture, selectedContext)}</p> : null}
       {indexStatus === "loading" && !indexData ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Atualizando dados competitivos…</p> : null}
       {indexStatus === "error" ? <div className="usage-error" role="alert"><p>Não foi possível atualizar todos os dados competitivos.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
@@ -453,8 +471,21 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const normalizedQuery = normalizeSearch(query.trim());
   const filteredPokemon = catalog
     .filter((entry) => {
-      const nameMatches = normalizeSearch(entry.name).includes(normalizedQuery)
-        || normalizeSearch(entry.showdownId || entry.metaRollId).includes(normalizedQuery);
+      const local = resolveCatalogPokemon(entry);
+      const nationalNumber = local?.speciesId;
+      const searchableText = [
+        entry.name,
+        entry.showdownId,
+        entry.metaRollId,
+        entry.id,
+        local?.name,
+        local?.speciesName,
+        local?.formName,
+        local?.slug,
+        nationalNumber,
+        Number.isFinite(nationalNumber) ? formatNationalNumber(nationalNumber) : null,
+      ].filter(Boolean).join(" ");
+      const nameMatches = normalizeSearch(searchableText).includes(normalizedQuery);
       const typeMatches = typeFilter === "all" || entry.types.includes(typeFilter);
       const moveMatches = moveFilter === "all" || entry.filterValues?.moves?.includes(moveFilter);
       const itemMatches = itemFilter === "all" || entry.filterValues?.items?.includes(itemFilter);
@@ -474,7 +505,24 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
     ? usage?.daily.find((snapshot) => snapshotKey(snapshot) === selectedSnapshotKey) || null
     : usage;
   const hasActiveFilters = Boolean(query) || typeFilter !== "all" || moveFilter !== "all"
-    || itemFilter !== "all" || abilityFilter !== "all";
+    || itemFilter !== "all" || abilityFilter !== "all" || periodMode === "history";
+  const activeFilters = [
+    query ? { label: `Busca: ${query}`, remove: () => setQuery("") } : null,
+    typeFilter !== "all" ? { label: `Tipo: ${typeFilter}`, remove: () => setTypeFilter("all") } : null,
+    moveFilter !== "all" ? { label: `Golpe: ${moveFilter}`, remove: () => setMoveFilter("all") } : null,
+    itemFilter !== "all" ? { label: `Item: ${itemFilter}`, remove: () => setItemFilter("all") } : null,
+    abilityFilter !== "all" ? { label: `Habilidade: ${abilityFilter}`, remove: () => setAbilityFilter("all") } : null,
+    periodMode === "history" ? {
+      label: `Snapshots · ${historyDays} dias${historySeason !== "all" ? ` · ${historySeason}` : ""}`,
+      remove: () => {
+        setPeriodMode("current");
+        setHistorySeason("all");
+        setHistoryDays(7);
+        setSelectedSnapshotKey("");
+        setUsageRetry(0);
+      },
+    } : null,
+  ].filter(Boolean);
 
   return (
     <div className="usage-source-content">
@@ -534,6 +582,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                       setMoveFilter("all");
                       setItemFilter("all");
                       setAbilityFilter("all");
+                      setPeriodMode("current");
+                      setHistorySeason("all");
+                      setHistoryDays(7);
+                      setSelectedSnapshotKey("");
+                      setUsageRetry(0);
                     }}
                   >
                     Limpar filtros
@@ -550,7 +603,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Ex.: Garchomp"
+                  placeholder="Nome, forma ou nº"
                   autoComplete="off"
                 />
               </label>
@@ -641,6 +694,22 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                 </div>
               </details>
             </div>
+
+            {activeFilters.length ? (
+              <div className="usage-active-filters" aria-label="Filtros ativos">
+                {activeFilters.map((filter) => (
+                  <button
+                    className="usage-filter-chip"
+                    type="button"
+                    key={filter.label}
+                    aria-label={`Remover ${filter.label}`}
+                    onClick={filter.remove}
+                  >
+                    {filter.label}<span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <p className="usage-filter-note">
               Golpes, itens e habilidades vêm dos índices publicados. Formas distintas permanecem separadas e valores ausentes não são inferidos.

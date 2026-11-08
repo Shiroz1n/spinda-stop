@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Generations, Pokemon } from "@smogon/calc";
 import {
   applySpeedPointsToStatSpread,
+  applySpeedModifiers,
   CHAMPIONS_MAX_STAT_POINTS,
   calculateChampionsSpeed,
   calculateStandardSpeed,
@@ -83,6 +84,16 @@ test("Natures nomeadas calculam Speed com sinais diferentes, e Trick Room só in
   assert.equal(compareSpeedOrder(140, 139, true), "second");
   assert.equal(compareSpeedOrder(138, 139, true), "first");
   assert.equal(compareSpeedOrder(139, 139, true), "tie");
+});
+
+test("Tailwind e Choice Scarf alteram a Speed efetiva, enquanto Trick Room só troca a ordem", () => {
+  assert.equal(applySpeedModifiers(151), 151);
+  assert.equal(applySpeedModifiers(151, { tailwind: true }), 302);
+  assert.equal(applySpeedModifiers(151, { choiceScarf: true }), 226);
+  assert.equal(applySpeedModifiers(151, { tailwind: true, choiceScarf: true }), 453);
+  assert.equal(applySpeedModifiers(null, { tailwind: true }), null);
+  assert.equal(minimumTrainingToOutspeed({ baseSpeed: 100, targetSpeed: 300, nature: "neutral", modifiers: { tailwind: true } }), 31);
+  assert.equal(compareSpeedOrder(applySpeedModifiers(100, { tailwind: true }), 150, true), "second");
 });
 
 test("prévia segue a Nature do set até que uma Nature temporária seja escolhida", () => {

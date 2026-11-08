@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
@@ -209,14 +209,22 @@ export function DexDetailPage() {
   const [learnsetState, setLearnsetState] = useState({ requestKey: "", status: "idle", data: null, error: "" });
   const [learnsetRetry, setLearnsetRetry] = useState(0);
 
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = previousScrollBehavior;
+  }, [location.pathname]);
+
   useEffect(() => {
     if (!summary?.spriteId) return undefined;
     let active = true;
     const requestKey = `${summary.spriteId}:${learnsetRetry}`;
     loadPokemonLearnsets(summary.spriteId).then((data) => {
       if (active) setLearnsetState({ requestKey, status: "ready", data, error: "" });
-    }).catch((error) => {
-      if (active) setLearnsetState({ requestKey, status: "error", data: null, error: error instanceof Error ? error.message : "Não foi possível carregar os dados de aprendibilidade." });
+    }).catch(() => {
+      if (active) setLearnsetState({ requestKey, status: "error", data: null, error: "Os golpes não estão disponíveis agora. Tente novamente." });
     });
     return () => { active = false; };
   }, [summary?.spriteId, learnsetRetry]);
