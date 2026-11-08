@@ -126,7 +126,10 @@ export function AppShell({ children }) {
             <ThemeIcon theme={activeTheme} />
           </button>
           <span className="sr-only" aria-live="polite">Tema {theme === "system" ? `automático, ${activeTheme === "dark" ? "escuro" : "claro"}` : theme === "dark" ? "escuro" : "claro"}</span>
-          <Link className="button button-small button-primary header-action" to="/builder">Montar time</Link>
+          <Link className="button button-small button-primary header-action" to="/builder" aria-label="Montar time">
+            <span className="header-action-wide" aria-hidden="true">Montar time</span>
+            <span className="header-action-compact" aria-hidden="true">Time</span>
+          </Link>
         </div>
       </header>
 
