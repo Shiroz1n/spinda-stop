@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyBuilderMetaOption } from "../src/data/builderMeta.js";
+import { applyBuilderMetaOption, hasDuplicateMove } from "../src/data/builderMeta.js";
 
 const member = {
   pokemonId: "pikachu",
@@ -18,6 +18,12 @@ test("meta move options deduplicate and replace the oldest move when all four sl
   assert.equal(duplicate.changed, false);
   assert.deepEqual(next.member.moves, ["Thunderbolt", "Volt Tackle", "Fake Out", "Electro Ball"]);
   assert.equal(member.moves[0], "Protect");
+});
+
+test("manual move edits detect duplicates but allow keeping the current slot value", () => {
+  assert.equal(hasDuplicateMove(member.moves, "thunderbolt"), true);
+  assert.equal(hasDuplicateMove(member.moves, "thunderbolt", 1), false);
+  assert.equal(hasDuplicateMove(member.moves, "Electro Ball"), false);
 });
 
 test("meta choices replace only their own field and validate published Stat Points", () => {

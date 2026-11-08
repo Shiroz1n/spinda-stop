@@ -7,7 +7,7 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
-import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows, selectUsageCapture } from "../data/usage/mergeUsageData.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -67,6 +67,15 @@ function formatSnapshotDate(value) {
   const folderDate = value.match(/^(\d{2})_(\d{2})_(\d{4})$/);
   if (folderDate) return folderDate[1] + "/" + folderDate[2] + "/" + folderDate[3];
   return value;
+}
+
+function captureSummary(source, context) {
+  if (!source) return "";
+  const period = context.season || "Período não informado";
+  const capture = source === "battleData"
+    ? context.capturedAt ? formatSnapshotDate(context.capturedAt) : "snapshot sem data publicada"
+    : context.capturedAt ? formatTimestamp(context.capturedAt) : "captura não informada";
+  return `${source === "metaRoll" ? "MetaRoll" : "Battle Data"} · ${period} · ${capture}`;
 }
 
 function displayValue(value) {
@@ -141,7 +150,7 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function MetaRollComparison({ selectedPokemon, usage, status, category, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
+function MetaRollComparison({ selectedPokemon, usage, status, category, periodMode, activeSeason, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
   const provider = usageProviders.metaroll;
   const entry = indexData?.entries.find((item) => item.id === selectedPokemon.metaRollId) || null;
   const [detailState, setDetailState] = useState({ key: "", status: "idle" });
@@ -167,8 +176,17 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
   const visibleCategories = category.id === "profile"
     ? categories.filter((item) => item.id !== "profile")
     : [category];
-  const battleRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
+  const battleRows = (item) => Array.isArray(usage?.rows) ? usage.rows.filter((row) => row.category === item.id) : null;
   const metaRows = (item) => metaEntry?.distributions?.[metaRollCategoryByBattleData[item.id]] || [];
+  const selectedCapture = selectUsageCapture(Object.values(metaEntry?.distributions || {}).flat(), usage?.rows, {
+    formats: { battleData: usage?.format || selectedPokemon.battleData?.format, metaRoll: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
+    seasons: { battleData: usage?.season || selectedPokemon.battleData?.season, metaRoll: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season },
+    activeSeason: usage?.season || selectedPokemon.battleData?.season || activeSeason,
+    periodMode,
+  });
+  const selectedContext = selectedCapture === "metaRoll"
+    ? { season: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season, capturedAt: detail.result?.capturedAt || indexData?.capturedAt || null }
+    : { season: usage?.season || selectedPokemon.battleData?.season, capturedAt: usage?.date || null };
   const dataPending = !usage && !metaEntry && ((status === "loading" || status === "idle") || indexStatus === "loading" || detail.status === "loading");
   const dataUnavailable = !usage && !metaEntry && (status === "error" || indexStatus === "error" || detail.status === "error");
   const emptyMessage = dataPending
@@ -184,6 +202,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
         {selectedPokemon.metaRollId ? <button className="text-button" type="button" onClick={() => onOpenDetails("summary")}>Histórico e confrontos</button> : null}
       </div>
       <p className="usage-distributions-note">Uso publicado; não é taxa de vitória.</p>
+      {selectedCapture ? <p className="usage-provenance usage-provenance-inline">{captureSummary(selectedCapture, selectedContext)}</p> : null}
       {indexStatus === "loading" && !indexData ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Atualizando dados competitivos…</p> : null}
       {indexStatus === "error" ? <div className="usage-error" role="alert"><p>Não foi possível atualizar todos os dados competitivos.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
       {entry && (detail.status === "loading" || detail.status === "idle") ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando os dados de {selectedPokemon.name}…</p> : null}
@@ -197,8 +216,9 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
               battleData: { season: usage?.season || selectedPokemon.battleData?.season, capturedAt: usage?.date || null, sourceFile: usage?.sourceFile || null, format: usage?.format || selectedPokemon.battleData?.format },
               metaRoll: { season: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season, capturedAt: detail.result?.capturedAt || indexData?.capturedAt || null, format: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
             },
-            battleRows: battleRows(item),
-            metaRows: metaRows(item),
+            battleRows: selectedCapture === "battleData" ? battleRows(item) || [] : [],
+            metaRows: selectedCapture === "metaRoll" ? metaRows(item) : [],
+            preferredSource: selectedCapture || "metaRoll",
             resolvePokemon: resolveCatalogPokemon,
           });
           const rows = item.id === "teammate" ? selectRankedPartnerRows(mergedRows) : mergedRows;
@@ -220,7 +240,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
+function UsagePanel({ selectedPokemon, usage, category, periodMode, activeSeason, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
@@ -285,6 +305,8 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, 
         usage={usage}
         status={status}
         category={category}
+        periodMode={periodMode}
+        activeSeason={activeSeason}
         indexData={metaRollIndex}
         indexStatus={metaRollIndexStatus}
         indexError={metaRollIndexError}
@@ -693,6 +715,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
               selectedPokemon={selectedPokemon}
               usage={displayedUsage}
               category={activeCategory}
+              periodMode={periodMode}
+              activeSeason={indexData?.season}
               status={usageStatus}
               error={usageError}
               metaRollIndex={metaRollIndex}

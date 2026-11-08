@@ -4,7 +4,7 @@ import { PokemonSprite } from "./PokemonSprite.jsx";
 import { usageProviders } from "../data/usage/registry.js";
 import { findUsagePokemonForCatalogEntry } from "../data/usage/pokemonQuery.js";
 import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../data/pokemonSprites.js";
-import { hasPublishedStatPoints, mergeCategoryRows, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, selectRankedPartnerRows, selectUsageCapture } from "../data/usage/mergeUsageData.js";
 import { applyBuilderMetaOption } from "../data/builderMeta.js";
 
 const sources = usageProviders;
@@ -42,10 +42,17 @@ function sameValue(left, right) {
     === String(right || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function hasPublishedRows(detail, source) {
-  return source === "battleData"
-    ? Boolean(detail?.rows?.length)
-    : Object.values(detail?.entry?.distributions || {}).some((rows) => rows.length > 0);
+function captureSummary(source, context) {
+  const period = context?.season || "Período não informado";
+  const snapshotDate = context?.capturedAt?.match(/^(\d{2})_(\d{2})_(\d{4})$/);
+  const capture = context?.capturedAt
+    ? snapshotDate ? `${snapshotDate[1]}/${snapshotDate[2]}/${snapshotDate[3]}` : context.capturedAt
+    : source === "battleData" ? "snapshot sem data publicada" : "captura não informada";
+  const sourceLabel = source === "metaRoll" ? "MetaRoll" : "Battle Data";
+  if (source === "metaRoll" && context?.capturedAt && !Number.isNaN(Date.parse(context.capturedAt))) {
+    return `${sourceLabel} · ${period} · ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "UTC" }).format(new Date(context.capturedAt))} UTC`;
+  }
+  return `${sourceLabel} · ${period} · ${capture}`;
 }
 
 function Distribution({ row, category, member, onApplyOption }) {
@@ -91,14 +98,18 @@ export function BuilderMetaPanel({ pokemon, member, onApplyOption }) {
       const battle = details[0].status === "fulfilled" ? details[0].value : null;
       const metaRoll = details[1].status === "fulfilled" ? details[1].value : null;
       const failedSources = [battleIndex, metaIndex, ...details].filter((result) => result.status === "rejected").length;
-      const published = hasPublishedRows(battle, "battleData") || hasPublishedRows(metaRoll, "metaRoll");
+      const published = Boolean(selectUsageCapture(Object.values(metaRoll?.entry?.distributions || {}).flat(), battle?.rows || [], {
+        formats: { battleData: battle?.format || indexes.battleData?.format, metaRoll: metaRoll?.format || indexes.metaRoll?.format },
+        seasons: { battleData: battle?.season || indexes.battleData?.season, metaRoll: metaRoll?.season || indexes.metaRoll?.season },
+        activeSeason: indexes.battleData?.season,
+      }));
       const hasMatch = Boolean(matches.battleData || matches.metaRoll);
       setState({
         status: published ? "ready" : failedSources ? "error" : hasMatch ? "no-sets" : "not-indexed",
         battle,
         metaRoll,
         contexts: {
-          battleData: { format: battle?.format || indexes.battleData?.format, season: battle?.season || indexes.battleData?.season, capturedAt: battle?.date || indexes.battleData?.generatedAt, sourceFile: battle?.sourceFile },
+          battleData: { format: battle?.format || indexes.battleData?.format, season: battle?.season || indexes.battleData?.season, capturedAt: battle?.date || null, sourceFile: battle?.sourceFile },
           metaRoll: { format: metaRoll?.format || indexes.metaRoll?.format, season: metaRoll?.season || indexes.metaRoll?.season, capturedAt: metaRoll?.capturedAt || indexes.metaRoll?.capturedAt },
         },
         indexes,
@@ -108,19 +119,26 @@ export function BuilderMetaPanel({ pokemon, member, onApplyOption }) {
     return () => { active = false; };
   }, [pokemon, attempt]);
 
+  const selectedSource = selectUsageCapture(Object.values(state.metaRoll?.entry?.distributions || {}).flat(), state.battle?.rows || [], {
+    formats: { battleData: state.contexts.battleData?.format, metaRoll: state.contexts.metaRoll?.format },
+    seasons: { battleData: state.contexts.battleData?.season, metaRoll: state.contexts.metaRoll?.season },
+    activeSeason: state.indexes?.battleData?.season,
+  });
   const distributions = useMemo(() => categories.map(([key, title, categoryId]) => {
     const rows = mergeCategoryRows({
-      battleRows: rowsFor(state.battle, "battleData", categoryId),
-      metaRows: rowsFor(state.metaRoll, "metaRoll", categoryId),
+      battleRows: selectedSource === "battleData" ? rowsFor(state.battle, "battleData", categoryId) : [],
+      metaRows: selectedSource === "metaRoll" ? rowsFor(state.metaRoll, "metaRoll", categoryId) : [],
       categoryId,
+      preferredSource: selectedSource || "metaRoll",
       formats: { battleData: state.contexts.battleData?.format, metaRoll: state.contexts.metaRoll?.format },
       contexts: state.contexts,
       resolvePokemon: (entry) => resolveCompetitivePokemonSprite(findPokemon, { id: entry.showdownId || entry.id, name: entry.name }),
     });
     return [key, title, key === "teammates" ? selectRankedPartnerRows(rows) : rows.slice(0, 6)];
-  }), [state]);
+  }), [selectedSource, state]);
 
-  const contexts = Object.entries(state.contexts).filter(([, context]) => context?.season || context?.capturedAt).map(([source, context]) => ({ source, ...context }));
+  const selectedContext = selectedSource ? state.contexts[selectedSource] : null;
+  const selectedProvider = selectedSource === "metaRoll" ? sources.metaroll : sources["pokemon-champions-battle-data"];
   return <section className="builder-meta-panel" aria-labelledby="builder-meta-title">
     <div className="builder-meta-heading"><div><p className="page-label">Doubles · Pokémon Champions</p><h2 id="builder-meta-title">Meta de {pokemon.name}</h2></div></div>
     {state.status === "loading" && <p role="status">Carregando as distribuições…</p>}
@@ -130,14 +148,15 @@ export function BuilderMetaPanel({ pokemon, member, onApplyOption }) {
     {state.status === "ready" && <>
       {state.failedSources > 0 && <p className="builder-meta-partial" role="status">Parte do meta está indisponível; os dados recebidos continuam visíveis.</p>}
       {onApplyOption && <p className="builder-meta-apply-hint">Selecione uma opção para aplicar ao Pokémon da posição ativa.</p>}
+      {selectedSource && <p className="usage-provenance usage-provenance-inline">{captureSummary(selectedSource, selectedContext)}</p>}
       <div className="builder-meta-grid">{distributions.map(([key, title, rows]) => <section className="builder-meta-category" key={key}>
         <div><h3>{title}</h3><span>{rows.length || "—"}</span></div>
         {rows.length ? <ol>{rows.map((row) => <Distribution key={row.key} row={row} category={categoryIds[key]} member={member} onApplyOption={onApplyOption} />)}</ol> : <p>Sem dados publicados.</p>}
       </section>)}</div>
       {onApplyOption && <p className="builder-meta-apply-status" role="status" aria-live="polite">Seleções alteram apenas esta posição.</p>}
       <details className="builder-meta-about"><summary>Sobre os dados</summary>
-        <p>Uma porcentagem por opção; recortes diferentes não são calculados em média.</p>
-        <ul>{contexts.map(({ source, format, season, capturedAt }) => <li key={source}><a href={sources[source === "metaRoll" ? "metaroll" : "pokemon-champions-battle-data"].source.url} target="_blank" rel="noreferrer">{sources[source === "metaRoll" ? "metaroll" : "pokemon-champions-battle-data"].source.label}</a>{format ? ` · ${format}` : ""}{season ? ` · ${season}` : ""}{capturedAt ? ` · ${capturedAt}` : ""}</li>)}</ul>
+        <p>Distribuições de capturas diferentes não são combinadas.</p>
+        {selectedProvider && <p><a href={selectedProvider.source.url} target="_blank" rel="noreferrer">Fonte e atribuição ↗</a></p>}
       </details>
     </>}
   </section>;

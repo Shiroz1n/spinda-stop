@@ -11,7 +11,7 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { BuilderMetaPanel } from "../components/BuilderMetaPanel.jsx";
 import { PublicTournamentTeams } from "../components/PublicTournamentTeams.jsx";
-import { applyBuilderMetaOption } from "../data/builderMeta.js";
+import { applyBuilderMetaOption, hasDuplicateMove } from "../data/builderMeta.js";
 import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
 import { getPokepasteRawUrl } from "../data/pokepaste.js";
 import { getNature, getNatureSpeedClass } from "../data/natures.js";
@@ -104,6 +104,7 @@ export function BuilderPage() {
   const [speedTargetPickerOpen, setSpeedTargetPickerOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
+  const [moveError, setMoveError] = useState(null);
   const selectedMember = team.members[selectedSlot];
   const teamAnalysis = useMemo(() => calculateTeamAnalysis(team, dexData.pokemon, moveData.moves), [team]);
   const selectedPokemonId = selectedMember?.pokemonId;
@@ -185,6 +186,7 @@ export function BuilderPage() {
   }, [initialDraft]);
 
   function commitTeam(nextTeam) {
+    setMoveError(null);
     setTeam(nextTeam);
     try {
       localStorage.setItem(STORAGE_KEY, serializeTeam(nextTeam));
@@ -215,6 +217,7 @@ export function BuilderPage() {
   }
 
   function chooseForSlot(slot) {
+    setMoveError(null);
     setSelectedSlot(slot);
     setPickerSlot(slot);
     setPickerOpen(true);
@@ -398,8 +401,15 @@ export function BuilderPage() {
   }
 
   function updateMove(index, value) {
+    if (value && hasDuplicateMove(selectedMember.moves, value, index)) {
+      setMoveError({ slot: selectedSlot, index, name: value });
+      setMessage("");
+      return;
+    }
+    setMoveError(null);
     const moves = [...selectedMember.moves];
     moves[index] = value;
+    setMessage("");
     updateMember({ moves });
   }
 
@@ -544,7 +554,7 @@ export function BuilderPage() {
                   key={index}
                   type="button"
                   aria-pressed={selectedSlot === index}
-                  onClick={() => entry ? setSelectedSlot(index) : chooseForSlot(index)}
+                  onClick={() => { setMoveError(null); entry ? setSelectedSlot(index) : chooseForSlot(index); }}
                 >
                   <span className="team-slot-art">{entry ? <PokemonSprite pokemon={entry} name={entry.name} size={64} decorative /> : <span className="team-slot-empty" aria-hidden="true">+</span>}</span>
                   <span className="slot-number">{String(index + 1).padStart(2, "0")}</span>
@@ -622,7 +632,8 @@ export function BuilderPage() {
                 {selectedMember.moves.map((move, index) => (
                   <label className="move-field" htmlFor={`move-${index}`} key={index}>
                     <span>{index + 1}</span>
-                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
+                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" aria-label={`Golpe ${index + 1}`} aria-invalid={moveError?.slot === selectedSlot && moveError.index === index} aria-describedby={moveError?.slot === selectedSlot && moveError.index === index ? `move-${index}-error` : undefined} />
+                    {moveError?.slot === selectedSlot && moveError.index === index && <small id={`move-${index}-error`} className="move-field-error" role="alert">{moveError.name} já está neste set.</small>}
                   </label>
                 ))}
                 <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>Golpes gerais; legalidade não verificada.</p></details>

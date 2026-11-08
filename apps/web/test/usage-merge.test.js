@@ -1,11 +1,50 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../src/data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows, selectUsageCapture } from "../src/data/usage/mergeUsageData.js";
 
 test("distinguishes published zero points from missing stat points", () => {
   assert.equal(hasPublishedStatPoints({ hp: 0, attack: null }), true);
   assert.equal(hasPublishedStatPoints({ hp: null, attack: undefined }), false);
   assert.equal(hasPublishedStatPoints(null), false);
+});
+
+test("selects one coherent capture for a species and defaults to the active Battle Data view", () => {
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [{ name: "Close Combat" }]), "battleData");
+  assert.equal(selectUsageCapture([], [{ name: "Close Combat" }]), "battleData");
+  assert.equal(selectUsageCapture([], []), null);
+});
+
+test("selects only captures matching the active format and can prefer a historical source", () => {
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [{ name: "Close Combat" }], {
+    formats: { metaRoll: "Singles", battleData: "Doubles" },
+  }), "battleData");
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [{ name: "Close Combat" }], {
+    formats: { metaRoll: "Doubles", battleData: "Doubles" },
+    preferredSource: "battleData",
+  }), "battleData");
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [{ name: "Close Combat" }], {
+    formats: { metaRoll: "Singles", battleData: "Singles" },
+  }), null);
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [], { periodMode: "history" }), "battleData");
+  assert.equal(selectUsageCapture([{ name: "Protect" }], null, { periodMode: "history" }), null);
+});
+
+test("does not substitute a distribution from a different season", () => {
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [{ name: "Close Combat" }], {
+    seasons: { metaRoll: "M-8", battleData: "Current" },
+    activeSeason: "Current",
+  }), "battleData");
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [], {
+    seasons: { metaRoll: "M-8" },
+    activeSeason: "Current",
+  }), null);
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [], {
+    seasons: { metaRoll: "Current" },
+    activeSeason: "Current",
+  }), "metaRoll");
+  assert.equal(selectUsageCapture([{ name: "Protect" }], [], {
+    seasons: { metaRoll: "Current" },
+  }), null);
 });
 
 const resolvePokemon = ({ id, name }) => {
