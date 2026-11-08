@@ -262,10 +262,12 @@ export function DexDetailPage() {
       <section className="detail-heading" aria-labelledby="pokemon-title">
         <div className="detail-stage-art">
           <PokemonSprite pokemon={pokemon} name={pokemon.name} size={200} priority />
-          <span className="detail-number">{formatNationalNumber(pokemon.speciesId)}</span>
         </div>
         <div className="detail-title">
-          <p className="page-label">PokéAPI · geração {pokemon.generation || "—"}</p>
+          <div className="detail-title-meta">
+            <p className="page-label">PokéAPI · geração {pokemon.generation || "—"}</p>
+            <span className="detail-number">#{formatNationalNumber(pokemon.speciesId)}</span>
+          </div>
           <h1 id="pokemon-title">{pokemon.name}</h1>
           <p className="detail-form-label">{pokemon.speciesName} <span>·</span> {formLabel(pokemon)}</p>
           <div className="type-list detail-types">{pokemon.types.map((type) => <TypeTag type={type} key={type} />)}</div>

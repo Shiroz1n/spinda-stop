@@ -336,18 +336,51 @@ export function BuilderPage() {
     }
   }
 
-  function applyPublicSet(member, sourceTeam) {
+  function applyPublicSet(member, sourceTeam, supplied = {}) {
     const slot = selectedMember?.pokemonId === member.pokemonId
       ? selectedSlot
       : team.members.findIndex((entry) => entry?.pokemonId === member.pokemonId);
     if (slot < 0) return;
-    if (!window.confirm(`Este set substituirá habilidade, item, Nature, Stat Points, nível e golpes de ${pokemonWithDetails(member.pokemonId)?.name || "este Pokémon"} na posição ${slot + 1}. Deseja continuar?`)) return;
+    const categories = [
+      supplied.ability && "habilidade",
+      supplied.item && "item",
+      supplied.nature && "Nature",
+      supplied.statPoints && "Stat Points",
+      supplied.level && "nível",
+      supplied.moves > 0 && "golpes",
+    ].filter(Boolean);
+    if (!categories.length) {
+      setMessage("Esta equipe não publicou campos de set aplicáveis para esse Pokémon.");
+      return;
+    }
+    const pokemonName = pokemonWithDetails(member.pokemonId)?.name || "este Pokémon";
+    const missing = [
+      !supplied.ability && "habilidade",
+      !supplied.item && "item",
+      !supplied.nature && "Nature",
+      !supplied.statPoints && "Stat Points",
+      !supplied.level && "nível",
+      !supplied.moves && "golpes",
+    ].filter(Boolean);
+    const partialMoves = supplied.moves > 0 && supplied.moves < 4
+      ? ` Só ${supplied.moves} de 4 golpes foi publicado; os demais espaços ficarão vazios.`
+      : "";
+    const confirmText = `Este set substituirá ${categories.join(", ")} de ${pokemonName} na posição ${slot + 1}.${partialMoves}${missing.length ? ` Os campos sem publicação (${missing.join(", ")}) serão mantidos.` : ""} Deseja continuar?`;
+    if (!window.confirm(confirmText)) return;
     const members = [...team.members];
-    members[slot] = { ...members[slot], ...member };
+    members[slot] = {
+      ...members[slot],
+      ...(supplied.ability ? { ability: member.ability } : {}),
+      ...(supplied.item ? { item: member.item } : {}),
+      ...(supplied.nature ? { nature: member.nature } : {}),
+      ...(supplied.statPoints ? { statPoints: member.statPoints } : {}),
+      ...(supplied.level ? { level: member.level } : {}),
+      ...(supplied.moves > 0 ? { moves: member.moves } : {}),
+    };
     commitTeam({ ...team, members });
     setSelectedSlot(slot);
     setBuilderTab("team");
-    setMessage(`Set de ${sourceTeam.event || "equipe pública"} aplicado à posição ${slot + 1}. Revise antes de usar.`);
+    setMessage(`Dados publicados de ${sourceTeam.event || "equipe pública"} aplicados à posição ${slot + 1}.`);
   }
 
   async function copyShowdownPaste() {

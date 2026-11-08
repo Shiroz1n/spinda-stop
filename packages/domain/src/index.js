@@ -155,6 +155,7 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
 
   const team = createEmptyTeam();
   const warnings = [];
+  const fieldPresence = Array(6).fill(null);
   const statKeys = { hp: "hp", atk: "atk", attack: "atk", def: "def", defense: "def", spa: "spa", spatk: "spa", spattack: "spa", spd: "spd", spdef: "spd", spdefense: "spd", spe: "spe", speed: "spe" };
 
   for (const [index, block] of blocks.entries()) {
@@ -174,6 +175,16 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
       matches = [...(bySpecies.get(speciesKey) || [])];
       resolvedNickname = matches.length > 0;
     }
+    const genderForm = gender ? gender.toLowerCase() === "f" ? "female" : "male" : null;
+    if (gender) {
+      const speciesId = normalizeText(speciesName).replace(/[^a-z0-9]/g, "");
+      const gendered = pokemon.filter((entry) => normalizeText(entry.speciesSlug || entry.speciesName || "").replace(/[^a-z0-9]/g, "") === speciesId && entry.formId === genderForm);
+      if (gendered.length === 1) matches = gendered;
+      else if (matches.length > 1) {
+        const matchingGender = matches.filter((entry) => entry.formId === genderForm);
+        if (matchingGender.length === 1) matches = matchingGender;
+      }
+    }
     const pokemonEntry = matches.length === 1 ? matches[0] : null;
     if (!pokemonEntry) {
       const error = `Pokémon ${index + 1}: “${speciesName}” ${matches.length ? "corresponde a mais de uma forma" : "não foi encontrado no catálogo atual"}.`;
@@ -185,20 +196,32 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
     }
 
     if (resolvedNickname) warnings.push(`Pokémon ${index + 1}: o apelido “${nicknameMatch[1]}” não é preservado no rascunho.`);
-    if (gender) warnings.push(`Pokémon ${index + 1}: o gênero do set não é preservado no rascunho.`);
+    if (gender && pokemonEntry.formId !== genderForm) warnings.push(`Pokémon ${index + 1}: o gênero do set não é preservado no rascunho.`);
     const member = createTeamMember(pokemonEntry);
+    member.ability = "";
     member.item = itemParts.join(" @ ").trim();
+    const supplied = { ability: false, item: Boolean(member.item), nature: false, level: false, statPoints: false, moves: 0 };
     let moveIndex = 0;
     for (const line of lines) {
       if (/^-\s*/.test(line)) {
         if (moveIndex === 4) return { ok: false, error: `Pokémon ${index + 1}: há mais de quatro golpes.` };
-        member.moves[moveIndex] = line.replace(/^-\s*/, "").trim();
+        const move = line.replace(/^-\s*/, "").trim();
+        if (!move) {
+          warnings.push(`Pokémon ${index + 1}: um golpe vazio foi ignorado.`);
+          continue;
+        }
+        member.moves[moveIndex] = move;
         moveIndex += 1;
+        supplied.moves += 1;
         continue;
       }
       const nature = line.match(/^(.+)\s+Nature$/i);
       if (nature) {
-        member.nature = nature[1].trim();
+        const value = nature[1].trim();
+        if (value) {
+          member.nature = value;
+          supplied.nature = true;
+        }
         continue;
       }
       const field = line.match(/^([^:]+):\s*(.*)$/);
@@ -206,15 +229,30 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
         warnings.push(`Pokémon ${index + 1}: linha não reconhecida — ${line}`);
         continue;
       }
-      const [, rawKey, value] = field;
+      const [, rawKey, rawValue] = field;
+      const value = rawValue.trim();
       const key = normalizeText(rawKey).replace(/[^a-z0-9]/g, "");
-      if (key === "ability") member.ability = value;
+      if (key === "ability") {
+        if (value) {
+          member.ability = value;
+          supplied.ability = true;
+        }
+      }
       else if (key === "level") {
+        if (!value) continue;
         const level = Number(value);
         if (!Number.isInteger(level) || level < 1 || level > 100) return { ok: false, error: `Pokémon ${index + 1}: o nível deve estar entre 1 e 100.` };
         member.level = level;
-      } else if (key === "nature") member.nature = value.replace(/\s+nature$/i, "").trim();
+        supplied.level = true;
+      } else if (key === "nature") {
+        const natureValue = value.replace(/\s+nature$/i, "").trim();
+        if (natureValue) {
+          member.nature = natureValue;
+          supplied.nature = true;
+        }
+      }
       else if (key === "evs") {
+        if (!value) continue;
         const spread = Object.fromEntries(STAT_KEYS.map((stat) => [stat, 0]));
         const seenStats = new Set();
         for (const part of value.split("/").map((segment) => segment.trim()).filter(Boolean)) {
@@ -226,11 +264,13 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
           seenStats.add(statKey);
           spread[statKey] = Number(stat[1]);
         }
+        if (!seenStats.size) return { ok: false, error: `Pokémon ${index + 1}: não reconheci a distribuição “${value}”.` };
         const total = Object.values(spread).reduce((sum, points) => sum + points, 0);
         if (Object.values(spread).some((points) => points > 32) || total > 66) {
           return { ok: false, error: `Pokémon ${index + 1}: a linha EVs excede o limite Champions de 32 pontos por atributo ou 66 no total; não foi convertida.` };
         }
         member.statPoints = spread;
+        supplied.statPoints = true;
       } else if (key === "ivs") {
         if (value && !value.split("/").every((part) => /^\s*31\s+/.test(part))) {
           warnings.push(`Pokémon ${index + 1}: IVs não são representados no rascunho Champions e não foram importados.`);
@@ -241,11 +281,22 @@ export function importShowdownTeam(text, pokemon = [], { allowPartial = false } 
         warnings.push(`Pokémon ${index + 1}: campo “${rawKey}” não foi importado.`);
       }
     }
-    team.members[allowPartial ? team.members.findIndex((entry) => entry === null) : index] = member;
+    const missing = [
+      !supplied.moves && "golpes",
+      !supplied.item && "item",
+      !supplied.ability && "habilidade",
+      !supplied.nature && "Nature",
+      !supplied.statPoints && "distribuição de pontos",
+      !supplied.level && "nível",
+    ].filter(Boolean);
+    if (missing.length) warnings.push(`Pokémon ${index + 1}: o paste não publica ${missing.join(", ")}; esses campos não serão considerados parte do set.`);
+    const slot = allowPartial ? team.members.findIndex((entry) => entry === null) : index;
+    team.members[slot] = member;
+    fieldPresence[slot] = supplied;
   }
 
   if (!team.members.some(Boolean)) return { ok: false, error: "Nenhum Pokémon do paste foi reconhecido no catálogo atual." };
-  return { ok: true, value: team, warnings: [...new Set(warnings)] };
+  return { ok: true, value: team, warnings: [...new Set(warnings)], fieldPresence };
 }
 
 export function exportShowdownTeam(team, pokemon = []) {
