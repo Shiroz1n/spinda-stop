@@ -2217,9 +2217,12 @@ async function runFastViewport(viewportName, viewport) {
       }
     }
 
-    // Route changes intentionally move focus to <main>; reset to document
-    // focus so this check measures the first Tab on a fresh page context.
-    await page.evaluate(() => document.activeElement?.blur());
+    // Opening a Pokémon correctly focuses <main>; reload the Dex route so the
+    // skip-link check measures the first Tab on a direct page load.
+    if (screen === "dex" && viewport.width <= 560) {
+      await page.goto(baseUrl + quickScreenRegistry.dex, { waitUntil: "domcontentloaded" });
+      await heading.waitFor({ state: "visible", timeout: 10_000 });
+    }
     await page.keyboard.press("Tab");
     const skipFocus = await page.evaluate(() => {
       const active = document.activeElement;
