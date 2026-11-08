@@ -2217,6 +2217,9 @@ async function runFastViewport(viewportName, viewport) {
       }
     }
 
+    // Route changes intentionally move focus to <main>; reset to document
+    // focus so this check measures the first Tab on a fresh page context.
+    await page.evaluate(() => document.activeElement?.blur());
     await page.keyboard.press("Tab");
     const skipFocus = await page.evaluate(() => {
       const active = document.activeElement;
