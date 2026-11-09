@@ -44,6 +44,12 @@ export function calculateStandardSpeed({ baseSpeed, level = 50, iv = 31, ev = 0,
   return Math.floor(unmodified * natureFactor(nature));
 }
 
+export function applySpeedModifiers(speed, { tailwind = false, choiceScarf = false } = {}) {
+  return Number.isFinite(speed)
+    ? Math.floor(speed * (tailwind ? 2 : 1) * (choiceScarf ? 1.5 : 1))
+    : null;
+}
+
 export function compareSpeed(value, target) {
   if (!Number.isFinite(value) || !Number.isFinite(target)) return "unknown";
   if (value > target) return "faster";
@@ -94,14 +100,14 @@ export function applySpeedPointsToStatSpread(statPoints, speedPoints) {
     : { ok: false, error: validation.error };
 }
 
-export function minimumTrainingToOutspeed({ model = "champions", baseSpeed, targetSpeed, nature = "neutral", level = 50, iv = 31 }) {
+export function minimumTrainingToOutspeed({ model = "champions", baseSpeed, targetSpeed, nature = "neutral", level = 50, iv = 31, modifiers }) {
   if (!Number.isFinite(targetSpeed)) return null;
   const maximum = model === "standard" ? 252 : CHAMPIONS_MAX_STAT_POINTS;
   for (let value = 0; value <= maximum; value += model === "standard" ? 4 : 1) {
     const speed = model === "standard"
       ? calculateStandardSpeed({ baseSpeed, level, iv, ev: value, nature })
       : calculateChampionsSpeed(baseSpeed, value, nature);
-    if (speed > targetSpeed) return value;
+    if (applySpeedModifiers(speed, modifiers) > targetSpeed) return value;
   }
   return null;
 }

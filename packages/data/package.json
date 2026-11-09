@@ -7,6 +7,7 @@
     "./details": "./generated/details.json",
     "./moves": "./generated/moves.json",
     "./natures": "./generated/natures.json",
+    "./champions-eligibility": "./snapshots/champions-eligibility.json",
     "./learnsets/*": "./generated/learnsets/*.json"
   },
   "scripts": {

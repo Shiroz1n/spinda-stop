@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import pokedex from "../../../packages/data/generated/pokedex.json" with { type: "json" };
 import {
   createPokemonSpriteLookup,
   itemSpriteUrl,
@@ -81,6 +82,8 @@ test("a descriptive form name wins when a provider ID collapses it to the base s
     resolveCompetitivePokemonSprite(lookup, { id: "raichualola", name: "Raichu" })?.slug,
     "raichu-alola",
   );
+  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "charizard-mega-x", name: "Charizard" })?.slug, "charizard-mega-x");
+  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "charizard-mega-x", name: "Raichu" }), null);
 });
 
 test("Showdown and MetaRoll Paldean Tauros IDs resolve to the exact breed", () => {
@@ -104,11 +107,39 @@ test("Showdown gender IDs resolve to the matching local form", () => {
     { slug: "indeedee-female", name: "Female Indeedee", speciesSlug: "indeedee", speciesName: "Indeedee", formId: "female", spriteId: 10186 },
   ]);
 
-  assert.equal(lookup("basculegion")?.slug, "basculegion-male");
+  assert.equal(lookup("basculegion"), null);
   assert.equal(lookup("basculegionf")?.slug, "basculegion-female");
+  assert.equal(lookup("indeedee"), null);
   assert.equal(lookup("indeedeef")?.slug, "indeedee-female");
-  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "basculegion", name: "Basculegion" })?.slug, "basculegion-male");
+  assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "basculegion", name: "Basculegion" }), null);
   assert.equal(resolveCompetitivePokemonSprite(lookup, { id: "indeedeef", name: "Indeedee-F" })?.slug, "indeedee-female");
+});
+
+test("generic gendered species names stay unresolved with the production catalog", () => {
+  const lookup = createPokemonSpriteLookup(pokedex.pokemon);
+
+  for (const name of ["Basculegion", "Indeedee", "Meowstic"]) {
+    assert.equal(lookup(name), null, `${name} must not imply the male form`);
+    assert.equal(resolveCompetitivePokemonSprite(lookup, { id: name, name }), null);
+  }
+  for (const id of [678, 876, 902]) assert.equal(lookup(id), null);
+  assert.equal(lookup("Basculegion (Male)")?.slug, "basculegion-male");
+  assert.equal(lookup("Male Basculegion")?.slug, "basculegion-male");
+  assert.equal(lookup("Indeedee-F")?.slug, "indeedee-female");
+  assert.equal(lookup("Female Meowstic")?.slug, "meowstic-female");
+});
+
+test("a form-specific ID conflicting with the supplied form name stays unresolved", () => {
+  const lookup = createPokemonSpriteLookup(pokedex.pokemon);
+
+  assert.equal(resolveCompetitivePokemonSprite(lookup, {
+    id: "indeedeemale",
+    name: "Female Indeedee",
+  }), null);
+  assert.equal(resolveCompetitivePokemonSprite(lookup, {
+    id: "basculegion-male",
+    name: "Female Basculegion",
+  }), null);
 });
 
 test("a HOME sprite can fall back to matching official artwork for alternate forms", () => {
@@ -117,6 +148,12 @@ test("a HOME sprite can fall back to matching official artwork for alternate for
     `${POKEAPI_SPRITES_BASE}/pokemon/other/official-artwork/10248.png`,
   );
   assert.equal(resolvePokemonSpriteFallbackUrl({}), null);
+});
+
+test("an alternate form never borrows the base species sprite", () => {
+  const ambiguousForm = { slug: "basculegion-female", speciesId: 902, spriteId: 902, formId: "female", isDefault: false };
+  assert.equal(resolvePokemonSpriteUrl(ambiguousForm), null);
+  assert.equal(resolvePokemonSpriteFallbackUrl(ambiguousForm), null);
 });
 
 test("a failed fallback stays unavailable and a new form starts from its own HOME sprite", () => {

@@ -1,27 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchPokemon } from "@spinda-stop/domain";
-import { usageProviders } from "../data/usage/registry.js";
-import { getChampionsIndexedPokemon } from "../data/pokemonChampionsRoster.js";
+import { getChampionsEligiblePokemon, getChampionsRosterSummary, getOfficialPokemonAliases } from "../data/pokemonChampionsRoster.js";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { TypeTag } from "./TypeTag.jsx";
+import { nextSpeciesPickerIndex } from "./speciesPickerKeyboard.js";
 
 export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "species" }) {
   const dialogRef = useRef(null);
   const searchRef = useRef(null);
+  const resultsRef = useRef(null);
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState("champions");
-  const [roster, setRoster] = useState({ status: "idle", pokemon: [] });
-  const activePokemon = catalog === "champions" ? roster.pokemon : pokemon;
+  const roster = useMemo(() => getOfficialPokemonAliases(getChampionsEligiblePokemon(pokemon, "M-C")), [pokemon]);
+  const rosterSummary = getChampionsRosterSummary("M-C");
+  const activePokemon = catalog === "champions" ? roster : pokemon;
   const filtered = useMemo(() => searchPokemon(activePokemon, query).slice(0, 16), [activePokemon, query]);
-
-  useEffect(() => {
-    if (!open || roster.status !== "idle") return undefined;
-    let active = true;
-    usageProviders["pokemon-champions-battle-data"].loadIndex()
-      .then((index) => { if (active) setRoster({ status: "ready", pokemon: getChampionsIndexedPokemon(index, pokemon) }); })
-      .catch(() => { if (active) setRoster({ status: "error", pokemon: [] }); });
-    return () => { active = false; };
-  }, [open, pokemon, roster.status]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -45,6 +38,20 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
     onClose();
   }
 
+  function handleResultNavigation(event) {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    const resultButtons = [...(resultsRef.current?.querySelectorAll(".picker-result") || [])];
+    if (!resultButtons.length) return;
+
+    const currentIndex = resultButtons.indexOf(document.activeElement);
+    const isSearch = document.activeElement === searchRef.current;
+    if (!isSearch && currentIndex < 0) return;
+
+    event.preventDefault();
+    const nextIndex = nextSpeciesPickerIndex(currentIndex, event.key, resultButtons.length);
+    resultButtons[nextIndex]?.focus();
+  }
+
   return (
     <dialog
       ref={dialogRef}
@@ -52,6 +59,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
       aria-labelledby={`${idPrefix}-dialog-title`}
       onCancel={(event) => { event.preventDefault(); closePicker(); }}
       onClick={(event) => { if (event.target === dialogRef.current) closePicker(); }}
+      onKeyDown={handleResultNavigation}
     >
       <div className="dialog-content">
         <div className="dialog-heading">
@@ -77,10 +85,8 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
           placeholder="Ex.: Garchomp ou 445"
           autoComplete="off"
         />
-        {catalog === "champions" && <p className="form-hint">Índice atual de Doubles; não confirma legalidade no regulamento.</p>}
-        <div className="picker-results" aria-live="polite">
-          {catalog === "champions" && roster.status === "idle" && open && <p className="empty-state" role="status">Carregando o índice de Doubles…</p>}
-          {catalog === "champions" && roster.status === "error" && <p className="empty-state" role="status">Índice de Champions indisponível. <button type="button" onClick={() => setRoster({ status: "idle", pokemon: [] })}>Tentar novamente</button> ou escolha a Pokédex geral.</p>}
+        {catalog === "champions" && <p className="form-hint">Elenco M-C · {rosterSummary?.checkedAt ? `consultado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "UTC" }).format(new Date(rosterSummary.checkedAt))}` : "consulta sem data"}.</p>}
+        <div ref={resultsRef} className="picker-results" aria-live="polite">
           {filtered.map((entry) => (
             <button
               className="picker-result"
@@ -98,7 +104,7 @@ export function SpeciesPicker({ open, pokemon, onChoose, onClose, idPrefix = "sp
               </span>
             </button>
           ))}
-          {filtered.length === 0 && (catalog === "general" || roster.status === "ready") && <p className="empty-state">{catalog === "champions" ? "Nenhum resultado no índice atual de Doubles." : "Nenhum resultado. Tente outro nome ou número."}</p>}
+          {filtered.length === 0 && <p className="empty-state">{catalog === "champions" ? "Nenhum resultado confirmado no elenco M-C." : "Nenhum resultado. Tente outro nome ou número."}</p>}
         </div>
         {query.trim() && filtered.length === 16 && <p className="form-hint">Mostrando 16 resultados. Refine a busca para ver a forma desejada.</p>}
       </div>

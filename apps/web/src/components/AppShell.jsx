@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { BrandMark } from "./BrandMark.jsx";
+
+const GlobalSearch = lazy(() => import("./GlobalSearch.jsx").then((module) => ({ default: module.GlobalSearch })));
 
 const navigation = [
   { to: "/dex", label: "Pokédex", shortLabel: "Dex", icon: "search" },
@@ -21,7 +23,7 @@ function NavigationIcon({ name }) {
   return <svg className="mobile-nav-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">{paths[name]}</svg>;
 }
 
-function CommunityMenu() {
+function CommunityMenu({ onOpenSearch }) {
   const menuRef = useRef(null);
   function closeMenu() {
     if (menuRef.current) menuRef.current.open = false;
@@ -34,6 +36,7 @@ function CommunityMenu() {
         <span>Mais</span>
       </summary>
       <div className="mobile-more-menu">
+        <button type="button" onClick={() => { closeMenu(); onOpenSearch(); }}>Buscar Pokémon ou golpe <span aria-hidden="true">⌕</span></button>
         <Link to="/rooms" onClick={closeMenu}>Salas <span aria-hidden="true">↗</span></Link>
         <Link to="/tournaments" onClick={closeMenu}>Torneios <span aria-hidden="true">↗</span></Link>
       </div>
@@ -56,7 +59,10 @@ function ThemeIcon({ theme }) {
 export function AppShell({ children }) {
   const location = useLocation();
   const mainRef = useRef(null);
+  const searchReturnFocusRef = useRef(null);
   const previousPath = useRef(location.pathname);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchMounted, setSearchMounted] = useState(false);
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("spinda-theme");
@@ -71,7 +77,7 @@ export function AppShell({ children }) {
   useEffect(() => {
     if (previousPath.current !== location.pathname) {
       previousPath.current = location.pathname;
-      mainRef.current?.focus();
+      mainRef.current?.focus({ preventScroll: true });
     }
   }, [location.pathname]);
 
@@ -93,6 +99,35 @@ export function AppShell({ children }) {
       // The in-memory theme still works when storage is unavailable.
     }
   }, [activeTheme, theme]);
+
+  useEffect(() => {
+    function openSearch(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
+        event.preventDefault();
+        searchReturnFocusRef.current = document.activeElement;
+        setSearchMounted(true);
+        setSearchOpen(true);
+      }
+    }
+    window.addEventListener("keydown", openSearch);
+    return () => window.removeEventListener("keydown", openSearch);
+  }, []);
+
+  function openSearch() {
+    searchReturnFocusRef.current = document.activeElement;
+    setSearchMounted(true);
+    setSearchOpen(true);
+  }
+
+  function closeSearch() {
+    setSearchOpen(false);
+    const target = searchReturnFocusRef.current;
+    searchReturnFocusRef.current = null;
+    requestAnimationFrame(() => {
+      if (target?.isConnected && target.getClientRects().length) target.focus();
+      else mainRef.current?.focus({ preventScroll: true });
+    });
+  }
 
   function cycleTheme() {
     setTheme((current) => current === "system"
@@ -122,6 +157,9 @@ export function AppShell({ children }) {
           <NavLink to="/tournaments" className={({ isActive }) => `nav-link${isActive ? " is-active" : ""}`}>Torneios</NavLink>
         </nav>
         <div className="header-tools">
+          <button className="header-search-button" type="button" aria-label="Buscar no Spinda Stop" title="Buscar (Ctrl/⌘ K)" onClick={openSearch}>
+            <NavigationIcon name="search" />
+          </button>
           <button className="theme-toggle" type="button" aria-label={themeLabel} title={themeLabel} onClick={cycleTheme}>
             <ThemeIcon theme={activeTheme} />
           </button>
@@ -142,8 +180,10 @@ export function AppShell({ children }) {
             <span>{item.shortLabel}</span>
           </NavLink>
         ))}
-        <CommunityMenu />
+        <CommunityMenu onOpenSearch={openSearch} />
       </nav>
+
+      {searchMounted ? <Suspense fallback={null}><GlobalSearch open={searchOpen} onClose={closeSearch} /></Suspense> : null}
 
       <footer className="site-footer">
         <span>Projeto de fã independente, sem vínculo oficial.</span>

@@ -548,6 +548,16 @@ async function runViewport(viewportName, viewport) {
   if (dexSpriteState.total === 0 || dexSpriteState.uncovered > 0) {
     failures.push(`${viewportName}: há sprites sem imagem carregada nem fallback visível na Pokédex (${dexSpriteState.uncovered}/${dexSpriteState.total}).`);
   }
+  if (viewport.width <= 560) {
+    const dexSpriteFit = await page.locator(".pokemon-card-art").first().evaluate((well) => {
+      const sprite = well.querySelector(".pokemon-art");
+      const wellRect = well.getBoundingClientRect();
+      const spriteRect = sprite?.getBoundingClientRect();
+      return { wellWidth: wellRect.width, spriteWidth: spriteRect?.width || 0, fits: Boolean(spriteRect && spriteRect.width <= wellRect.width + 1 && spriteRect.height <= wellRect.height + 1) };
+    });
+    observations.push({ viewport: viewportName, name: "pokedex-mobile-sprite-fit", ...dexSpriteFit });
+    if (!dexSpriteFit.fits) failures.push(`${viewportName}: o sprite da lista da Pokédex excede sua caixa visual.`);
+  }
   await safeCapture(page, viewportName, "pokedex-loaded-more", { audit: true, fullPage: viewport.width > 720 });
   await page.locator(".pokemon-card").nth(Math.max(initialCardCount, loadedCardCount - 6)).scrollIntoViewIfNeeded();
   await safeCapture(page, viewportName, "pokedex-loaded-more-scrolled", { fullPage: false });
@@ -605,6 +615,35 @@ async function runViewport(viewportName, viewport) {
   await firstPokemonCard.evaluate((card) => card.scrollIntoView({ block: "center" }));
   await firstPokemonCard.click();
   await page.getByRole("heading", { name: "Garchomp", exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+  if (viewport.width <= 560) {
+    await page.waitForFunction(() => window.scrollY <= 1, null, { timeout: 5_000 });
+    const detailMobileLayout = await page.evaluate(() => {
+      const stage = document.querySelector(".detail-stage-art");
+      const sprite = stage?.querySelector(".pokemon-art");
+      const title = document.querySelector(".detail-title");
+      const number = document.querySelector(".detail-number");
+      const box = (element) => {
+        const rect = element?.getBoundingClientRect();
+        return rect ? { left: rect.left, right: rect.right, width: rect.width, height: rect.height } : null;
+      };
+      const stageBox = box(stage);
+      const spriteBox = box(sprite);
+      const titleBox = box(title);
+      return {
+        scrollY: window.scrollY,
+        stage: stageBox,
+        sprite: spriteBox,
+        title: titleBox,
+        spriteFits: Boolean(stageBox && spriteBox && spriteBox.left >= stageBox.left - 1 && spriteBox.right <= stageBox.right + 1 && spriteBox.height <= stageBox.height + 1),
+        columnsDoNotOverlap: Boolean(stageBox && titleBox && stageBox.right <= titleBox.left + 1),
+        numberWithTitle: Boolean(number && title?.contains(number) && !stage?.contains(number)),
+      };
+    });
+    observations.push({ viewport: viewportName, name: "pokemon-sheet-mobile-layout", ...detailMobileLayout });
+    if (!detailMobileLayout.spriteFits || !detailMobileLayout.columnsDoNotOverlap || !detailMobileLayout.numberWithTitle) {
+      failures.push(`${viewportName}: a ficha mobile sobrepõe o sprite, o título ou o número nacional.`);
+    }
+  }
   await safeCapture(page, viewportName, "pokemon-sheet", { audit: true, fullPage: false });
   const missingSpritePage = await context.newPage();
   await missingSpritePage.route(`${POKEAPI_SPRITES_BASE}/pokemon/other/home/25.png`, (route) => route.abort());
@@ -620,6 +659,17 @@ async function runViewport(viewportName, viewport) {
   await missingSpritePage.close();
   const evolutionSection = page.locator(".detail-evolutions");
   await evolutionSection.waitFor({ state: "visible", timeout: 10_000 });
+  if (viewport.width <= 560) {
+    const evolutionLayout = await evolutionSection.locator(".evolution-list").evaluate((list) => ({
+      display: getComputedStyle(list).display,
+      itemCount: list.children.length,
+      hasHorizontalOverflow: list.scrollWidth > list.clientWidth + 1,
+    }));
+    observations.push({ viewport: viewportName, name: "evolution-mobile-layout", ...evolutionLayout });
+    if (evolutionLayout.display !== "grid" || evolutionLayout.hasHorizontalOverflow) {
+      failures.push(`${viewportName}: a cadeia evolutiva continua comprimida ou com rolagem horizontal no mobile.`);
+    }
+  }
   const evolutionNames = await evolutionSection.locator(".evolution-list strong").allTextContents();
   if (!evolutionNames.includes("Gabite") || !evolutionNames.includes("Garchomp")) {
     failures.push(`${viewportName}: a ficha de Garchomp não mostrou sua relação evolutiva direta.`);
@@ -751,7 +801,10 @@ async function runViewport(viewportName, viewport) {
   const waterScrollBeforeOpen = await page.evaluate(() => window.scrollY);
   await page.locator(".pokemon-card-link").nth(12).click();
   await page.locator(".detail-page").waitFor({ state: "visible", timeout: 10_000 });
+  const openedScrollY = await page.evaluate(() => window.scrollY);
   const savedScrollY = await page.evaluate(() => JSON.parse(window.sessionStorage.getItem("spinda-dex-view") || "null")?.scrollY);
+  observations.push({ viewport: viewportName, name: "pokedex-detail-opens-at-top", scrollY: openedScrollY });
+  if (openedScrollY > 1) failures.push(`${viewportName}: a ficha abriu sem voltar ao topo da página.`);
   await page.locator(".detail-page .back-link").click();
   await page.getByRole("heading", { name: "Pokédex" }).waitFor({ state: "visible", timeout: 10_000 });
   await page.waitForFunction((expectedScrollY) => {
@@ -2027,6 +2080,54 @@ async function runFastViewport(viewportName, viewport) {
     const headingText = await heading.textContent().catch(() => "");
     await capture(page, viewportName, "quick-" + screen + "-first-fold", { audit: false, fullPage: mobileOnly && ["home", "builder"].includes(screen) });
 
+    if (screen === "dex") {
+      await page.locator(".pokemon-card-link").first().waitFor({ state: "visible", timeout: 10_000 });
+      const dexLayout = await page.evaluate(() => {
+        const well = document.querySelector(".pokemon-card-art");
+        const sprite = well?.querySelector(".pokemon-art");
+        const wellRect = well?.getBoundingClientRect();
+        const spriteRect = sprite?.getBoundingClientRect();
+        return {
+          spriteFits: Boolean(wellRect && spriteRect && spriteRect.left >= wellRect.left - 1 && spriteRect.right <= wellRect.right + 1 && spriteRect.top >= wellRect.top - 1 && spriteRect.bottom <= wellRect.bottom + 1),
+          documentFits: document.documentElement.scrollWidth <= innerWidth + 1,
+        };
+      });
+      observations.push({ mode: mobileOnly ? "mobile" : "fast", viewport: viewportName, name: "quick-pokedex-sprite-fit", ...dexLayout });
+      if (!dexLayout.spriteFits || (viewport.width <= 560 && !dexLayout.documentFits)) {
+        failures.push(viewportName + "/dex: sprites devem caber em sua caixa e a Pokédex não deve criar overflow horizontal no mobile.");
+      }
+      if (viewport.width <= 560) {
+        await page.locator(".pokemon-card-link").first().click();
+        await page.locator("#pokemon-title").waitFor({ state: "visible", timeout: 10_000 });
+        await page.waitForFunction(() => window.scrollY <= 1, null, { timeout: 5_000 });
+      }
+    }
+
+    if (screen === "pokemon" || (screen === "dex" && viewport.width <= 560)) {
+      const pokemonLayout = await page.evaluate(() => {
+        const stage = document.querySelector(".detail-stage-art");
+        const sprite = stage?.querySelector(".pokemon-art");
+        const title = document.querySelector(".detail-title");
+        const meta = document.querySelector(".detail-title-meta");
+        const number = meta?.querySelector(".detail-number");
+        const stageRect = stage?.getBoundingClientRect();
+        const spriteRect = sprite?.getBoundingClientRect();
+        const numberRect = number?.getBoundingClientRect();
+        const metaRect = meta?.getBoundingClientRect();
+        return {
+          scrollY: window.scrollY,
+          numberPosition: number ? getComputedStyle(number).position : "missing",
+          numberFits: Boolean(numberRect && metaRect && numberRect.left >= metaRect.left - 1 && numberRect.right <= metaRect.right + 1),
+          spriteFits: Boolean(stageRect && spriteRect && spriteRect.left >= stageRect.left - 1 && spriteRect.right <= stageRect.right + 1 && spriteRect.top >= stageRect.top - 1 && spriteRect.bottom <= stageRect.bottom + 1),
+          columnsSeparate: Boolean(stageRect && title && stageRect.right <= title.getBoundingClientRect().left + 1),
+        };
+      });
+      observations.push({ mode: mobileOnly ? "mobile" : "fast", viewport: viewportName, name: "quick-pokemon-detail-layout", ...pokemonLayout });
+      if (pokemonLayout.numberPosition !== "static" || !pokemonLayout.numberFits || !pokemonLayout.spriteFits || !pokemonLayout.columnsSeparate || (viewport.width <= 560 && pokemonLayout.scrollY > 1)) {
+        failures.push(viewportName + "/pokemon: sprite e número devem permanecer contidos na ficha, com a abertura mobile no topo.");
+      }
+    }
+
     if (mobileOnly) {
       const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
       if (accessibility.violations.length) {
@@ -2107,14 +2208,21 @@ async function runFastViewport(viewportName, viewport) {
           controlsFit: controls.length === 6 && controls.every(Boolean),
           titleWidth: title?.width ?? 0,
           speedLeft: speed?.left ?? 0,
+          slotColumns: getComputedStyle(document.querySelector(".builder-center-column .team-slots")).gridTemplateColumns.split(" ").length,
         };
       });
       observations.push({ mode: "mobile", viewport: viewportName, name: "builder-heading-and-actions", ...builderLayout });
-      if (!builderLayout.titleAndActionSeparate || !builderLayout.controlsFit || builderLayout.titleWidth < 90) {
+      if (!builderLayout.titleAndActionSeparate || !builderLayout.controlsFit || builderLayout.titleWidth < 90 || (viewport.width <= 380 && builderLayout.slotColumns !== 1)) {
         failures.push(viewportName + "/builder: título, Comparar Speed e ações devem ter áreas independentes e confortáveis ao toque.");
       }
     }
 
+    // Opening a Pokémon correctly focuses <main>; reload the Dex route so the
+    // skip-link check measures the first Tab on a direct page load.
+    if (screen === "dex" && viewport.width <= 560) {
+      await page.goto(baseUrl + quickScreenRegistry.dex, { waitUntil: "domcontentloaded" });
+      await heading.waitFor({ state: "visible", timeout: 10_000 });
+    }
     await page.keyboard.press("Tab");
     const skipFocus = await page.evaluate(() => {
       const active = document.activeElement;
@@ -2177,7 +2285,7 @@ async function runFastViewport(viewportName, viewport) {
           failures.push(`${viewportName}/builder: Champions não foi aberto como catálogo padrão do seletor.`);
         }
         await search.fill("Regieleki");
-        await page.getByText("Nenhum resultado no índice atual de Doubles.").waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByText("Nenhum resultado confirmado no elenco M-C.").waitFor({ state: "visible", timeout: 5_000 });
         await page.getByRole("button", { name: "Pokédex geral", exact: true }).click();
         await page.locator(".species-dialog .picker-result").filter({ hasText: "Regieleki" }).waitFor({ state: "visible", timeout: 5_000 });
         await page.getByRole("button", { name: "Champions", exact: true }).click();

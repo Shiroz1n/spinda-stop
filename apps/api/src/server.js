@@ -1,8 +1,10 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import { Elysia } from "elysia";
 import { createPublicCommunityTeamsHandler } from "./public-community-teams.js";
 import { createPublicVgcTournamentsHandler } from "./public-vgc-tournaments.js";
 import dexData from "../../../packages/data/generated/pokedex.json" with { type: "json" };
+import movesData from "../../../packages/data/generated/moves.json" with { type: "json" };
 import { createDatabase } from "./db.js";
 import {
   canCheckIn,
@@ -150,8 +152,8 @@ function validateTeamName(name) {
   return name.trim();
 }
 
-function sharedRosterFromTeam(data, pokemonCatalog) {
-  const validation = validateTeamPayload(data, pokemonCatalog);
+function sharedRosterFromTeam(data, pokemonCatalog, movesCatalog) {
+  const validation = validateTeamPayload(data, pokemonCatalog, movesCatalog);
   if (!validation.ok) throw new HttpError(409, "team_invalid", "Salve a equipe novamente antes de compartilhá-la.");
   if (!validation.value.members.some(Boolean)) throw new HttpError(409, "team_empty", "Adicione ao menos um Pokémon à equipe antes de compartilhá-la.");
   return validation.value.members.map((member) => member && ({
@@ -164,6 +166,7 @@ function sharedRosterFromTeam(data, pokemonCatalog) {
 }
 
 export function createRateLimiter({ limit = 24, windowMs = 15 * 60 * 1000, maxBuckets = 10_000 } = {}) {
+  // shortcut: process-local buckets do not coordinate Vercel instances; use shared storage if a global quota becomes required.
   const attempts = new Map();
   let lastPrunedAt = 0;
   return (req, key) => {
@@ -318,8 +321,8 @@ function responseRecorder() {
 
 function requestAddress(request, server, trustVercelForwardedFor) {
   if (trustVercelForwardedFor) {
-    const forwardedAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    if (forwardedAddress) return forwardedAddress;
+    const forwardedAddress = request.headers.get("x-forwarded-for")?.trim();
+    if (forwardedAddress && !forwardedAddress.includes(",") && isIP(forwardedAddress)) return forwardedAddress;
   }
   const socketAddress = server?.requestIP?.(request)?.address;
   // Outside Vercel, forwarded headers are request input unless a separately
@@ -327,11 +330,26 @@ function requestAddress(request, server, trustVercelForwardedFor) {
   return socketAddress || "unknown";
 }
 
-function limitPublicTeamPaste(request, server, handler, limiter, trustVercelForwardedFor) {
-  if (!/^\/api\/public\/teams\/[^/]+\/paste$/.test(new URL(request.url).pathname)) return handler(request);
+function limitPublicCommunityTeams(request, server, handler, limiter, trustVercelForwardedFor) {
+  if (!/^\/api\/public\/teams(?:\/|$)/.test(new URL(request.url).pathname)) return handler(request);
   try {
     const address = requestAddress(request, server, trustVercelForwardedFor);
-    limiter(requestFromWebRequest(request, address), "public-team-paste");
+    limiter(requestFromWebRequest(request, address), "public-community-teams");
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status !== 429) throw error;
+    return Response.json({ error: { code: error.code, message: error.message } }, {
+      status: error.status,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+  return handler(request);
+}
+
+function limitPublicVgcTournaments(request, server, handler, limiter, trustVercelForwardedFor) {
+  if (!/^\/api\/public\/vgc-tournaments(?:\/|$)/.test(new URL(request.url).pathname)) return handler(request);
+  try {
+    const address = requestAddress(request, server, trustVercelForwardedFor);
+    limiter(requestFromWebRequest(request, address), "public-vgc-tournaments");
   } catch (error) {
     if (!(error instanceof HttpError) || error.status !== 429) throw error;
     return Response.json({ error: { code: error.code, message: error.message } }, {
@@ -376,7 +394,7 @@ function teamPage(rows, offset, limit, includeVisibility = false) {
   };
 }
 
-function createApiRequestHandler({ database, env = process.env, fetchImpl = fetch, pokemonCatalog = dexData.pokemon } = {}) {
+function createApiRequestHandler({ database, env = process.env, fetchImpl = fetch, pokemonCatalog = dexData.pokemon, movesCatalog = movesData.moves } = {}) {
   if (!database) throw new Error("A conexão SQLite é obrigatória.");
   const config = appConfig(env);
   const rateLimit = createRateLimiter();
@@ -537,7 +555,7 @@ function createApiRequestHandler({ database, env = process.env, fetchImpl = fetc
     if (method === "POST" && pathname === "/api/teams") {
       const current = assertUser(user);
       const body = await readJson(req);
-      const validation = validateTeamPayload(body.data, pokemonCatalog);
+      const validation = validateTeamPayload(body.data, pokemonCatalog, movesCatalog);
       if (!validation.ok) throw new HttpError(400, "invalid_team", validation.error);
       if (Buffer.byteLength(JSON.stringify(body.data)) > MAX_BODY_BYTES) throw new HttpError(413, "team_too_large", "A equipe passou de 128 KB.");
       const visibility = body.visibility === "public" ? "public" : body.visibility === "private" ? "private" : null;
@@ -571,7 +589,7 @@ function createApiRequestHandler({ database, env = process.env, fetchImpl = fetc
       const existing = await database.query("SELECT id, data_json FROM teams WHERE id = ?1 AND owner_id = ?2", [teamMatch[1], current.id]);
       if (!existing.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada.");
       const nextData = body.data === undefined ? existing.rows[0].data_json : body.data;
-      const validation = validateTeamPayload(nextData, pokemonCatalog);
+      const validation = validateTeamPayload(nextData, pokemonCatalog, movesCatalog);
       if (!validation.ok) throw new HttpError(400, "invalid_team", validation.error);
       const visibility = body.visibility === undefined ? null : body.visibility;
       if (visibility !== null && !["private", "public"].includes(visibility)) throw new HttpError(400, "invalid_visibility", "Escolha se a equipe fica privada ou pública.");
@@ -737,7 +755,7 @@ function createApiRequestHandler({ database, env = process.env, fetchImpl = fetc
           if (["completed", "cancelled"].includes(membership.rows[0].tournament_status)) throw new HttpError(409, "tournament_finished", "O torneio já terminou.");
           const team = await tx.query("SELECT data_json FROM teams WHERE id = ?1 AND owner_id = ?2", [body.teamId, current.id]);
           if (!team.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada nesta conta.");
-          const roster = sharedRosterFromTeam(team.rows[0].data_json, pokemonCatalog);
+          const roster = sharedRosterFromTeam(team.rows[0].data_json, pokemonCatalog, movesCatalog);
           await tx.query(
             "UPDATE tournament_members SET shared_roster_json = ?1, shared_roster_updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE tournament_id = ?2 AND user_id = ?3",
             [JSON.stringify(roster), tournamentId, current.id],
@@ -1017,7 +1035,7 @@ function createApiRequestHandler({ database, env = process.env, fetchImpl = fetc
           if (["completed", "cancelled"].includes(membership.rows[0].room_status)) throw new HttpError(409, "room_finished", "A sala já terminou.");
           const team = await tx.query("SELECT data_json FROM teams WHERE id = ?1 AND owner_id = ?2", [body.teamId, current.id]);
           if (!team.rowCount) throw new HttpError(404, "team_not_found", "Equipe não encontrada nesta conta.");
-          const roster = sharedRosterFromTeam(team.rows[0].data_json, pokemonCatalog);
+          const roster = sharedRosterFromTeam(team.rows[0].data_json, pokemonCatalog, movesCatalog);
           await tx.query(
             "UPDATE room_members SET shared_roster_json = ?1, shared_roster_updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE room_id = ?2 AND user_id = ?3",
             [JSON.stringify(roster), roomId, current.id],
@@ -1302,15 +1320,20 @@ export function createApiApp(options = {}) {
   const handleRequest = createApiRequestHandler(options);
   const handlePublicCommunityTeams = createPublicCommunityTeamsHandler(options.publicTeamsFetch);
   const handlePublicVgcTournaments = createPublicVgcTournamentsHandler(options.publicVgcTournamentsFetch);
-  const publicPasteRateLimit = createRateLimiter();
+  const publicTeamsRateLimit = createRateLimiter();
+  const publicVgcRateLimit = createRateLimiter();
   const trustVercelForwardedFor = Boolean((options.env || process.env).VERCEL_ENV);
-  const publicTeamsRequest = ({ request, server }) => limitPublicTeamPaste(
-    request, server, handlePublicCommunityTeams, publicPasteRateLimit, trustVercelForwardedFor,
+  const publicTeamsRequest = ({ request, server }) => limitPublicCommunityTeams(
+    request, server, handlePublicCommunityTeams, publicTeamsRateLimit, trustVercelForwardedFor,
+  );
+  const publicVgcRequest = ({ request, server }) => limitPublicVgcTournaments(
+    request, server, handlePublicVgcTournaments, publicVgcRateLimit, trustVercelForwardedFor,
   );
   return new Elysia({ name: "spinda-stop-community-api" })
     .all("/api/public/teams", publicTeamsRequest)
     .all("/api/public/teams/*", publicTeamsRequest)
-    .all("/api/public/vgc-tournaments", ({ request }) => handlePublicVgcTournaments(request))
+    .all("/api/public/vgc-tournaments", publicVgcRequest)
+    .all("/api/public/vgc-tournaments/*", publicVgcRequest)
     .all("/api", ({ request, server }) => handleRequest(request, server))
     .all("/api/*", ({ request, server }) => handleRequest(request, server));
 }
@@ -1445,15 +1468,20 @@ async function handleDeploymentRequest({ request, server }) {
 
 const handlePublicCommunityTeams = createPublicCommunityTeamsHandler();
 const handlePublicVgcTournaments = createPublicVgcTournamentsHandler();
-const deploymentPublicPasteRateLimit = createRateLimiter();
+const deploymentPublicTeamsRateLimit = createRateLimiter();
+const deploymentPublicVgcRateLimit = createRateLimiter();
 const trustDeploymentForwardedFor = Boolean(process.env.VERCEL_ENV);
-const deploymentPublicTeamsRequest = ({ request, server }) => limitPublicTeamPaste(
-  request, server, handlePublicCommunityTeams, deploymentPublicPasteRateLimit, trustDeploymentForwardedFor,
+const deploymentPublicTeamsRequest = ({ request, server }) => limitPublicCommunityTeams(
+  request, server, handlePublicCommunityTeams, deploymentPublicTeamsRateLimit, trustDeploymentForwardedFor,
+);
+const deploymentPublicVgcRequest = ({ request, server }) => limitPublicVgcTournaments(
+  request, server, handlePublicVgcTournaments, deploymentPublicVgcRateLimit, trustDeploymentForwardedFor,
 );
 const deploymentApp = new Elysia({ name: "spinda-stop-community-api" })
   .all("/api/public/teams", deploymentPublicTeamsRequest)
   .all("/api/public/teams/*", deploymentPublicTeamsRequest)
-  .all("/api/public/vgc-tournaments", ({ request }) => handlePublicVgcTournaments(request))
+  .all("/api/public/vgc-tournaments", deploymentPublicVgcRequest)
+  .all("/api/public/vgc-tournaments/*", deploymentPublicVgcRequest)
   .all("/api", handleDeploymentRequest)
   .all("/api/*", handleDeploymentRequest);
 

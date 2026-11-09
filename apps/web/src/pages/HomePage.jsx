@@ -7,6 +7,7 @@ import { usageProviders } from "../data/usage/registry.js";
 import { communityRequest } from "../data/communityApi.js";
 import { mergeUsageCatalog } from "../data/usage/mergeUsageData.js";
 import { getCompetitionPhase, getRankedRegulationPhase, megaEvolutionBattle, rankedRegulation } from "../data/championsCompetition.js";
+import { getChampionsRosterSummary } from "../data/pokemonChampionsRoster.js";
 
 const spinda = dexData.pokemon.find((pokemon) => pokemon.slug === "spinda");
 const metaRoll = usageProviders.metaroll;
@@ -31,6 +32,7 @@ function periodLabel() {
 }
 
 function RegulationPanel({ titleId }) {
+  const roster = getChampionsRosterSummary("M-C");
   const phase = getRankedRegulationPhase();
   const state = phase === "ended" ? "Aviso expirado" : phase === "upcoming" ? "Ainda não vigente" : "Vigente";
   const title = phase === "ended" ? "Última regulação publicada" : phase === "upcoming" ? "Próxima regulação" : "Regulação atual";
@@ -42,11 +44,11 @@ function RegulationPanel({ titleId }) {
         <span className="home-season-status">{state}</span>
       </div>
       <p className="home-regulation-name"><strong>Season {rankedRegulation.season}</strong><span>{rankedRegulation.ruleset}</span></p>
-      <p className="home-regulation-period">{periodLabel()}</p>
-      <p className="home-regulation-copy">{phase === "ended" ? "O período anunciado terminou. Consulte o jogo para confirmar a regulação vigente." : phase === "upcoming" ? "O anúncio informa as datas; confirme as regras no jogo antes de montar o time." : "Ranked segue esta regulação até 2 dez. 2026. Confirme a elegibilidade no jogo."}</p>
-      <details className="home-regulation-details"><summary>Dados do roster</summary><p>O anúncio consultado não informa contagem de Pokémon, Megas disponíveis ou novas liberações.</p></details>
+      <p className="home-regulation-period">Temporada ranqueada · {periodLabel()}<br />Regulation M-C · {roster?.validFrom ? formatUtcRange(roster.validFrom, roster.validUntil) : "período não confirmado"}</p>
+      <p className="home-regulation-copy">{phase === "ended" ? "O período anunciado terminou. Consulte o jogo para confirmar a regulação vigente." : phase === "upcoming" ? "O anúncio informa as datas; confirme as regras no jogo antes de montar o time." : `Ranked segue esta regulação até ${new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(rankedRegulation.endsAt))}.`}</p>
+      <details className="home-regulation-details"><summary>Roster M-C</summary>{roster?.rosterComplete ? <><ul className="home-regulation-facts"><li><strong>{roster.rosterCount}</strong><span>formas no índice oficial</span></li><li><strong>{roster.megaCount}</strong><span>Mega Evoluções listadas</span></li><li><strong>{roster.newlyFeatured.length}</strong><span>recém-apresentados no anúncio</span></li></ul><p className="home-regulation-featured">{roster.newlyFeatured.slice(0, 12).join(" · ")}{roster.newlyFeatured.length > 12 ? ` · +${roster.newlyFeatured.length - 12}` : ""}</p><details><summary>Ver espécies e formas anunciadas</summary><ul className="home-regulation-species">{roster.newlyFeatured.map((name) => <li key={name}>{name}</li>)}</ul></details></> : <p>A lista oficial completa do roster não está disponível.</p>}</details>
       <a className="home-text-link" href={rankedRegulation.sourceUrl} target="_blank" rel="noreferrer">Anúncio oficial ↗</a>
-      <small className="home-checked-at">Verificado em 6 nov. 2026</small>
+      <small className="home-checked-at">Consulta dos dados: {roster?.checkedAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(roster.checkedAt)) + " UTC" : "data indisponível"} · <a href={roster?.sourceUrl} target="_blank" rel="noreferrer">lista de elegibilidade ↗</a></small>
     </section>
   );
 }
@@ -80,7 +82,7 @@ function PublicVgcTournaments() {
         return payload;
       })
       .then((payload) => setState({ status: "ready", tournaments: Array.isArray(payload.tournaments) ? payload.tournaments : [] }))
-      .catch((error) => { if (!controller.signal.aborted) setState({ status: "error", tournaments: [], message: error.message }); });
+      .catch(() => { if (!controller.signal.aborted) setState({ status: "error", tournaments: [], message: "A agenda não está disponível agora. Consulte a fonte dos torneios." }); });
     return () => controller.abort();
   }, []);
 
@@ -89,12 +91,13 @@ function PublicVgcTournaments() {
     <p className="home-vgc-intro">Datas de início publicadas pela comunidade; não indicam se o torneio está ao vivo.</p>
     {state.status === "loading" && <p className="home-data-state" role="status">Carregando torneios M-C…</p>}
     {state.status === "error" && <p className="home-data-state" role="status">{state.message || "A agenda não respondeu."}</p>}
-    {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum torneio M-C de hoje ou futuro foi publicado.</p>}
+    {state.status === "ready" && !state.tournaments.length && <p className="home-data-state">Nenhum evento M-C apareceu nesta consulta.</p>}
     {state.tournaments.length > 0 && <ol className="home-vgc-list">{state.tournaments.slice(0, 6).map((tournament) => <li key={tournament.id}>
       <span className="home-vgc-date">{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" }).format(new Date(tournament.date))} UTC</span>
-      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.scheduleStatus === "today" ? "Agendado para hoje" : "Próximo torneio"}</small></span>
+      <span className="home-vgc-name"><strong>{tournament.name || "Torneio VGC"}</strong><small>{tournament.players === null ? "Participantes não informados" : `${tournament.players} participantes publicados`}</small></span>
       <a href={tournament.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${tournament.name || "torneio"} no Limitless`}>Abrir ↗</a>
     </li>)}</ol>}
+    <Link className="home-text-link" to="/tournaments/vgc">Explorar torneios e equipes ↗</Link>
     <small className="home-vgc-credit">Fonte: <a href="https://docs.limitlesstcg.com/developer/tournaments.html" target="_blank" rel="noreferrer">API pública Limitless VGC</a>.</small>
   </section>;
 }

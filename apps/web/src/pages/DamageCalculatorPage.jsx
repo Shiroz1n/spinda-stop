@@ -169,7 +169,7 @@ function MovePicker({ sideName, side, activeSide, activeMoveSlot, versionGroupId
     if (!pokemonId) return undefined;
     loadPokemonLearnsets(pokemonId)
       .then((data) => { if (active) setLearnsetState({ pokemonId, status: "ready", data, error: "" }); })
-      .catch((error) => { if (active) setLearnsetState({ pokemonId, status: "error", data: null, error: error instanceof Error ? error.message : "Não foi possível carregar a aprendibilidade geral." }); });
+      .catch(() => { if (active) setLearnsetState({ pokemonId, status: "error", data: null, error: "A lista de golpes não está disponível agora. O catálogo do motor continua disponível." }); });
     return () => { active = false; };
   }, [pokemonId]);
 

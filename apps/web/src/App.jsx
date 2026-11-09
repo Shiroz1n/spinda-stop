@@ -14,6 +14,7 @@ const RoomDetailPage = lazy(() => import("./pages/RoomsPage.jsx").then((module) 
 const TournamentsPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentsPage })));
 const TournamentJoinPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentJoinPage })));
 const TournamentDetailPage = lazy(() => import("./pages/TournamentsPage.jsx").then((module) => ({ default: module.TournamentDetailPage })));
+const PublicVgcTournamentsPage = lazy(() => import("./pages/PublicVgcTournamentsPage.jsx").then((module) => ({ default: module.PublicVgcTournamentsPage })));
 const SpeedTiersPage = lazy(() => import("./pages/SpeedTiersPage.jsx").then((module) => ({ default: module.SpeedTiersPage })));
 
 function NotFoundPage() {
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/rooms/join" element={<RoomJoinPage />} />
           <Route path="/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="/tournaments" element={<TournamentsPage />} />
+          <Route path="/tournaments/vgc" element={<PublicVgcTournamentsPage />} />
           <Route path="/tournaments/join" element={<TournamentJoinPage />} />
           <Route path="/tournaments/:tournamentId" element={<TournamentDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />

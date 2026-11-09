@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -395,10 +395,31 @@ export function shardPokemonMoveLearnsets(learnsets, shardCount = LEARNSET_SHARD
 
 export async function publishGeneratedSnapshot(files, destination) {
   const parent = dirname(destination);
+  const name = basename(destination);
   await mkdir(parent, { recursive: true });
+  let destinationExists = true;
+  try { await lstat(destination); } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    destinationExists = false;
+  }
+  if (!destinationExists) {
+    const prefix = `.${name}-backup-`;
+    const backups = (await readdir(parent, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith(prefix));
+    const candidates = await Promise.all(backups.map(async (entry) => {
+      const path = resolve(parent, entry.name);
+      return { path, modifiedAt: (await stat(path)).mtimeMs };
+    }));
+    candidates.sort((left, right) => left.modifiedAt - right.modifiedAt);
+    if (candidates.length) await rename(candidates.at(-1).path, destination);
+  }
   const staging = await mkdtemp(resolve(parent, ".generated-stage-"));
-  const backup = resolve(parent, `.${basename(destination)}-backup-${randomUUID()}`);
-  let backedUp = false;
+  const published = resolve(parent, `.${name}-snapshot-${randomUUID()}`);
+  const pointer = resolve(parent, `.${name}-pointer-${randomUUID()}`);
+  const backup = resolve(parent, `.${name}-backup-${randomUUID()}`);
+  let stagingPublished = false;
+  let legacyMoved = false;
+  let previousTarget = "";
   try {
     for (const [fileName, contents] of Object.entries(files)) {
       const target = resolve(staging, fileName);
@@ -410,30 +431,43 @@ export async function publishGeneratedSnapshot(files, destination) {
       await writeFile(target, contents, "utf8");
     }
 
-    // shortcut: directory replacement has a brief missing-path window; use a pointer swap if readers run during sync.
     try {
-      await rename(destination, backup);
-      backedUp = true;
+      const destinationInfo = await lstat(destination);
+      if (destinationInfo.isSymbolicLink()) previousTarget = await readlink(destination);
+      else if (destinationInfo.isDirectory()) {
+        // shortcut: legacy-directory migration briefly removes the path; run sync before readers until the first pointer swap.
+        await rename(destination, backup);
+        legacyMoved = true;
+      } else throw new Error("O destino do snapshot precisa ser um diretório ou um link de diretório.");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
 
     try {
-      await rename(staging, destination);
+      await rename(staging, published);
+      stagingPublished = true;
+      await symlink(relative(parent, published), pointer, "dir");
+      await rename(pointer, destination);
     } catch (error) {
-      if (backedUp) {
+      if (legacyMoved) {
         try {
           await rename(backup, destination);
-          backedUp = false;
+          legacyMoved = false;
         } catch (restoreError) {
           throw new AggregateError([error, restoreError], `A publicação falhou; o snapshot anterior está preservado em ${backup}.`, { cause: restoreError });
         }
       }
+      if (stagingPublished) await rm(published, { recursive: true, force: true });
       throw error;
     }
-    if (backedUp) await rm(backup, { recursive: true, force: true });
+    if (legacyMoved) await rm(backup, { recursive: true, force: true });
+    const previousName = basename(previousTarget);
+    if (previousName.startsWith(`.${name}-snapshot-`) && previousName === previousTarget) {
+      await rm(resolve(parent, previousName), { recursive: true, force: true });
+    }
   } finally {
     await rm(staging, { recursive: true, force: true });
+    await rm(pointer, { recursive: true, force: true });
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { formatNationalNumber } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
 import { ItemSprite, PokemonSprite } from "../components/PokemonSprite.jsx";
 import { TypeTag } from "../components/TypeTag.jsx";
@@ -7,7 +8,8 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 import { usageProviders } from "../data/usage/registry.js";
 import { useCacheRevalidation } from "../data/usage/useCacheRevalidation.js";
 import { findUsagePokemonByReference } from "../data/usage/pokemonQuery.js";
-import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows } from "../data/usage/mergeUsageData.js";
+import { hasPublishedStatPoints, mergeCategoryRows, mergeUsageCatalog, selectRankedPartnerRows, selectUsageCapture } from "../data/usage/mergeUsageData.js";
+import { areComparableSnapshots, compareSnapshotRanks } from "../data/usage/snapshotComparison.js";
 import { MetaRollUsagePage } from "./MetaRollUsagePage.jsx";
 
 const categories = [
@@ -19,6 +21,14 @@ const categories = [
   { id: "stat_points", label: "Pontos investidos" },
   { id: "teammate", label: "Parceiros" },
 ];
+const snapshotCategoryLabels = {
+  move: "Golpes",
+  held_item: "Itens",
+  ability: "Habilidades",
+  stat_alignment: "Naturezas",
+  stat_points: "Pontos investidos",
+  teammate: "Parceiros",
+};
 const metaRollCategoryByBattleData = Object.freeze({
   move: "moves",
   held_item: "items",
@@ -46,7 +56,10 @@ const statPointLabels = [
 const findPokemonSprite = createPokemonSpriteLookup(dexData.pokemon);
 
 function resolveCatalogPokemon(entry) {
-  return findPokemonSprite(entry.name) || findPokemonSprite(entry.showdownId || entry.id);
+  return resolveCompetitivePokemonSprite(findPokemonSprite, {
+    id: entry.showdownId || entry.id,
+    name: entry.name,
+  });
 }
 
 function normalizeSearch(value) {
@@ -69,6 +82,15 @@ function formatSnapshotDate(value) {
   return value;
 }
 
+function captureSummary(source, context) {
+  if (!source) return "";
+  const period = context.season || "Período não informado";
+  const capture = source === "battleData"
+    ? context.capturedAt ? formatSnapshotDate(context.capturedAt) : "snapshot sem data publicada"
+    : context.capturedAt ? formatTimestamp(context.capturedAt) : "captura não informada";
+  return `${source === "metaRoll" ? "MetaRoll" : "Battle Data"} · ${period} · ${capture}`;
+}
+
 function displayValue(value) {
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
@@ -80,6 +102,9 @@ function snapshotKey(snapshot) {
 function CategoryRow({ row, category }) {
   const statAlignment = category.id === "stat_alignment";
   const observation = row.selected;
+  const teammate = category.id === "teammate"
+    ? resolveCompetitivePokemonSprite(findPokemonSprite, { id: row.showdownId || row.id, name: row.name })
+    : null;
   const natureEffects = statAlignment
     ? [observation?.statUp ? "↑ " + observation.statUp : "", observation?.statDown ? "↓ " + observation.statDown : ""].filter(Boolean).join(" · ")
     : "";
@@ -87,6 +112,11 @@ function CategoryRow({ row, category }) {
     ? `${observation.percentageValue}%`
     : observation?.percentage || null;
   const partnerRank = category.id === "teammate" ? observation?.rank : null;
+  const metricLabel = category.id === "teammate"
+    ? "Posição publicada"
+    : observation?.source === "metaRoll"
+      ? category.id === "stat_points" ? "Proporção publicada deste spread" : "Proporção das aparições"
+      : "Percentual publicado; definição não informada";
   const sourceLabel = observation?.source === "metaRoll" ? "MetaRoll" : "Pokémon Champions Battle Data";
   const capturedAt = observation?.source === "battleData"
     ? formatSnapshotDate(observation.capturedAt)
@@ -110,17 +140,17 @@ function CategoryRow({ row, category }) {
             <div className="usage-row-copy">
               <span className="usage-row-asset">
                 {category.id === "held_item" ? <ItemSprite name={row.name} size={28} /> : null}
-                {category.id === "teammate" && findPokemonSprite(row.name) ? <PokemonSprite pokemon={findPokemonSprite(row.name)} name={row.name} size={38} decorative /> : null}
+                {teammate ? <PokemonSprite pokemon={teammate} name={row.name} size={38} decorative /> : null}
               </span>
               <strong>{row.name || (category.id === "stat_points" ? "Distribuição" : "Nome não informado")}</strong>
               {natureEffects ? <small className="usage-nature-effects">{natureEffects}</small> : null}
             </div>
           )}
         </div>
-        <div className="usage-merged-values" aria-label={category.id === "teammate" ? "Posição publicada" : "Percentual publicado"}>
+        <div className="usage-merged-values" aria-label={metricLabel}>
           {category.id === "teammate"
-            ? <span className="usage-source-observation" aria-label={`Posição publicada ${partnerRank}`} title={provenance}>Posição {partnerRank}</span>
-            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${percentage ?? "Percentual indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
+            ? <span className="usage-source-observation" aria-label={`${metricLabel}: ${partnerRank}`} title={provenance}>Posição {partnerRank}</span>
+            : <span className={percentage === null ? "usage-source-observation is-missing" : "usage-source-observation"} aria-label={`${metricLabel}: ${percentage ?? "indisponível"} · ${provenance}`} title={provenance}>{percentage ?? "—"}</span>}
         </div>
       </div>
     </li>
@@ -141,7 +171,7 @@ function CategoryRows({ rows, category }) {
   );
 }
 
-function MetaRollComparison({ selectedPokemon, usage, status, category, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
+function MetaRollComparison({ selectedPokemon, usage, status, category, periodMode, activeSeason, indexData, indexStatus, indexError, onRetryIndex, onOpenDetails }) {
   const provider = usageProviders.metaroll;
   const entry = indexData?.entries.find((item) => item.id === selectedPokemon.metaRollId) || null;
   const [detailState, setDetailState] = useState({ key: "", status: "idle" });
@@ -167,8 +197,17 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
   const visibleCategories = category.id === "profile"
     ? categories.filter((item) => item.id !== "profile")
     : [category];
-  const battleRows = (item) => usage?.rows.filter((row) => row.category === item.id) || [];
+  const battleRows = (item) => Array.isArray(usage?.rows) ? usage.rows.filter((row) => row.category === item.id) : null;
   const metaRows = (item) => metaEntry?.distributions?.[metaRollCategoryByBattleData[item.id]] || [];
+  const selectedCapture = selectUsageCapture(Object.values(metaEntry?.distributions || {}).flat(), usage?.rows, {
+    formats: { battleData: usage?.format || selectedPokemon.battleData?.format, metaRoll: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
+    seasons: { battleData: usage?.season || selectedPokemon.battleData?.season, metaRoll: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season },
+    activeSeason: usage?.season || selectedPokemon.battleData?.season || activeSeason,
+    periodMode,
+  });
+  const selectedContext = selectedCapture === "metaRoll"
+    ? { season: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season, capturedAt: detail.result?.capturedAt || indexData?.capturedAt || null }
+    : { season: usage?.season || selectedPokemon.battleData?.season, capturedAt: usage?.date || null };
   const dataPending = !usage && !metaEntry && ((status === "loading" || status === "idle") || indexStatus === "loading" || detail.status === "loading");
   const dataUnavailable = !usage && !metaEntry && (status === "error" || indexStatus === "error" || detail.status === "error");
   const emptyMessage = dataPending
@@ -183,7 +222,14 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
         <h3>Distribuições</h3>
         {selectedPokemon.metaRollId ? <button className="text-button" type="button" onClick={() => onOpenDetails("summary")}>Histórico e confrontos</button> : null}
       </div>
-      <p className="usage-distributions-note">Uso publicado; não é taxa de vitória.</p>
+      <p className="usage-distributions-note">
+        {selectedCapture === "metaRoll"
+          ? "Golpes, itens, habilidades, naturezas e spreads são parcelas das aparições; a amostra não é publicada. Não é win rate."
+          : selectedCapture === "battleData"
+            ? "Percentuais publicados sem métrica ou denominador identificados; não são interpretados como win rate."
+            : "Percentuais publicados não são interpretados como taxa de vitória."}
+      </p>
+      {selectedCapture ? <p className="usage-provenance usage-provenance-inline">{captureSummary(selectedCapture, selectedContext)}</p> : null}
       {indexStatus === "loading" && !indexData ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Atualizando dados competitivos…</p> : null}
       {indexStatus === "error" ? <div className="usage-error" role="alert"><p>Não foi possível atualizar todos os dados competitivos.</p><button className="button button-outline button-small" type="button" onClick={onRetryIndex}>Tentar de novo</button>{indexError ? <span className="visually-hidden">{indexError}</span> : null}</div> : null}
       {entry && (detail.status === "loading" || detail.status === "idle") ? <p className="usage-loading" role="status"><span className="usage-spinner" aria-hidden="true" />Carregando os dados de {selectedPokemon.name}…</p> : null}
@@ -197,8 +243,9 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
               battleData: { season: usage?.season || selectedPokemon.battleData?.season, capturedAt: usage?.date || null, sourceFile: usage?.sourceFile || null, format: usage?.format || selectedPokemon.battleData?.format },
               metaRoll: { season: detail.result?.season || indexData?.season || selectedPokemon.metaRoll?.season, capturedAt: detail.result?.capturedAt || indexData?.capturedAt || null, format: detail.result?.format || indexData?.format || selectedPokemon.metaRoll?.format },
             },
-            battleRows: battleRows(item),
-            metaRows: metaRows(item),
+            battleRows: selectedCapture === "battleData" ? battleRows(item) || [] : [],
+            metaRows: selectedCapture === "metaRoll" ? metaRows(item) : [],
+            preferredSource: selectedCapture || "metaRoll",
             resolvePokemon: resolveCatalogPokemon,
           });
           const rows = item.id === "teammate" ? selectRankedPartnerRows(mergedRows) : mergedRows;
@@ -220,7 +267,7 @@ function MetaRollComparison({ selectedPokemon, usage, status, category, indexDat
   );
 }
 
-function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
+function UsagePanel({ selectedPokemon, usage, category, periodMode, activeSeason, status, error, onRetry, onCategoryChange, metaRollIndex, metaRollIndexStatus, metaRollIndexError, onRetryMetaRoll, onOpenMetaRoll }) {
   if (!selectedPokemon) {
     return (
       <section className="usage-detail-panel" aria-label="Dados da espécie">
@@ -285,6 +332,8 @@ function UsagePanel({ selectedPokemon, usage, category, status, error, onRetry, 
         usage={usage}
         status={status}
         category={category}
+        periodMode={periodMode}
+        activeSeason={activeSeason}
         indexData={metaRollIndex}
         indexStatus={metaRollIndexStatus}
         indexError={metaRollIndexError}
@@ -314,6 +363,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const [historySeason, setHistorySeason] = useState("all");
   const [historyDays, setHistoryDays] = useState(7);
   const [selectedSnapshotKey, setSelectedSnapshotKey] = useState("");
+  const [comparisonSnapshotKey, setComparisonSnapshotKey] = useState("");
   const [usageState, setUsageState] = useState({ key: "", status: "idle", result: null, error: "" });
   const [usageRetry, setUsageRetry] = useState(0);
   const usageForceKey = useRef("");
@@ -329,6 +379,10 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const usage = usageStateIsCurrent ? usageState.result : null;
   const usageStatus = usageStateIsCurrent ? usageState.status : selectedShowdownId ? "loading" : selectedPokemonKey ? "success" : "idle";
   const usageError = usageStateIsCurrent ? usageState.error : "";
+  const failedUsageSources = [
+    indexStatus === "error" ? "Champions Battle Data" : null,
+    metaRollIndexStatus === "error" ? "MetaRoll" : null,
+  ].filter(Boolean);
 
   function refreshIndex(force = false) {
     const nextRetry = indexRetry + 1;
@@ -431,8 +485,21 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const normalizedQuery = normalizeSearch(query.trim());
   const filteredPokemon = catalog
     .filter((entry) => {
-      const nameMatches = normalizeSearch(entry.name).includes(normalizedQuery)
-        || normalizeSearch(entry.showdownId || entry.metaRollId).includes(normalizedQuery);
+      const local = resolveCatalogPokemon(entry);
+      const nationalNumber = local?.speciesId;
+      const searchableText = [
+        entry.name,
+        entry.showdownId,
+        entry.metaRollId,
+        entry.id,
+        local?.name,
+        local?.speciesName,
+        local?.formName,
+        local?.slug,
+        nationalNumber,
+        Number.isFinite(nationalNumber) ? formatNationalNumber(nationalNumber) : null,
+      ].filter(Boolean).join(" ");
+      const nameMatches = normalizeSearch(searchableText).includes(normalizedQuery);
       const typeMatches = typeFilter === "all" || entry.types.includes(typeFilter);
       const moveMatches = moveFilter === "all" || entry.filterValues?.moves?.includes(moveFilter);
       const itemMatches = itemFilter === "all" || entry.filterValues?.items?.includes(itemFilter);
@@ -451,8 +518,32 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
   const displayedUsage = periodMode === "history"
     ? usage?.daily.find((snapshot) => snapshotKey(snapshot) === selectedSnapshotKey) || null
     : usage;
+  const comparisonSnapshots = displayedUsage
+    ? (usage?.daily || []).filter((snapshot) => snapshotKey(snapshot) !== selectedSnapshotKey && areComparableSnapshots(displayedUsage, snapshot))
+    : [];
+  const comparisonSnapshot = comparisonSnapshots.find((snapshot) => snapshotKey(snapshot) === comparisonSnapshotKey)
+    || comparisonSnapshots[0]
+    || null;
+  const comparisonGroups = comparisonSnapshot ? compareSnapshotRanks(displayedUsage, comparisonSnapshot, categoryId) : null;
   const hasActiveFilters = Boolean(query) || typeFilter !== "all" || moveFilter !== "all"
-    || itemFilter !== "all" || abilityFilter !== "all";
+    || itemFilter !== "all" || abilityFilter !== "all" || periodMode === "history";
+  const activeFilters = [
+    query ? { label: `Busca: ${query}`, remove: () => setQuery("") } : null,
+    typeFilter !== "all" ? { label: `Tipo: ${typeFilter}`, remove: () => setTypeFilter("all") } : null,
+    moveFilter !== "all" ? { label: `Golpe: ${moveFilter}`, remove: () => setMoveFilter("all") } : null,
+    itemFilter !== "all" ? { label: `Item: ${itemFilter}`, remove: () => setItemFilter("all") } : null,
+    abilityFilter !== "all" ? { label: `Habilidade: ${abilityFilter}`, remove: () => setAbilityFilter("all") } : null,
+    periodMode === "history" ? {
+      label: `Snapshots · ${historyDays} dias${historySeason !== "all" ? ` · ${historySeason}` : ""}`,
+      remove: () => {
+        setPeriodMode("current");
+        setHistorySeason("all");
+        setHistoryDays(7);
+        setSelectedSnapshotKey("");
+        setUsageRetry(0);
+      },
+    } : null,
+  ].filter(Boolean);
 
   return (
     <div className="usage-source-content">
@@ -491,7 +582,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
           <button className="button button-outline" type="button" onClick={refreshVisibleData}>Tentar de novo</button>
         </div>
       ) : null}
-      {catalog.length && (indexStatus === "error" || metaRollIndexStatus === "error") ? <p className="usage-partial-error" role="status">Parte dos dados não foi atualizada; o que está disponível continua na ficha.</p> : null}
+      {catalog.length && failedUsageSources.length ? <p className="usage-partial-error" role="status">Falha ao atualizar {failedUsageSources.join(" e ")}; os dados disponíveis continuam na ficha.</p> : null}
 
       {catalog.length ? (
         <div className="usage-layout">
@@ -512,6 +603,11 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                       setMoveFilter("all");
                       setItemFilter("all");
                       setAbilityFilter("all");
+                      setPeriodMode("current");
+                      setHistorySeason("all");
+                      setHistoryDays(7);
+                      setSelectedSnapshotKey("");
+                      setUsageRetry(0);
                     }}
                   >
                     Limpar filtros
@@ -528,7 +624,7 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Ex.: Garchomp"
+                  placeholder="Nome, forma ou nº"
                   autoComplete="off"
                 />
               </label>
@@ -620,6 +716,22 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
               </details>
             </div>
 
+            {activeFilters.length ? (
+              <div className="usage-active-filters" aria-label="Filtros ativos">
+                {activeFilters.map((filter) => (
+                  <button
+                    className="usage-filter-chip"
+                    type="button"
+                    key={filter.label}
+                    aria-label={`Remover ${filter.label}`}
+                    onClick={filter.remove}
+                  >
+                    {filter.label}<span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <p className="usage-filter-note">
               Golpes, itens e habilidades vêm dos índices publicados. Formas distintas permanecem separadas e valores ausentes não são inferidos.
             </p>
@@ -684,6 +796,58 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
                 </select>
               </label>
             ) : null}
+            {periodMode === "history" && displayedUsage ? (
+              <section className="usage-snapshot-comparison" aria-labelledby="usage-snapshot-comparison-title">
+                <div className="usage-snapshot-comparison-heading">
+                  <div>
+                    <h3 id="usage-snapshot-comparison-title">Comparar posições</h3>
+                    <p>Use capturas da mesma espécie, temporada e formato.</p>
+                  </div>
+                  {comparisonSnapshots.length ? (
+                    <label className="usage-snapshot-picker">
+                      <span>Comparar com</span>
+                      <select value={comparisonSnapshot ? snapshotKey(comparisonSnapshot) : ""} onChange={(event) => setComparisonSnapshotKey(event.target.value)}>
+                        {comparisonSnapshots.map((snapshot) => (
+                          <option key={snapshotKey(snapshot)} value={snapshotKey(snapshot)}>
+                            {snapshot.season} · {formatSnapshotDate(snapshot.date)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+                {comparisonGroups?.length ? (
+                  <div className="usage-snapshot-comparison-results" aria-live="polite">
+                    {comparisonGroups.map((group) => (
+                      <section className="usage-snapshot-comparison-group" key={group.category}>
+                        <h4>{snapshotCategoryLabels[group.category] || group.category}</h4>
+                        <p className="usage-snapshot-comparison-dates">
+                          {formatSnapshotDate(displayedUsage.date)} ← {formatSnapshotDate(comparisonSnapshot.date)}
+                        </p>
+                        <ol>
+                          {group.rows.slice(0, 5).map((row) => (
+                            <li key={group.category + "-" + row.currentRank + "-" + row.name}>
+                              <span>{row.name || "Distribuição"}</span>
+                              <strong>#{row.currentRank}</strong>
+                              <span>{row.movement > 0
+                                ? "Subiu " + row.movement + " " + (row.movement === 1 ? "posição" : "posições")
+                                : row.movement < 0
+                                  ? "Caiu " + Math.abs(row.movement) + " " + (Math.abs(row.movement) === 1 ? "posição" : "posições")
+                                  : "Manteve a posição"}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="usage-snapshot-comparison-empty" role="status">
+                    {comparisonSnapshot ? "Nenhuma linha com posição aparece nas duas capturas." : "Não há outra captura compatível disponível."}
+                  </p>
+                )}
+                <small>Mostra apenas posições presentes nas duas capturas. O denominador não foi publicado; porcentagens não são comparadas.</small>
+              </section>
+            ) : null}
             {periodMode === "history" && usageStatus === "success" && usage?.daily.length === 0 ? (
               <div className="usage-empty usage-empty-compact usage-no-snapshots">
                 <p>A fonte não trouxe snapshots para esta consulta. Isso não significa uso zero.</p>
@@ -693,6 +857,8 @@ function BattleDataUsagePage({ initialPokemonName = "", onPokemonSelect, metaRol
               selectedPokemon={selectedPokemon}
               usage={displayedUsage}
               category={activeCategory}
+              periodMode={periodMode}
+              activeSeason={indexData?.season}
               status={usageStatus}
               error={usageError}
               metaRollIndex={metaRollIndex}

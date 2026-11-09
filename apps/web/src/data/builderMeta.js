@@ -4,13 +4,18 @@ function normalize(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+export function hasDuplicateMove(moves, name, exceptIndex = -1) {
+  const key = normalize(name);
+  return Boolean(key && moves?.some((move, index) => index !== exceptIndex && normalize(move) === key));
+}
+
 export function applyBuilderMetaOption(member, category, row) {
   const name = typeof row?.name === "string" ? row.name.trim() : "";
   if (!member || (!name && category !== "stat_points")) return { ok: false, error: "Esta opção não pode ser aplicada." };
 
   if (category === "move") {
     const existing = (member.moves || []).filter(Boolean);
-    if (existing.some((move) => normalize(move) === normalize(name))) {
+    if (hasDuplicateMove(existing, name)) {
       return { ok: true, changed: false, member, message: `${name} já está selecionado.` };
     }
     if (existing.length === 4) existing.shift();

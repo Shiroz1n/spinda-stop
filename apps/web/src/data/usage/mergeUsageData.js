@@ -22,6 +22,20 @@ export function hasPublishedStatPoints(statPoints) {
   return Boolean(statPoints && Object.values(statPoints).some(Number.isFinite));
 }
 
+export function selectUsageCapture(metaRows, battleRows, { formats = {}, seasons = {}, preferredSource = "battleData", activeFormat = "doubles", activeSeason = null, periodMode = "current" } = {}) {
+  const rows = { metaRoll: metaRows, battleData: battleRows };
+  if (periodMode === "history") return Array.isArray(battleRows) ? "battleData" : null;
+  const sources = [preferredSource, preferredSource === "metaRoll" ? "battleData" : "metaRoll"];
+  const active = normalizeKey(activeFormat);
+  const period = normalizeKey(activeSeason);
+  return sources.find((source) => {
+    const format = normalizeKey(formats[source]);
+    const season = normalizeKey(seasons[source]);
+    const periodMatches = period ? season === period : source === preferredSource;
+    return rows[source]?.length && (!format || format === active) && periodMatches;
+  }) || null;
+}
+
 function sourceObservation(row, source, context = {}) {
   return {
     source,

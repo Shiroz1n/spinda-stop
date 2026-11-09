@@ -170,8 +170,10 @@ test("resolves nicknames and gender while warning that the draft cannot preserve
   const imported = importShowdownTeam("Sparky (Pikachu) @ Light Ball\nIVs: 0 Atk\nJolly Nature\n- Thunderbolt", catalog);
   assert.equal(imported.ok, true);
   assert.equal(imported.value.members[0].pokemonId, "pikachu");
+  assert.equal(imported.value.members[0].ability, "");
   assert.ok(imported.warnings.some((warning) => warning.includes("apelido “Sparky” não é preservado")));
   assert.ok(imported.warnings.some((warning) => warning.includes("IVs não são representados")));
+  assert.ok(imported.warnings.some((warning) => warning.includes("não publica") && warning.includes("habilidade")));
   assert.equal(imported.value.members[0].statPoints.atk, 0);
 
   const gendered = importShowdownTeam("Pikachu (M)\n- Thunderbolt", catalog);
@@ -197,7 +199,46 @@ test("partial public imports skip unknown Pokémon and resolve Showdown female f
   assert.equal(imported.ok, true);
   assert.deepEqual(imported.value.members.filter(Boolean).map((member) => member.pokemonId), ["pikachu", "indeedee-female"]);
   assert.ok(imported.warnings.some((warning) => warning.includes("Unknownmon") && warning.includes("Foi ignorado")));
+  assert.equal(imported.value.members[0].pokemonId, "pikachu");
+  assert.deepEqual(imported.fieldPresence[0], { ability: false, item: true, nature: false, level: false, statPoints: false, moves: 1 });
+  assert.equal(imported.fieldPresence[1].item, true);
   assert.match(importShowdownTeam("Unknownmon", [catalog[0]], { allowPartial: true }).error, /Nenhum Pokémon/);
+});
+
+test("partial paste reports fields that are absent instead of implying a published ability or set", () => {
+  const imported = importShowdownTeam("Pikachu\n- Thunderbolt", catalog, { allowPartial: true });
+
+  assert.equal(imported.ok, true);
+  assert.equal(imported.value.members[0].ability, "");
+  assert.deepEqual(imported.fieldPresence[0], { ability: false, item: false, nature: false, level: false, statPoints: false, moves: 1 });
+  assert.ok(imported.warnings.some((warning) => warning.includes("não publica") && warning.includes("habilidade") && warning.includes("distribuição de pontos")));
+});
+
+test("empty Showdown fields remain absent and cannot clear configured categories as published data", () => {
+  const imported = importShowdownTeam("Pikachu @ \nAbility: \nNature: \nLevel: \nEVs: \n- \n- Thunderbolt", catalog, { allowPartial: true });
+
+  assert.equal(imported.ok, true);
+  assert.equal(imported.value.members[0].ability, "");
+  assert.equal(imported.value.members[0].item, "");
+  assert.equal(imported.value.members[0].nature, "");
+  assert.equal(imported.value.members[0].level, 50);
+  assert.deepEqual(imported.value.members[0].statPoints, { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
+  assert.deepEqual(imported.value.members[0].moves, ["Thunderbolt", "", "", ""]);
+  assert.deepEqual(imported.fieldPresence[0], { ability: false, item: false, nature: false, level: false, statPoints: false, moves: 1 });
+  assert.ok(imported.warnings.some((warning) => warning.includes("golpe vazio foi ignorado")));
+  assert.ok(imported.warnings.some((warning) => warning.includes("não publica") && warning.includes("nível")));
+});
+
+test("Showdown gender suffix selects a matching gendered species form when available", () => {
+  const gendered = [
+    { ...catalog[0], slug: "meowstic-male", name: "Meowstic Male", speciesSlug: "meowstic", speciesName: "Meowstic", formId: "male" },
+    { ...catalog[0], slug: "meowstic-female", name: "Meowstic Female", speciesSlug: "meowstic", speciesName: "Meowstic", formId: "female" },
+  ];
+
+  const imported = importShowdownTeam("Meowstic (F)\n- Psychic", gendered);
+  assert.equal(imported.ok, true);
+  assert.equal(imported.value.members[0].pokemonId, "meowstic-female");
+  assert.ok(!imported.warnings.some((warning) => warning.includes("gênero do set não é preservado")));
 });
 
 test("round trips Paldean Tauros breed forms through Showdown species IDs", () => {
@@ -219,7 +260,7 @@ test("round trips Paldean Tauros breed forms through Showdown species IDs", () =
     const imported = importShowdownTeam(heading, [tauros]);
     assert.equal(imported.ok, true);
     assert.equal(imported.value.members[0].pokemonId, tauros.slug);
-    if (heading === "Paldean Tauros (Aqua Breed)") assert.deepEqual(imported.warnings, []);
+    if (heading === "Paldean Tauros (Aqua Breed)") assert.ok(imported.warnings.some((warning) => warning.includes("não publica")));
   }
   const roundTrip = importShowdownTeam(exported, [tauros]);
   assert.equal(roundTrip.ok, true);
@@ -228,19 +269,24 @@ test("round trips Paldean Tauros breed forms through Showdown species IDs", () =
 
 test("rejects unsupported or invalid Champions point budgets and malformed species", () => {
   assert.match(importShowdownTeam("Pikachu\nEVs: 252 Atk", catalog).error, /excede o limite Champions/);
+  assert.match(importShowdownTeam("Pikachu\nEVs: /", catalog).error, /não reconheci a distribuição/);
   assert.match(importShowdownTeam("Missingmon", catalog).error, /não foi encontrado/);
   assert.match(importShowdownTeam("Pikachu\n- One\n- Two\n- Three\n- Four\n- Five", catalog).error, /mais de quatro golpes/);
   assert.match(importShowdownTeam(Array(7).fill("Pikachu").join("\n\n"), catalog).error, /mais de seis/);
 });
 
-test("searches by accents, slug, type, and generation with no filters by default", () => {
+test("searches by accents, safe punctuation aliases, number, type, and generation", () => {
   const entries = [
     { ...catalog[0], name: "Nidorán", speciesName: "Nidorán" },
     { ...catalog[0], slug: "raichu-alola", name: "Raichu de Alola", speciesName: "Raichu", formName: "Alola", types: ["electric", "psychic"], generation: 7 },
+    { ...catalog[0], slug: "farfetchd", name: "Farfetch’d", speciesId: 83, aliases: ["Farfetch'd"] },
   ];
-  assert.equal(searchPokemon(entries).length, 2);
+  assert.equal(searchPokemon(entries).length, 3);
   assert.equal(searchPokemon(entries, "raichu", { type: "electric", generation: 7 }).length, 1);
   assert.equal(searchPokemon(entries, "nidoran").length, 1);
+  assert.equal(searchPokemon(entries, "Farfetch'd").length, 1);
+  assert.equal(searchPokemon(entries, "#0083").map(({ slug }) => slug).join(","), "farfetchd");
+  assert.equal(searchPokemon(entries, "83").map(({ slug }) => slug).join(","), "farfetchd");
   assert.equal(formatNationalNumber(25), "#0025");
 });
 

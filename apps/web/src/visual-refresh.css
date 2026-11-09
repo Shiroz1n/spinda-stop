@@ -229,6 +229,8 @@ h3 { font-size: 1rem; line-height: 1.25; }
 .usage-detail-heading h2 { font-size: 1.2rem; overflow-wrap: anywhere; }
 .usage-format-stamp { padding: 3px 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); font-size: 0.7rem; }
 .usage-provenance { gap: 4px 12px; margin-block: 8px; color: var(--muted); font-size: 0.72rem; }
+.usage-provenance.usage-provenance-inline { font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.move-field-error { grid-column: 2; margin-top: -3px; color: var(--coral-dark); font-size: 1rem; line-height: 1.35; }
 .usage-row-list { border-top-color: var(--line); }
 .usage-row-list > li { min-height: 42px; border-bottom-color: var(--line); }
 .usage-row-main { grid-template-columns: minmax(0, 1fr) minmax(80px, 0.65fr); gap: 14px; }

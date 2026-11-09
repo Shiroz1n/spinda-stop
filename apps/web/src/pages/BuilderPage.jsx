@@ -11,7 +11,7 @@ import { TypeTag } from "../components/TypeTag.jsx";
 import { TeamAccountPanel } from "../components/TeamAccountPanel.jsx";
 import { BuilderMetaPanel } from "../components/BuilderMetaPanel.jsx";
 import { PublicTournamentTeams } from "../components/PublicTournamentTeams.jsx";
-import { applyBuilderMetaOption } from "../data/builderMeta.js";
+import { applyBuilderMetaOption, hasDuplicateMove } from "../data/builderMeta.js";
 import { buildDamageCalculatorSearch, calculateChampionsStats, getDamageSpeciesName } from "../data/damageCalculator.js";
 import { getPokepasteRawUrl } from "../data/pokepaste.js";
 import { getNature, getNatureSpeedClass } from "../data/natures.js";
@@ -86,6 +86,7 @@ export function BuilderPage() {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const accountDetailsRef = useRef(null);
+  const consumedPublicImport = useRef(null);
   const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug, location.state?.metaOption));
   const [team, setTeam] = useState(initialDraft.team);
   const [showdownInput, setShowdownInput] = useState("");
@@ -104,6 +105,7 @@ export function BuilderPage() {
   const [speedTargetPickerOpen, setSpeedTargetPickerOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState(initialDraft.preserveStored ? "Rascunho salvo preservado" : "Rascunho local");
   const [message, setMessage] = useState(initialDraft.message);
+  const [moveError, setMoveError] = useState(null);
   const selectedMember = team.members[selectedSlot];
   const teamAnalysis = useMemo(() => calculateTeamAnalysis(team, dexData.pokemon, moveData.moves), [team]);
   const selectedPokemonId = selectedMember?.pokemonId;
@@ -176,8 +178,21 @@ export function BuilderPage() {
   }
 
   useEffect(() => {
+    const publicPaste = location.state?.publicTournamentPaste;
+    const importKey = location.state?.publicTournamentImportKey || publicPaste;
+    if (publicPaste && importKey && consumedPublicImport.current !== importKey) {
+      consumedPublicImport.current = importKey;
+      const source = location.state?.publicTournamentSource || "";
+      const name = location.state?.publicTournamentName || "teamlist pública";
+      const sourceHost = (() => { try { return new URL(source).hostname; } catch { return "Limitless"; } })();
+      if (typeof publicPaste === "string" && publicPaste.trim()) importShowdownText(publicPaste, { allowPartial: true, sourceNotice: `${name} · ${sourceHost}` });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Router state is a one-shot import result that must be surfaced without replacing the draft.
+      else setMessage("A teamlist pública não pôde ser convertida para o catálogo atual; nenhuma posição foi substituída.");
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
     if (location.state?.pokemonSlug || location.state?.metaOption) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, navigate]);
+  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, location.state?.publicTournamentPaste, location.state?.publicTournamentImportKey, location.state?.publicTournamentName, location.state?.publicTournamentSource, navigate, importShowdownText]);
 
   useEffect(() => {
     if (initialDraft.preserveStored) return;
@@ -185,6 +200,7 @@ export function BuilderPage() {
   }, [initialDraft]);
 
   function commitTeam(nextTeam) {
+    setMoveError(null);
     setTeam(nextTeam);
     try {
       localStorage.setItem(STORAGE_KEY, serializeTeam(nextTeam));
@@ -215,6 +231,7 @@ export function BuilderPage() {
   }
 
   function chooseForSlot(slot) {
+    setMoveError(null);
     setSelectedSlot(slot);
     setPickerSlot(slot);
     setPickerOpen(true);
@@ -289,13 +306,15 @@ export function BuilderPage() {
   }
 
   function importShowdownText(text, options = {}) {
-    const result = importShowdownTeam(text, dexData.pokemon, options);
+    const { allowPartial = false, sourceNotice = "" } = options;
+    const result = importShowdownTeam(text, dexData.pokemon, { allowPartial });
     if (!result.ok) {
       setMessage(result.error);
       return;
     }
     const consequences = [
       team.members.some(Boolean) ? "A importação substituirá as seis posições e as configurações atuais do rascunho." : "A equipe será salva neste navegador.",
+      ...(sourceNotice ? [`Origem: ${sourceNotice}.`] : []),
       ...(result.warnings.length ? [`Avisos:\n${result.warnings.join("\n")}`] : []),
     ].join("\n\n");
     if ((team.members.some(Boolean) || result.warnings.length) && !window.confirm(consequences)) return;
@@ -304,7 +323,7 @@ export function BuilderPage() {
     setSpeedPreviews({});
     setShowdownInput("");
     setBuilderTab("team");
-    setMessage(saved ? "Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+    setMessage(saved ? `${sourceNotice ? `Equipe pública importada de ${sourceNotice}.` : "Equipe Showdown importada."} Revise os campos disponíveis e a legalidade no formato selecionado.` : "Equipe importada, mas não foi possível salvá-la neste navegador.");
   }
 
   function importShowdownPaste() {
@@ -333,18 +352,51 @@ export function BuilderPage() {
     }
   }
 
-  function applyPublicSet(member, sourceTeam) {
+  function applyPublicSet(member, sourceTeam, supplied = {}) {
     const slot = selectedMember?.pokemonId === member.pokemonId
       ? selectedSlot
       : team.members.findIndex((entry) => entry?.pokemonId === member.pokemonId);
     if (slot < 0) return;
-    if (!window.confirm(`Este set substituirá habilidade, item, Nature, Stat Points, nível e golpes de ${pokemonWithDetails(member.pokemonId)?.name || "este Pokémon"} na posição ${slot + 1}. Deseja continuar?`)) return;
+    const categories = [
+      supplied.ability && "habilidade",
+      supplied.item && "item",
+      supplied.nature && "Nature",
+      supplied.statPoints && "Stat Points",
+      supplied.level && "nível",
+      supplied.moves > 0 && "golpes",
+    ].filter(Boolean);
+    if (!categories.length) {
+      setMessage("Esta equipe não publicou campos de set aplicáveis para esse Pokémon.");
+      return;
+    }
+    const pokemonName = pokemonWithDetails(member.pokemonId)?.name || "este Pokémon";
+    const missing = [
+      !supplied.ability && "habilidade",
+      !supplied.item && "item",
+      !supplied.nature && "Nature",
+      !supplied.statPoints && "Stat Points",
+      !supplied.level && "nível",
+      !supplied.moves && "golpes",
+    ].filter(Boolean);
+    const partialMoves = supplied.moves > 0 && supplied.moves < 4
+      ? ` Só ${supplied.moves} de 4 golpes foi publicado; os demais espaços ficarão vazios.`
+      : "";
+    const confirmText = `Este set substituirá ${categories.join(", ")} de ${pokemonName} na posição ${slot + 1}.${partialMoves}${missing.length ? ` Os campos sem publicação (${missing.join(", ")}) serão mantidos.` : ""} Deseja continuar?`;
+    if (!window.confirm(confirmText)) return;
     const members = [...team.members];
-    members[slot] = { ...members[slot], ...member };
+    members[slot] = {
+      ...members[slot],
+      ...(supplied.ability ? { ability: member.ability } : {}),
+      ...(supplied.item ? { item: member.item } : {}),
+      ...(supplied.nature ? { nature: member.nature } : {}),
+      ...(supplied.statPoints ? { statPoints: member.statPoints } : {}),
+      ...(supplied.level ? { level: member.level } : {}),
+      ...(supplied.moves > 0 ? { moves: member.moves } : {}),
+    };
     commitTeam({ ...team, members });
     setSelectedSlot(slot);
     setBuilderTab("team");
-    setMessage(`Set de ${sourceTeam.event || "equipe pública"} aplicado à posição ${slot + 1}. Revise antes de usar.`);
+    setMessage(`Dados publicados de ${sourceTeam.event || "equipe pública"} aplicados à posição ${slot + 1}.`);
   }
 
   async function copyShowdownPaste() {
@@ -398,8 +450,15 @@ export function BuilderPage() {
   }
 
   function updateMove(index, value) {
+    if (value && hasDuplicateMove(selectedMember.moves, value, index)) {
+      setMoveError({ slot: selectedSlot, index, name: value });
+      setMessage("");
+      return;
+    }
+    setMoveError(null);
     const moves = [...selectedMember.moves];
     moves[index] = value;
+    setMessage("");
     updateMember({ moves });
   }
 
@@ -544,7 +603,7 @@ export function BuilderPage() {
                   key={index}
                   type="button"
                   aria-pressed={selectedSlot === index}
-                  onClick={() => entry ? setSelectedSlot(index) : chooseForSlot(index)}
+                  onClick={() => { setMoveError(null); entry ? setSelectedSlot(index) : chooseForSlot(index); }}
                 >
                   <span className="team-slot-art">{entry ? <PokemonSprite pokemon={entry} name={entry.name} size={64} decorative /> : <span className="team-slot-empty" aria-hidden="true">+</span>}</span>
                   <span className="slot-number">{String(index + 1).padStart(2, "0")}</span>
@@ -622,7 +681,8 @@ export function BuilderPage() {
                 {selectedMember.moves.map((move, index) => (
                   <label className="move-field" htmlFor={`move-${index}`} key={index}>
                     <span>{index + 1}</span>
-                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" />
+                    <input id={`move-${index}`} className="text-input" list={moveListId} value={move} maxLength={100} onChange={(event) => updateMove(index, event.target.value)} placeholder="Buscar golpe" aria-label={`Golpe ${index + 1}`} aria-invalid={moveError?.slot === selectedSlot && moveError.index === index} aria-describedby={moveError?.slot === selectedSlot && moveError.index === index ? `move-${index}-error` : undefined} />
+                    {moveError?.slot === selectedSlot && moveError.index === index && <small id={`move-${index}-error`} className="move-field-error" role="alert">{moveError.name} já está neste set.</small>}
                   </label>
                 ))}
                 <details className="builder-compatibility field-wide"><summary>Compatibilidade do set</summary><p>Golpes gerais; legalidade não verificada.</p></details>
