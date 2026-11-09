@@ -1523,6 +1523,7 @@ input, select, textarea { font-size: 1rem; }
 .home-regulation .home-text-link { min-height: 44px; display: inline-flex; align-items: center; }
 .home-checked-at, .home-data-credit { color: var(--muted); font-size: 1rem; }
 .home-checked-at { display: block; }
+.home-checked-at a { color: var(--blue-dark); text-decoration: underline; text-underline-offset: 0.15em; }
 .home-data-credit { margin: 14px 0 0; }
 .home-data-credit a { color: var(--blue-dark); }
 
