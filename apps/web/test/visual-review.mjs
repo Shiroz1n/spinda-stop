@@ -2285,7 +2285,7 @@ async function runFastViewport(viewportName, viewport) {
           failures.push(`${viewportName}/builder: Champions não foi aberto como catálogo padrão do seletor.`);
         }
         await search.fill("Regieleki");
-        await page.getByText("Nenhum resultado no índice atual de Doubles.").waitFor({ state: "visible", timeout: 5_000 });
+        await page.getByText("Nenhum resultado confirmado no elenco M-C.").waitFor({ state: "visible", timeout: 5_000 });
         await page.getByRole("button", { name: "Pokédex geral", exact: true }).click();
         await page.locator(".species-dialog .picker-result").filter({ hasText: "Regieleki" }).waitFor({ state: "visible", timeout: 5_000 });
         await page.getByRole("button", { name: "Champions", exact: true }).click();

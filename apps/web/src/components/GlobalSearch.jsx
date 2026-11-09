@@ -31,8 +31,6 @@ export function GlobalSearch({ open, onClose }) {
     }
   }, [open]);
 
-  useEffect(() => setActiveIndex(0), [query]);
-
   function choose(entry) {
     if (!entry) return;
     dialogRef.current?.close();
@@ -69,7 +67,7 @@ export function GlobalSearch({ open, onClose }) {
             ref={inputRef}
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
             onKeyDown={onInputKeyDown}
             placeholder="Nome, forma, número, tipo, golpe ou habilidade"
             role="combobox"

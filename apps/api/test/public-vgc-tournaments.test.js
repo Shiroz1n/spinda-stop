@@ -126,7 +126,7 @@ test("public event details preserve edition and only expose approved fields", as
 });
 
 test("event details and standings reject a response for a different event ID", async () => {
-  const handler = createPublicVgcTournamentsHandler(async (url) => Response.json({
+  const handler = createPublicVgcTournamentsHandler(async () => Response.json({
     id: "6aee620dc931f53978d951e7",
     game: "VGC",
     format: "M-C",
@@ -174,6 +174,8 @@ test("public standings expose published records and a validated six-member teaml
     secret: "discard",
   }));
   const keyedTeamlist = Object.fromEntries(teamlist.map((member, index) => [String(index), member]));
+  const sparseTeamlist = teamlist.slice(1);
+  sparseTeamlist.length = 6;
   const handler = createPublicVgcTournamentsHandler(async (url) => {
     requested.push(new URL(url).pathname);
     if (url.endsWith("/details")) {
@@ -183,7 +185,7 @@ test("public standings expose published records and a validated six-member teaml
       { player: "public-id", name: "Player", country: "br", placing: 2, record: { wins: 5, losses: 1, ties: 0 }, decklist: keyedTeamlist, drop: null },
       { player: "other", name: "Other", placing: 1, record: { wins: 6, losses: 0, ties: 0 }, decklist: teamlist.slice(0, 5) },
       { player: "array", name: "Array list", placing: 2, decklist: teamlist },
-      { player: "sparse", name: "Sparse", placing: 3, decklist: [, ...teamlist.slice(1)] },
+      { player: "sparse", name: "Sparse", placing: 3, decklist: sparseTeamlist },
       { player: "unexpected-keys", name: "Unexpected keys", placing: 4, decklist: { ...keyedTeamlist, metadata: "ignore" } },
       { name: "Missing player id", placing: 4 },
     ]);

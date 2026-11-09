@@ -23,6 +23,14 @@ function readSavedView() {
   }
 }
 
+function saveDexView(view) {
+  try {
+    window.sessionStorage.setItem(RESTORE_KEY, JSON.stringify({ ...view, savedAt: Date.now() }));
+  } catch {
+    // Navigation remains available when session storage is disabled.
+  }
+}
+
 export function DexPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialView] = useState(readSavedView);
@@ -110,21 +118,7 @@ export function DexPage() {
   }
 
   function rememberPosition() {
-    try {
-      window.sessionStorage.setItem(RESTORE_KEY, JSON.stringify({
-        query,
-        type,
-        generation,
-        minimumBaseStatTotal,
-        maximumBaseStatTotal,
-        sort,
-        visibleCount,
-        scrollY: window.scrollY,
-        savedAt: Date.now(),
-      }));
-    } catch {
-      // Navigation remains available when session storage is disabled.
-    }
+    saveDexView({ query, type, generation, minimumBaseStatTotal, maximumBaseStatTotal, sort, visibleCount, scrollY: window.scrollY });
   }
 
   function rememberPokemonAndPosition(slug) {

@@ -186,12 +186,13 @@ export function BuilderPage() {
       const name = location.state?.publicTournamentName || "teamlist pública";
       const sourceHost = (() => { try { return new URL(source).hostname; } catch { return "Limitless"; } })();
       if (typeof publicPaste === "string" && publicPaste.trim()) importShowdownText(publicPaste, { allowPartial: true, sourceNotice: `${name} · ${sourceHost}` });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Router state is a one-shot import result that must be surfaced without replacing the draft.
       else setMessage("A teamlist pública não pôde ser convertida para o catálogo atual; nenhuma posição foi substituída.");
       navigate(location.pathname, { replace: true, state: null });
       return;
     }
     if (location.state?.pokemonSlug || location.state?.metaOption) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, location.state?.publicTournamentPaste, location.state?.publicTournamentImportKey, location.state?.publicTournamentName, location.state?.publicTournamentSource, navigate]);
+  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, location.state?.publicTournamentPaste, location.state?.publicTournamentImportKey, location.state?.publicTournamentName, location.state?.publicTournamentSource, navigate, importShowdownText]);
 
   useEffect(() => {
     if (initialDraft.preserveStored) return;

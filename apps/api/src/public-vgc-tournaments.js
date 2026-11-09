@@ -294,6 +294,7 @@ export function createPublicVgcTournamentsHandler(fetchImpl = globalThis.fetch, 
     }
 
     const selectedPlayer = url.searchParams.get("player") || "";
+    // eslint-disable-next-line no-control-regex -- Reject control characters in untrusted public player IDs.
     if (selectedPlayer.length > 100 || /[\u0000-\u001f\u007f]/.test(selectedPlayer)) {
       return reply({ error: { code: "invalid_player", message: "Identificador de jogador inválido." } }, 400);
     }

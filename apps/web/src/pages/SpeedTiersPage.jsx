@@ -62,29 +62,18 @@ export function SpeedTiersPage() {
   const navigate = useNavigate();
   const availableRegulations = useMemo(() => REGULATIONS.filter((id) => getChampionsRosterSummary(id)), []);
   const routeSettings = useMemo(() => parseSpeedTiersRoute(location.search, { availableRegulations, pokemonSlugs }), [location.search, availableRegulations]);
-  const [model, setModel] = useState(routeSettings.model);
-  const [regulation, setRegulation] = useState(routeSettings.regulation);
-  const [includeMegas, setIncludeMegas] = useState(routeSettings.includeMegas);
-  const [targetSlug, setTargetSlug] = useState(routeSettings.targetSlug);
-  const [targetQuery, setTargetQuery] = useState(() => routeSettings.targetQuery || bySlug.get(routeSettings.targetSlug)?.name || "");
+  const model = routeSettings.model;
+  const regulation = routeSettings.regulation;
+  const includeMegas = routeSettings.includeMegas;
+  const targetSlug = routeSettings.targetSlug;
+  const targetQuery = routeSettings.targetQuery || bySlug.get(routeSettings.targetSlug)?.name || "";
   const [candidateQuery, setCandidateQuery] = useState("");
-  const [sort, setSort] = useState(routeSettings.sort);
-  const [trickRoom, setTrickRoom] = useState(routeSettings.trickRoom);
+  const sort = routeSettings.sort;
+  const trickRoom = routeSettings.trickRoom;
   const [visibleCount, setVisibleCount] = useState(90);
-  const [candidate, setCandidate] = useState(routeSettings.candidate);
-  const [target, setTarget] = useState(routeSettings.target);
+  const candidate = routeSettings.candidate;
+  const target = routeSettings.target;
   const [shortcuts, setShortcuts] = useState(readStoredResearchShortcuts);
-  useEffect(() => {
-    setModel(routeSettings.model);
-    setRegulation(routeSettings.regulation);
-    setIncludeMegas(routeSettings.includeMegas);
-    setSort(routeSettings.sort);
-    setTargetSlug(routeSettings.targetSlug);
-    setTargetQuery(routeSettings.targetQuery || bySlug.get(routeSettings.targetSlug)?.name || "");
-    setCandidate(routeSettings.candidate);
-    setTarget(routeSettings.target);
-    setTrickRoom(routeSettings.trickRoom);
-  }, [routeSettings]);
   useEffect(() => {
     const canonicalSearch = `?${serializeSpeedTiersRoute(routeSettings, availableRegulations)}`;
     if (location.search !== canonicalSearch) {
@@ -104,14 +93,19 @@ export function SpeedTiersPage() {
     title: `${selectedTarget.name} · ${model === "champions" ? regulation : "Padrão"}`,
     url: `/speed-tiers?${serializeSpeedTiersRoute({ ...routeSettings, targetSlug: selectedTarget.slug, targetQuery: "" }, availableRegulations)}`,
   } : null;
+  const currentComparisonKey = currentComparison?.key;
+  const currentComparisonTitle = currentComparison?.title;
+  const currentComparisonUrl = currentComparison?.url;
   useEffect(() => {
-    if (!currentComparison) return;
+    if (!currentComparisonKey || !currentComparisonTitle || !currentComparisonUrl) return;
+    const comparison = { key: currentComparisonKey, title: currentComparisonTitle, url: currentComparisonUrl };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- A directly opened route is persisted once as a recent comparison.
     setShortcuts((current) => {
-      const next = rememberComparison(current, currentComparison);
+      const next = rememberComparison(current, comparison);
       if (next !== current) writeStoredResearchShortcuts(next);
       return next;
     });
-  }, [currentComparison?.key, currentComparison?.title, currentComparison?.url]);
+  }, [currentComparisonKey, currentComparisonTitle, currentComparisonUrl]);
   const targetOptions = useMemo(() => {
     const query = normalizedSearch(targetQuery.trim());
     if (!query || selectedTarget?.name === targetQuery) return [];
@@ -161,13 +155,11 @@ export function SpeedTiersPage() {
 
   function updateCandidate(key, value) {
     const next = { ...candidate, [key]: value };
-    setCandidate(next);
     updateRoute({ candidate: next });
     setVisibleCount(90);
   }
   function updateTarget(key, value) {
     const next = { ...target, [key]: value };
-    setTarget(next);
     updateRoute({ target: next });
   }
   function updateComparisonShortcuts(next) {
@@ -220,8 +212,6 @@ export function SpeedTiersPage() {
             <span>Alvo da comparação</span>
             <input className="text-input" value={targetQuery} onChange={(event) => {
               const query = event.target.value;
-              setTargetQuery(query);
-              setTargetSlug("");
               updateRoute({ targetSlug: "", targetQuery: query });
             }} placeholder="Buscar espécie ou forma" autoComplete="off" role="combobox" aria-expanded={targetOptions.length > 0} aria-controls="speed-target-options" />
             {targetOptions.length > 0 && <div className="speed-search-options" id="speed-target-options" role="listbox">{targetOptions.map((pokemon) => <button type="button" role="option" aria-selected="false" key={pokemon.slug} onClick={() => chooseTarget(pokemon)}><PokemonSprite pokemon={pokemon} name={pokemon.name} size={38} decorative /><span>{pokemon.name}<small>#{pokemon.speciesId} · {pokemon.formId === "default" ? "forma base" : pokemon.formId}</small></span></button>)}</div>}
@@ -230,7 +220,7 @@ export function SpeedTiersPage() {
             <span>Ordenar</span>
             <select className="text-input" value={sort} onChange={(event) => updateRoute({ sort: event.target.value })}><option value="fastest">Mais rápidos primeiro</option><option value="slowest">Mais lentos primeiro</option></select>
           </label>
-          <label className="speed-trick-room-toggle"><input type="checkbox" checked={trickRoom} onChange={(event) => { setTrickRoom(event.target.checked); updateRoute({ trickRoom: event.target.checked }); }} /><span>Trick Room ativo</span><small>A Speed bruta não muda; a ordem é invertida.</small></label>
+          <label className="speed-trick-room-toggle"><input type="checkbox" checked={trickRoom} onChange={(event) => updateRoute({ trickRoom: event.target.checked })} /><span>Trick Room ativo</span><small>A Speed bruta não muda; a ordem é invertida.</small></label>
         </div>
 
       </section>
