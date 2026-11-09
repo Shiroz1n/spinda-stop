@@ -65,6 +65,37 @@ test("paste fetch validates the fixed ID and limits returned text", async () => 
   assert.deepEqual(await response.json(), { text: "Sneasler @ Focus Sash\n- Close Combat", sourceUrl: "https://pokepast.es/example" });
 });
 
+test("paste text is limited by its UTF-8 byte length", async () => {
+  const handler = createPublicCommunityTeamsHandler(async () => Response.json({ text: "é".repeat(70_000) }));
+  const response = await handler(new Request("https://app.test/api/public/teams/MC781/paste"));
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), {
+    error: { code: "public_team_unavailable", message: "O paste público não está disponível agora." },
+  });
+});
+
+test("missing pastes are negatively cached without exposing upstream responses", async () => {
+  let now = 10_000;
+  let requests = 0;
+  const handler = createPublicCommunityTeamsHandler(async () => {
+    requests += 1;
+    return new Response("", { status: 404 });
+  }, { now: () => now });
+
+  const first = await handler(new Request("https://app.test/api/public/teams/MC781/paste"));
+  assert.equal(first.status, 404);
+  assert.equal(first.headers.get("cache-control"), "public, max-age=10, s-maxage=30, stale-while-revalidate=30");
+  assert.deepEqual(await first.json(), {
+    error: { code: "public_team_not_found", message: "Esta equipe não publicou um paste disponível." },
+  });
+  assert.equal((await handler(new Request("https://app.test/api/public/teams/MC781/paste"))).status, 404);
+  assert.equal(requests, 1);
+
+  now += 30_001;
+  await handler(new Request("https://app.test/api/public/teams/MC781/paste"));
+  assert.equal(requests, 2);
+});
+
 test("upstream failures and unexpected payloads do not expose provider details", async () => {
   const handler = createPublicCommunityTeamsHandler(async () => new Response("private upstream detail", { status: 503 }));
   const response = await handler(new Request("https://app.test/api/public/teams?pokemon=Sneasler"));

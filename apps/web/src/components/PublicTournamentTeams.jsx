@@ -8,10 +8,6 @@ import { createPokemonSpriteLookup, resolveCompetitivePokemonSprite } from "../d
 const pokemonBySlug = new Map(dexData.pokemon.map((pokemon) => [pokemon.slug, pokemon]));
 const findPokemon = createPokemonSpriteLookup(dexData.pokemon);
 
-function normalized(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onApplySet }) {
   const [state, setState] = useState({ status: "loading", teams: [] });
   const [opened, setOpened] = useState(null);
@@ -80,8 +76,7 @@ export function PublicTournamentTeams({ pokemon, selectedPokemon, onImport, onAp
         <div className="builder-public-card-heading"><strong>{team.player || "Jogador sem nome publicado"}</strong><time>{team.date || "Data não publicada"}</time></div>
         <p>{team.event || "Evento sem nome publicado"}{team.placement ? ` · ${team.placement}` : ""}</p>
         <div className="builder-public-sprites" aria-label="Pokémon da equipe">{team.pokemon.map((member, index) => {
-          const local = resolveCompetitivePokemonSprite(findPokemon, { id: member.showdownId || member.pokemonId || member.id, name: member.name })
-            || dexData.pokemon.find((entry) => normalized(entry.name) === normalized(member.name) || normalized(entry.slug) === normalized(member.name));
+          const local = resolveCompetitivePokemonSprite(findPokemon, { id: member.showdownId || member.pokemonId || member.id, name: member.name });
           return local ? <PokemonSprite key={`${team.id}-${index}`} pokemon={local} name={member.name} size={36} /> : <span className="builder-public-fallback" key={`${team.id}-${index}`} aria-label={member.name}>{member.name.slice(0, 2).toUpperCase()}</span>;
         })}</div>
         <div className="builder-public-actions"><button type="button" className="button button-outline button-small" aria-expanded={opened === team.id} onClick={() => toggleDetails(team)}>{opened === team.id ? "Ocultar set" : "Ver set"}</button>{team.sourceUrl && <a className="button button-quiet button-small" href={team.sourceUrl} target="_blank" rel="noreferrer">Fonte ↗</a>}<button type="button" className="button button-quiet button-small" disabled={paste?.status === "loading"} onClick={() => reviewImport(team)}>{paste?.status === "loading" ? "Carregando…" : "Revisar importação"}</button></div>

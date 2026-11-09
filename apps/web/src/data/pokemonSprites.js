@@ -89,7 +89,7 @@ function formAliases(entry) {
   const species = toId(entry.speciesSlug || entry.speciesName);
   if (!species || !form || form === "default") return aliases;
 
-  if (form === "male") aliases.push(species);
+  if (form === "male") aliases.push(`${species}m`, `${species}male`);
   if (form === "female") aliases.push(`${species}f`, `${species}female`);
   if (form.startsWith("mega")) aliases.push(`${species}${form}`);
   if (form === "mega") aliases.push(`${species}mega`);
@@ -112,31 +112,50 @@ function formAliases(entry) {
 
 export function createPokemonSpriteLookup(catalog) {
   const lookup = new Map();
+  const ambiguous = Symbol("ambiguous sprite identity");
   const add = (alias, entry) => {
     const key = toId(alias);
-    if (key && !lookup.has(key)) lookup.set(key, entry);
+    if (!key) return;
+    if (!lookup.has(key)) lookup.set(key, entry);
+    else if (lookup.get(key) !== entry) lookup.set(key, ambiguous);
   };
 
   for (const entry of catalog || []) {
+    const unqualifiedMaleForm = entry.formId === "male" && Number(entry.spriteId) === Number(entry.speciesId);
     add(entry.slug, entry);
     add(entry.name, entry);
-    if (entry.showdownId) add(entry.showdownId, entry);
-    if (entry.metarollId) add(entry.metarollId, entry);
-    if (entry.spriteId) add(entry.spriteId, entry);
+    if (!unqualifiedMaleForm && entry.showdownId) add(entry.showdownId, entry);
+    if (!unqualifiedMaleForm && entry.metarollId) add(entry.metarollId, entry);
+    if (!unqualifiedMaleForm && entry.spriteId) add(entry.spriteId, entry);
     for (const alias of formAliases(entry)) add(alias, entry);
-    if (entry.formId === "default" || entry.isDefault === true) {
+    if (entry.formId === "default") {
       add(entry.speciesSlug, entry);
       add(entry.speciesName, entry);
     }
   }
 
-  return (reference) => lookup.get(toId(reference)) || null;
+  return (reference) => {
+    const result = lookup.get(toId(reference));
+    return result && result !== ambiguous ? result : null;
+  };
 }
 
 export function resolveCompetitivePokemonSprite(lookup, { id, name }) {
   const byId = lookup(id);
   const byName = lookup(name);
-  if (byName?.isDefault === false && byId?.isDefault === true) return byName;
+  if (byId && byName && byId.slug !== byName.slug) {
+    if (byId.speciesId !== byName.speciesId) return null;
+    if (byName.isDefault === false && byId.isDefault === true) {
+      const suppliedId = toId(id);
+      const genericId = suppliedId === toId(byId.speciesSlug || byId.speciesName)
+        || (Number.isInteger(Number(id)) && Number(id) === Number(byId.speciesId));
+      return genericId ? byName : null;
+    }
+    const suppliedName = toId(name);
+    const genericName = toId(byName.speciesName || byName.speciesSlug);
+    if (byId.isDefault === false && byName.isDefault === true && suppliedName === genericName) return byId;
+    return null;
+  }
   return byId || byName || null;
 }
 
@@ -146,11 +165,13 @@ export function resolvePokemonSpriteUrl(pokemon) {
   if (exactHomeFormAsset) return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${exactHomeFormAsset}`;
   const spriteId = Number(pokemon.spriteId);
   if (!Number.isInteger(spriteId) || spriteId < 1) return null;
+  if (pokemon.isDefault === false && spriteId === Number(pokemon.speciesId)) return null;
   return `${POKEAPI_SPRITES_BASE}/pokemon/other/home/${spriteId}.png`;
 }
 
 export function resolvePokemonSpriteFallbackUrl(pokemon) {
   const spriteId = Number(pokemon?.spriteId);
+  if (pokemon?.isDefault === false && spriteId === Number(pokemon.speciesId)) return null;
   return Number.isInteger(spriteId) && spriteId > 0
     ? `${POKEAPI_SPRITES_BASE}/pokemon/other/official-artwork/${spriteId}.png`
     : null;

@@ -1,4 +1,8 @@
-export function validateTeamPayload(payload, pokemonCatalog) {
+function normalizeMoveName(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("en").replace(/[^a-z0-9]/g, "");
+}
+
+export function validateTeamPayload(payload, pokemonCatalog, movesCatalog = []) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return { ok: false, error: "A equipe precisa ser um objeto JSON." };
   }
@@ -13,6 +17,7 @@ export function validateTeamPayload(payload, pokemonCatalog) {
     return { ok: false, error: "A equipe precisa ter seis posições." };
   }
   const statKeys = ["hp", "atk", "def", "spa", "spd", "spe"];
+  const knownMoves = new Set((movesCatalog || []).flatMap((move) => [move.slug, move.name].filter(Boolean).map(normalizeMoveName)));
   for (const [index, member] of members.entries()) {
     if (member === null) continue;
     if (!member || typeof member !== "object" || Array.isArray(member)) {
@@ -37,6 +42,9 @@ export function validateTeamPayload(payload, pokemonCatalog) {
     }
     if (!Array.isArray(member.moves) || member.moves.length !== 4 || member.moves.some((move) => typeof move !== "string" || move.length > 100)) {
       return { ok: false, error: `A posição ${index + 1} precisa de quatro campos de golpe.` };
+    }
+    if (member.moves.some((move) => move && !knownMoves.has(normalizeMoveName(move)))) {
+      return { ok: false, error: `A posição ${index + 1} contém um golpe que não existe no catálogo geral.` };
     }
     if (!member.statPoints || typeof member.statPoints !== "object" || statKeys.some((key) => !Number.isInteger(member.statPoints[key]) || member.statPoints[key] < 0 || member.statPoints[key] > 32)) {
       return { ok: false, error: `A posição ${index + 1} precisa dos seis campos de Stat Points.` };

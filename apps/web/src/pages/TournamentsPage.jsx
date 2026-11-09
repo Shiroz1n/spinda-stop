@@ -105,7 +105,7 @@ export function TournamentsPage() {
   return (
     <section className="page-wrap community-page">
       <div className="page-heading-row community-heading">
-        <div><p className="page-label">Encontros da comunidade</p><h1>Torneios privados</h1><p className="page-intro">Um chaveamento simples de quatro pessoas. Combine as partidas no Pokémon Champions e registre os resultados aqui.</p></div>
+        <div><p className="page-label">Encontros da comunidade</p><h1>Torneios</h1><p className="page-intro">Crie um torneio privado ou consulte eventos VGC públicos registrados no Limitless.</p><Link className="button button-outline" to="/tournaments/vgc">Explorar torneios VGC e equipes ↗</Link></div>
         {state.status === "ready" ? <span className="community-account-chip">GitHub · {state.user.handle}</span> : null}
       </div>
 

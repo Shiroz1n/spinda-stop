@@ -86,6 +86,7 @@ export function BuilderPage() {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const accountDetailsRef = useRef(null);
+  const consumedPublicImport = useRef(null);
   const [initialDraft] = useState(() => createInitialDraft(location.state?.pokemonSlug, location.state?.metaOption));
   const [team, setTeam] = useState(initialDraft.team);
   const [showdownInput, setShowdownInput] = useState("");
@@ -177,8 +178,20 @@ export function BuilderPage() {
   }
 
   useEffect(() => {
+    const publicPaste = location.state?.publicTournamentPaste;
+    const importKey = location.state?.publicTournamentImportKey || publicPaste;
+    if (publicPaste && importKey && consumedPublicImport.current !== importKey) {
+      consumedPublicImport.current = importKey;
+      const source = location.state?.publicTournamentSource || "";
+      const name = location.state?.publicTournamentName || "teamlist pública";
+      const sourceHost = (() => { try { return new URL(source).hostname; } catch { return "Limitless"; } })();
+      if (typeof publicPaste === "string" && publicPaste.trim()) importShowdownText(publicPaste, { allowPartial: true, sourceNotice: `${name} · ${sourceHost}` });
+      else setMessage("A teamlist pública não pôde ser convertida para o catálogo atual; nenhuma posição foi substituída.");
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
     if (location.state?.pokemonSlug || location.state?.metaOption) navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, navigate]);
+  }, [location.pathname, location.state?.pokemonSlug, location.state?.metaOption, location.state?.publicTournamentPaste, location.state?.publicTournamentImportKey, location.state?.publicTournamentName, location.state?.publicTournamentSource, navigate]);
 
   useEffect(() => {
     if (initialDraft.preserveStored) return;
@@ -292,13 +305,15 @@ export function BuilderPage() {
   }
 
   function importShowdownText(text, options = {}) {
-    const result = importShowdownTeam(text, dexData.pokemon, options);
+    const { allowPartial = false, sourceNotice = "" } = options;
+    const result = importShowdownTeam(text, dexData.pokemon, { allowPartial });
     if (!result.ok) {
       setMessage(result.error);
       return;
     }
     const consequences = [
       team.members.some(Boolean) ? "A importação substituirá as seis posições e as configurações atuais do rascunho." : "A equipe será salva neste navegador.",
+      ...(sourceNotice ? [`Origem: ${sourceNotice}.`] : []),
       ...(result.warnings.length ? [`Avisos:\n${result.warnings.join("\n")}`] : []),
     ].join("\n\n");
     if ((team.members.some(Boolean) || result.warnings.length) && !window.confirm(consequences)) return;
@@ -307,7 +322,7 @@ export function BuilderPage() {
     setSpeedPreviews({});
     setShowdownInput("");
     setBuilderTab("team");
-    setMessage(saved ? "Equipe Showdown importada. Revise os golpes e a legalidade no formato selecionado." : "Equipe importada, mas não foi possível salvá-la neste navegador.");
+    setMessage(saved ? `${sourceNotice ? `Equipe pública importada de ${sourceNotice}.` : "Equipe Showdown importada."} Revise os campos disponíveis e a legalidade no formato selecionado.` : "Equipe importada, mas não foi possível salvá-la neste navegador.");
   }
 
   function importShowdownPaste() {

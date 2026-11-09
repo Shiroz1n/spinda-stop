@@ -58,18 +58,19 @@ export function addPokemonToDraft(team, pokemon) {
 }
 
 export function searchPokemon(pokemon, query = "", filters = {}) {
-  const normalizedQuery = normalizeText(query.trim());
+  const normalizedQuery = normalizeSearchText(query.trim());
+  const numberQuery = /^#?\s*0*\d+\s*$/.test(query.trim()) ? Number(query.trim().replace(/^#/, "").trim()) : null;
   const { type = "", generation = "" } = filters;
   const minimumBaseStatTotal = optionalNumber(filters.minimumBaseStatTotal);
   const maximumBaseStatTotal = optionalNumber(filters.maximumBaseStatTotal);
 
   return pokemon.filter((entry) => {
-    const matchesQuery = !normalizedQuery || normalizeText([
+    const matchesQuery = !normalizedQuery || (numberQuery !== null && Number(entry.speciesId) === numberQuery) || normalizeSearchText([
       entry.name,
       entry.speciesName,
       entry.slug,
       entry.formName,
-      String(entry.speciesId),
+      ...(Array.isArray(entry.aliases) ? entry.aliases : []),
     ].filter(Boolean).join(" ")).includes(normalizedQuery);
     const matchesType = !type || entry.types.includes(type);
     const matchesGeneration = !generation || String(entry.generation) === String(generation);
@@ -417,4 +418,8 @@ export function parseTeam(text, pokemon = []) {
 
 function normalizeText(value) {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR");
+}
+
+function normalizeSearchText(value) {
+  return normalizeText(String(value || "")).replace(/[^a-z0-9]/g, "");
 }

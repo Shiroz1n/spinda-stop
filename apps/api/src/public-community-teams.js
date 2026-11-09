@@ -1,8 +1,12 @@
 import dexData from "../../../packages/data/generated/pokedex.json" with { type: "json" };
+import { Buffer } from "node:buffer";
 import { readBoundedJson } from "./read-bounded-json.js";
 
 const MUNCHSTATS_TEAMS_URL = "https://www.munchstats.com/teams/api/champions-mc/";
 const PUBLIC_CACHE = "public, max-age=60, s-maxage=900, stale-while-revalidate=3600";
+const NEGATIVE_CACHE = "public, max-age=10, s-maxage=30, stale-while-revalidate=30";
+const NEGATIVE_TTL_MS = 30_000;
+const MAX_NEGATIVE_ENTRIES = 256;
 const MAX_BODY_LENGTH = 1_048_576;
 const TEAM_ID = /^MC\d{3,8}$/;
 const EXTERNAL_HOSTS = new Set([
@@ -64,7 +68,7 @@ function normalizeTeam(row) {
   };
 }
 
-async function fetchJson(fetchImpl, url) {
+async function fetchJson(fetchImpl, url, { allowNotFound = false } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
   try {
@@ -73,13 +77,36 @@ async function fetchJson(fetchImpl, url) {
       redirect: "error",
       signal: controller.signal,
     });
+    if (allowNotFound && response.status === 404) {
+      await response.body?.cancel().catch(() => {});
+      return null;
+    }
     return await readBoundedJson(response, MAX_BODY_LENGTH);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export function createPublicCommunityTeamsHandler(fetchImpl = globalThis.fetch) {
+export function createPublicCommunityTeamsHandler(fetchImpl = globalThis.fetch, { now = Date.now } = {}) {
+  const notFoundCache = new Map();
+  function cachedNotFound(id) {
+    const cached = notFoundCache.get(id);
+    if (!cached) return null;
+    if (cached.expiresAt <= now()) {
+      notFoundCache.delete(id);
+      return null;
+    }
+    return reply(cached.body, 404, NEGATIVE_CACHE);
+  }
+  function rememberNotFound(id) {
+    if (!notFoundCache.has(id) && notFoundCache.size >= MAX_NEGATIVE_ENTRIES) {
+      notFoundCache.delete(notFoundCache.keys().next().value);
+    }
+    const body = { error: { code: "public_team_not_found", message: "Esta equipe não publicou um paste disponível." } };
+    notFoundCache.set(id, { body, expiresAt: now() + NEGATIVE_TTL_MS });
+    return reply(body, 404, NEGATIVE_CACHE);
+  }
+
   return async function handlePublicCommunityTeams(request) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -90,9 +117,12 @@ export function createPublicCommunityTeamsHandler(fetchImpl = globalThis.fetch) 
     if (pasteMatch) {
       const id = pasteMatch[1];
       if (!TEAM_ID.test(id)) return reply({ error: { code: "invalid_team_id" } }, 400);
+      const cached = cachedNotFound(id);
+      if (cached) return cached;
       try {
-        const payload = await fetchJson(fetchImpl, new URL(`paste/${id}`, MUNCHSTATS_TEAMS_URL));
-        if (typeof payload?.text !== "string" || payload.text.length > 128 * 1024) throw new Error("invalid_paste");
+        const payload = await fetchJson(fetchImpl, new URL(`paste/${id}`, MUNCHSTATS_TEAMS_URL), { allowNotFound: true });
+        if (!payload) return rememberNotFound(id);
+        if (typeof payload?.text !== "string" || Buffer.byteLength(payload.text, "utf8") > 128 * 1024) throw new Error("invalid_paste");
         return reply({ text: payload.text, sourceUrl: safeExternalUrl(payload.url) }, 200, PUBLIC_CACHE);
       } catch {
         return reply({ error: { code: "public_team_unavailable", message: "O paste público não está disponível agora." } }, 502);

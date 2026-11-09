@@ -2,13 +2,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { searchPokemon, sortPokemon } from "@spinda-stop/domain";
 import dexData from "@spinda-stop/data/pokedex";
+import detailData from "@spinda-stop/data/details";
 import { PokemonCard } from "../components/PokemonCard.jsx";
 import { typeLabel } from "../components/TypeTag.jsx";
+import { getOfficialPokemonAliases } from "../data/pokemonChampionsRoster.js";
+import { clearRecentResearch, readStoredResearchShortcuts, rememberPokemon, toggleFavoritePokemon, writeStoredResearchShortcuts } from "../data/researchShortcuts.js";
 
 const BATCH_SIZE = 36;
 const RESTORE_KEY = "spinda-dex-view";
 const RESTORE_TTL = 15 * 60 * 1000;
 const MAX_BASE_STAT_TOTAL = Math.max(...dexData.pokemon.map((entry) => entry.baseStatTotal || 0));
+const dexSearchCatalog = getOfficialPokemonAliases(dexData.pokemon);
 
 function readSavedView() {
   try {
@@ -24,22 +28,24 @@ export function DexPage() {
   const [initialView] = useState(readSavedView);
   const restoreRef = useRef(initialView);
   const [query, setQuery] = useState(() => searchParams.get("q") || initialView?.query || "");
-  const [type, setType] = useState(() => initialView?.type || "");
+  const [type, setType] = useState(() => searchParams.has("type") ? searchParams.get("type") || "" : initialView?.type || "");
   const [generation, setGeneration] = useState(() => initialView?.generation || "");
   const [minimumBaseStatTotal, setMinimumBaseStatTotal] = useState(() => initialView?.minimumBaseStatTotal || "");
   const [maximumBaseStatTotal, setMaximumBaseStatTotal] = useState(() => initialView?.maximumBaseStatTotal || "");
   const [sort, setSort] = useState(() => initialView?.sort || "number");
+  const [shortcuts, setShortcuts] = useState(readStoredResearchShortcuts);
   const [visibleCount, setVisibleCount] = useState(() => Math.max(BATCH_SIZE, initialView?.visibleCount || BATCH_SIZE));
   const sentinelRef = useRef(null);
-  const filtered = useMemo(() => searchPokemon(dexData.pokemon, query, {
+  const ability = searchParams.get("ability") || "";
+  const filtered = useMemo(() => searchPokemon(dexSearchCatalog, query, {
     type,
     generation,
     minimumBaseStatTotal,
     maximumBaseStatTotal,
-  }), [query, type, generation, minimumBaseStatTotal, maximumBaseStatTotal]);
+  }).filter((pokemon) => !ability || (detailData.pokemonBySlug[pokemon.slug]?.abilities || []).some((entry) => entry.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR") === ability.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR"))), [query, type, generation, minimumBaseStatTotal, maximumBaseStatTotal, ability]);
   const results = useMemo(() => sortPokemon(filtered, sort), [filtered, sort]);
   const visible = results.slice(0, visibleCount);
-  const filterCount = Number(Boolean(type)) + Number(Boolean(generation))
+  const filterCount = Number(Boolean(type)) + Number(Boolean(ability)) + Number(Boolean(generation))
     + Number(Boolean(minimumBaseStatTotal)) + Number(Boolean(maximumBaseStatTotal));
   const hasMore = visible.length < results.length;
   const filterKey = `${query}\u0000${type}\u0000${generation}\u0000${minimumBaseStatTotal}\u0000${maximumBaseStatTotal}\u0000${sort}`;
@@ -95,7 +101,12 @@ export function DexPage() {
     setMinimumBaseStatTotal("");
     setMaximumBaseStatTotal("");
     setSort("number");
-    if (searchParams.has("q")) setSearchParams({}, { replace: true });
+    if (searchParams.size) setSearchParams({}, { replace: true });
+  }
+
+  function updateShortcuts(next) {
+    setShortcuts(next);
+    writeStoredResearchShortcuts(next);
   }
 
   function rememberPosition() {
@@ -115,6 +126,14 @@ export function DexPage() {
       // Navigation remains available when session storage is disabled.
     }
   }
+
+  function rememberPokemonAndPosition(slug) {
+    updateShortcuts(rememberPokemon(shortcuts, slug));
+    rememberPosition();
+  }
+
+  const favoritePokemon = shortcuts.favoritePokemon.map((slug) => dexData.pokemon.find((pokemon) => pokemon.slug === slug)).filter(Boolean);
+  const recentPokemon = shortcuts.recentPokemon.map((slug) => dexData.pokemon.find((pokemon) => pokemon.slug === slug)).filter(Boolean);
 
   return (
     <div className="page-wrap dex-page">
@@ -177,8 +196,14 @@ export function DexPage() {
             <p>Total dos seis stats base na PokéAPI; não representa stats finais no Champions.</p>
           </div>
         </details>
+        {ability ? <button className="button button-quiet clear-filter" type="button" onClick={() => { const next = new URLSearchParams(searchParams); next.delete("ability"); setSearchParams(next, { replace: true }); }}>Habilidade: {ability} ×</button> : null}
         {filterCount > 0 || query ? <button className="button button-quiet clear-filter" type="button" onClick={clearFilters}>Limpar filtros</button> : null}
       </section>
+
+      {(favoritePokemon.length > 0 || recentPokemon.length > 0) && <section className="research-shortcuts" aria-label="Espécies favoritas e recentes">
+        {favoritePokemon.length > 0 && <div><div className="research-shortcuts-heading"><h2>Favoritos</h2><button className="text-button" type="button" onClick={() => updateShortcuts({ ...shortcuts, favoritePokemon: [] })}>Limpar</button></div><ul>{favoritePokemon.map((pokemon) => <li key={pokemon.slug}><Link to={`/dex/${encodeURIComponent(pokemon.slug)}`} onClick={() => rememberPokemonAndPosition(pokemon.slug)}>{pokemon.name}</Link><button type="button" aria-label={`Remover ${pokemon.name} dos favoritos`} onClick={() => updateShortcuts(toggleFavoritePokemon(shortcuts, pokemon.slug))}>×</button></li>)}</ul></div>}
+        {recentPokemon.length > 0 && <div><div className="research-shortcuts-heading"><h2>Recentes</h2><button className="text-button" type="button" onClick={() => updateShortcuts(clearRecentResearch(shortcuts, "pokemon"))}>Limpar</button></div><ul>{recentPokemon.slice(0, 6).map((pokemon) => <li key={pokemon.slug}><Link to={`/dex/${encodeURIComponent(pokemon.slug)}`} onClick={() => rememberPokemonAndPosition(pokemon.slug)}>{pokemon.name}</Link></li>)}</ul></div>}
+      </section>}
 
       <div className="results-line">
         <p aria-live="polite"><strong>{results.length.toLocaleString("pt-BR")}</strong> formas{filterCount > 0 || query ? ` · ${filterCount + Number(Boolean(query))} filtro${filterCount + Number(Boolean(query)) > 1 ? "s" : ""}` : ""}</p>
@@ -187,7 +212,7 @@ export function DexPage() {
 
       {visible.length > 0 ? (
         <div className="pokemon-grid">
-          {visible.map((pokemon) => <PokemonCard key={pokemon.slug} pokemon={pokemon} onOpen={rememberPosition} />)}
+          {visible.map((pokemon) => <PokemonCard key={pokemon.slug} pokemon={pokemon} onOpen={() => rememberPokemonAndPosition(pokemon.slug)} isFavorite={shortcuts.favoritePokemon.includes(pokemon.slug)} onToggleFavorite={(slug) => updateShortcuts(toggleFavoritePokemon(shortcuts, slug))} />)}
         </div>
       ) : (
         <section className="empty-state-panel">

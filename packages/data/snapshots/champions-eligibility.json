@@ -1,0 +1,3188 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-08T23:42:01Z",
+  "source": "Pokémon Champions official announcements and eligible-roster pages",
+  "regulations": {
+    "M-A": {
+      "validFrom": "2026-04-08T02:00:00Z",
+      "validUntil": "2026-06-17T01:59:00Z",
+      "sourceUrl": "https://web-view.app.pokemonchampions.jp/battle/pages/events/rs177501629259kmzbny/en/pokemon.html",
+      "regulationUrl": "https://champions-news.pokemon-home.com/en/page/751.html",
+      "checkedAt": "2026-11-08T23:42:01Z",
+      "sourceSha256": "56d8838a5b42cb7e4a5ba68e060f2326e7a65e23fbbb8adab420d70c2affc9bd",
+      "rowCount": 213,
+      "entries": [
+        {
+          "id": "0003-000",
+          "name": "Venusaur"
+        },
+        {
+          "id": "0006-000",
+          "name": "Charizard"
+        },
+        {
+          "id": "0009-000",
+          "name": "Blastoise"
+        },
+        {
+          "id": "0015-000",
+          "name": "Beedrill"
+        },
+        {
+          "id": "0018-000",
+          "name": "Pidgeot"
+        },
+        {
+          "id": "0024-000",
+          "name": "Arbok"
+        },
+        {
+          "id": "0025-000",
+          "name": "Pikachu"
+        },
+        {
+          "id": "0026-000",
+          "name": "Raichu"
+        },
+        {
+          "id": "0026-001",
+          "name": "Raichu (Alolan Form)"
+        },
+        {
+          "id": "0036-000",
+          "name": "Clefable"
+        },
+        {
+          "id": "0038-000",
+          "name": "Ninetales"
+        },
+        {
+          "id": "0038-001",
+          "name": "Ninetales (Alolan Form)"
+        },
+        {
+          "id": "0059-000",
+          "name": "Arcanine"
+        },
+        {
+          "id": "0059-001",
+          "name": "Arcanine (Hisuian Form)"
+        },
+        {
+          "id": "0065-000",
+          "name": "Alakazam"
+        },
+        {
+          "id": "0068-000",
+          "name": "Machamp"
+        },
+        {
+          "id": "0071-000",
+          "name": "Victreebel"
+        },
+        {
+          "id": "0080-000",
+          "name": "Slowbro"
+        },
+        {
+          "id": "0080-002",
+          "name": "Slowbro (Galarian Form)"
+        },
+        {
+          "id": "0094-000",
+          "name": "Gengar"
+        },
+        {
+          "id": "0115-000",
+          "name": "Kangaskhan"
+        },
+        {
+          "id": "0121-000",
+          "name": "Starmie"
+        },
+        {
+          "id": "0127-000",
+          "name": "Pinsir"
+        },
+        {
+          "id": "0128-000",
+          "name": "Tauros"
+        },
+        {
+          "id": "0128-001",
+          "name": "Tauros (Paldean Form (Combat Breed))"
+        },
+        {
+          "id": "0128-002",
+          "name": "Tauros (Paldean Form (Blaze Breed))"
+        },
+        {
+          "id": "0128-003",
+          "name": "Tauros (Paldean Form (Aqua Breed))"
+        },
+        {
+          "id": "0130-000",
+          "name": "Gyarados"
+        },
+        {
+          "id": "0132-000",
+          "name": "Ditto"
+        },
+        {
+          "id": "0134-000",
+          "name": "Vaporeon"
+        },
+        {
+          "id": "0135-000",
+          "name": "Jolteon"
+        },
+        {
+          "id": "0136-000",
+          "name": "Flareon"
+        },
+        {
+          "id": "0142-000",
+          "name": "Aerodactyl"
+        },
+        {
+          "id": "0143-000",
+          "name": "Snorlax"
+        },
+        {
+          "id": "0149-000",
+          "name": "Dragonite"
+        },
+        {
+          "id": "0154-000",
+          "name": "Meganium"
+        },
+        {
+          "id": "0157-000",
+          "name": "Typhlosion"
+        },
+        {
+          "id": "0157-001",
+          "name": "Typhlosion (Hisuian Form)"
+        },
+        {
+          "id": "0160-000",
+          "name": "Feraligatr"
+        },
+        {
+          "id": "0168-000",
+          "name": "Ariados"
+        },
+        {
+          "id": "0181-000",
+          "name": "Ampharos"
+        },
+        {
+          "id": "0184-000",
+          "name": "Azumarill"
+        },
+        {
+          "id": "0186-000",
+          "name": "Politoed"
+        },
+        {
+          "id": "0196-000",
+          "name": "Espeon"
+        },
+        {
+          "id": "0197-000",
+          "name": "Umbreon"
+        },
+        {
+          "id": "0199-000",
+          "name": "Slowking"
+        },
+        {
+          "id": "0199-001",
+          "name": "Slowking (Galarian Form)"
+        },
+        {
+          "id": "0205-000",
+          "name": "Forretress"
+        },
+        {
+          "id": "0208-000",
+          "name": "Steelix"
+        },
+        {
+          "id": "0212-000",
+          "name": "Scizor"
+        },
+        {
+          "id": "0214-000",
+          "name": "Heracross"
+        },
+        {
+          "id": "0227-000",
+          "name": "Skarmory"
+        },
+        {
+          "id": "0229-000",
+          "name": "Houndoom"
+        },
+        {
+          "id": "0248-000",
+          "name": "Tyranitar"
+        },
+        {
+          "id": "0279-000",
+          "name": "Pelipper"
+        },
+        {
+          "id": "0282-000",
+          "name": "Gardevoir"
+        },
+        {
+          "id": "0302-000",
+          "name": "Sableye"
+        },
+        {
+          "id": "0306-000",
+          "name": "Aggron"
+        },
+        {
+          "id": "0308-000",
+          "name": "Medicham"
+        },
+        {
+          "id": "0310-000",
+          "name": "Manectric"
+        },
+        {
+          "id": "0319-000",
+          "name": "Sharpedo"
+        },
+        {
+          "id": "0323-000",
+          "name": "Camerupt"
+        },
+        {
+          "id": "0324-000",
+          "name": "Torkoal"
+        },
+        {
+          "id": "0334-000",
+          "name": "Altaria"
+        },
+        {
+          "id": "0350-000",
+          "name": "Milotic"
+        },
+        {
+          "id": "0351-000",
+          "name": "Castform"
+        },
+        {
+          "id": "0354-000",
+          "name": "Banette"
+        },
+        {
+          "id": "0358-000",
+          "name": "Chimecho"
+        },
+        {
+          "id": "0359-000",
+          "name": "Absol"
+        },
+        {
+          "id": "0362-000",
+          "name": "Glalie"
+        },
+        {
+          "id": "0389-000",
+          "name": "Torterra"
+        },
+        {
+          "id": "0392-000",
+          "name": "Infernape"
+        },
+        {
+          "id": "0395-000",
+          "name": "Empoleon"
+        },
+        {
+          "id": "0405-000",
+          "name": "Luxray"
+        },
+        {
+          "id": "0407-000",
+          "name": "Roserade"
+        },
+        {
+          "id": "0409-000",
+          "name": "Rampardos"
+        },
+        {
+          "id": "0411-000",
+          "name": "Bastiodon"
+        },
+        {
+          "id": "0428-000",
+          "name": "Lopunny"
+        },
+        {
+          "id": "0442-000",
+          "name": "Spiritomb"
+        },
+        {
+          "id": "0445-000",
+          "name": "Garchomp"
+        },
+        {
+          "id": "0448-000",
+          "name": "Lucario"
+        },
+        {
+          "id": "0450-000",
+          "name": "Hippowdon"
+        },
+        {
+          "id": "0454-000",
+          "name": "Toxicroak"
+        },
+        {
+          "id": "0460-000",
+          "name": "Abomasnow"
+        },
+        {
+          "id": "0461-000",
+          "name": "Weavile"
+        },
+        {
+          "id": "0464-000",
+          "name": "Rhyperior"
+        },
+        {
+          "id": "0470-000",
+          "name": "Leafeon"
+        },
+        {
+          "id": "0471-000",
+          "name": "Glaceon"
+        },
+        {
+          "id": "0472-000",
+          "name": "Gliscor"
+        },
+        {
+          "id": "0473-000",
+          "name": "Mamoswine"
+        },
+        {
+          "id": "0475-000",
+          "name": "Gallade"
+        },
+        {
+          "id": "0478-000",
+          "name": "Froslass"
+        },
+        {
+          "id": "0479-000",
+          "name": "Rotom (Rotom)"
+        },
+        {
+          "id": "0479-001",
+          "name": "Rotom (Heat Rotom)"
+        },
+        {
+          "id": "0479-002",
+          "name": "Rotom (Wash Rotom)"
+        },
+        {
+          "id": "0479-003",
+          "name": "Rotom (Frost Rotom)"
+        },
+        {
+          "id": "0479-004",
+          "name": "Rotom (Fan Rotom)"
+        },
+        {
+          "id": "0479-005",
+          "name": "Rotom (Mow Rotom)"
+        },
+        {
+          "id": "0497-000",
+          "name": "Serperior"
+        },
+        {
+          "id": "0500-000",
+          "name": "Emboar"
+        },
+        {
+          "id": "0503-000",
+          "name": "Samurott"
+        },
+        {
+          "id": "0503-001",
+          "name": "Samurott (Hisuian Form)"
+        },
+        {
+          "id": "0505-000",
+          "name": "Watchog"
+        },
+        {
+          "id": "0510-000",
+          "name": "Liepard"
+        },
+        {
+          "id": "0512-000",
+          "name": "Simisage"
+        },
+        {
+          "id": "0514-000",
+          "name": "Simisear"
+        },
+        {
+          "id": "0516-000",
+          "name": "Simipour"
+        },
+        {
+          "id": "0530-000",
+          "name": "Excadrill"
+        },
+        {
+          "id": "0531-000",
+          "name": "Audino"
+        },
+        {
+          "id": "0534-000",
+          "name": "Conkeldurr"
+        },
+        {
+          "id": "0547-000",
+          "name": "Whimsicott"
+        },
+        {
+          "id": "0553-000",
+          "name": "Krookodile"
+        },
+        {
+          "id": "0563-000",
+          "name": "Cofagrigus"
+        },
+        {
+          "id": "0569-000",
+          "name": "Garbodor"
+        },
+        {
+          "id": "0571-000",
+          "name": "Zoroark"
+        },
+        {
+          "id": "0571-001",
+          "name": "Zoroark (Hisuian Form)"
+        },
+        {
+          "id": "0579-000",
+          "name": "Reuniclus"
+        },
+        {
+          "id": "0584-000",
+          "name": "Vanilluxe"
+        },
+        {
+          "id": "0587-000",
+          "name": "Emolga"
+        },
+        {
+          "id": "0609-000",
+          "name": "Chandelure"
+        },
+        {
+          "id": "0614-000",
+          "name": "Beartic"
+        },
+        {
+          "id": "0618-000",
+          "name": "Stunfisk"
+        },
+        {
+          "id": "0618-001",
+          "name": "Stunfisk (Galarian Form)"
+        },
+        {
+          "id": "0623-000",
+          "name": "Golurk"
+        },
+        {
+          "id": "0635-000",
+          "name": "Hydreigon"
+        },
+        {
+          "id": "0637-000",
+          "name": "Volcarona"
+        },
+        {
+          "id": "0652-000",
+          "name": "Chesnaught"
+        },
+        {
+          "id": "0655-000",
+          "name": "Delphox"
+        },
+        {
+          "id": "0658-000",
+          "name": "Greninja"
+        },
+        {
+          "id": "0660-000",
+          "name": "Diggersby"
+        },
+        {
+          "id": "0663-000",
+          "name": "Talonflame"
+        },
+        {
+          "id": "0666-018",
+          "name": "Vivillon"
+        },
+        {
+          "id": "0670-005",
+          "name": "Floette"
+        },
+        {
+          "id": "0671-000",
+          "name": "Florges"
+        },
+        {
+          "id": "0675-000",
+          "name": "Pangoro"
+        },
+        {
+          "id": "0676-000",
+          "name": "Furfrou"
+        },
+        {
+          "id": "0678-000",
+          "name": "Meowstic (Male)"
+        },
+        {
+          "id": "0678-001",
+          "name": "Meowstic (Female)"
+        },
+        {
+          "id": "0681-000",
+          "name": "Aegislash"
+        },
+        {
+          "id": "0683-000",
+          "name": "Aromatisse"
+        },
+        {
+          "id": "0685-000",
+          "name": "Slurpuff"
+        },
+        {
+          "id": "0693-000",
+          "name": "Clawitzer"
+        },
+        {
+          "id": "0695-000",
+          "name": "Heliolisk"
+        },
+        {
+          "id": "0697-000",
+          "name": "Tyrantrum"
+        },
+        {
+          "id": "0699-000",
+          "name": "Aurorus"
+        },
+        {
+          "id": "0700-000",
+          "name": "Sylveon"
+        },
+        {
+          "id": "0701-000",
+          "name": "Hawlucha"
+        },
+        {
+          "id": "0702-000",
+          "name": "Dedenne"
+        },
+        {
+          "id": "0706-000",
+          "name": "Goodra"
+        },
+        {
+          "id": "0706-001",
+          "name": "Goodra (Hisuian Form)"
+        },
+        {
+          "id": "0707-000",
+          "name": "Klefki"
+        },
+        {
+          "id": "0709-000",
+          "name": "Trevenant"
+        },
+        {
+          "id": "0711-000",
+          "name": "Gourgeist (Medium Variety)"
+        },
+        {
+          "id": "0711-001",
+          "name": "Gourgeist (Small Variety)"
+        },
+        {
+          "id": "0711-002",
+          "name": "Gourgeist (Large Variety)"
+        },
+        {
+          "id": "0711-003",
+          "name": "Gourgeist (Jumbo Variety)"
+        },
+        {
+          "id": "0713-000",
+          "name": "Avalugg"
+        },
+        {
+          "id": "0713-001",
+          "name": "Avalugg (Hisuian Form)"
+        },
+        {
+          "id": "0715-000",
+          "name": "Noivern"
+        },
+        {
+          "id": "0724-000",
+          "name": "Decidueye"
+        },
+        {
+          "id": "0724-001",
+          "name": "Decidueye (Hisuian Form)"
+        },
+        {
+          "id": "0727-000",
+          "name": "Incineroar"
+        },
+        {
+          "id": "0730-000",
+          "name": "Primarina"
+        },
+        {
+          "id": "0733-000",
+          "name": "Toucannon"
+        },
+        {
+          "id": "0740-000",
+          "name": "Crabominable"
+        },
+        {
+          "id": "0745-000",
+          "name": "Lycanroc (Midday Form)"
+        },
+        {
+          "id": "0745-001",
+          "name": "Lycanroc (Midnight Form)"
+        },
+        {
+          "id": "0745-002",
+          "name": "Lycanroc (Dusk Form)"
+        },
+        {
+          "id": "0748-000",
+          "name": "Toxapex"
+        },
+        {
+          "id": "0750-000",
+          "name": "Mudsdale"
+        },
+        {
+          "id": "0752-000",
+          "name": "Araquanid"
+        },
+        {
+          "id": "0758-000",
+          "name": "Salazzle"
+        },
+        {
+          "id": "0763-000",
+          "name": "Tsareena"
+        },
+        {
+          "id": "0765-000",
+          "name": "Oranguru"
+        },
+        {
+          "id": "0766-000",
+          "name": "Passimian"
+        },
+        {
+          "id": "0778-000",
+          "name": "Mimikyu"
+        },
+        {
+          "id": "0780-000",
+          "name": "Drampa"
+        },
+        {
+          "id": "0784-000",
+          "name": "Kommo-o"
+        },
+        {
+          "id": "0823-000",
+          "name": "Corviknight"
+        },
+        {
+          "id": "0841-000",
+          "name": "Flapple"
+        },
+        {
+          "id": "0842-000",
+          "name": "Appletun"
+        },
+        {
+          "id": "0844-000",
+          "name": "Sandaconda"
+        },
+        {
+          "id": "0855-000",
+          "name": "Polteageist"
+        },
+        {
+          "id": "0858-000",
+          "name": "Hatterene"
+        },
+        {
+          "id": "0866-000",
+          "name": "Mr. Rime"
+        },
+        {
+          "id": "0867-000",
+          "name": "Runerigus"
+        },
+        {
+          "id": "0869-000",
+          "name": "Alcremie"
+        },
+        {
+          "id": "0877-000",
+          "name": "Morpeko"
+        },
+        {
+          "id": "0887-000",
+          "name": "Dragapult"
+        },
+        {
+          "id": "0899-000",
+          "name": "Wyrdeer"
+        },
+        {
+          "id": "0900-000",
+          "name": "Kleavor"
+        },
+        {
+          "id": "0902-000",
+          "name": "Basculegion (Male)"
+        },
+        {
+          "id": "0902-001",
+          "name": "Basculegion (Female)"
+        },
+        {
+          "id": "0903-000",
+          "name": "Sneasler"
+        },
+        {
+          "id": "0908-000",
+          "name": "Meowscarada"
+        },
+        {
+          "id": "0911-000",
+          "name": "Skeledirge"
+        },
+        {
+          "id": "0914-000",
+          "name": "Quaquaval"
+        },
+        {
+          "id": "0925-000",
+          "name": "Maushold"
+        },
+        {
+          "id": "0934-000",
+          "name": "Garganacl"
+        },
+        {
+          "id": "0936-000",
+          "name": "Armarouge"
+        },
+        {
+          "id": "0937-000",
+          "name": "Ceruledge"
+        },
+        {
+          "id": "0939-000",
+          "name": "Bellibolt"
+        },
+        {
+          "id": "0952-000",
+          "name": "Scovillain"
+        },
+        {
+          "id": "0956-000",
+          "name": "Espathra"
+        },
+        {
+          "id": "0959-000",
+          "name": "Tinkaton"
+        },
+        {
+          "id": "0964-000",
+          "name": "Palafin"
+        },
+        {
+          "id": "0968-000",
+          "name": "Orthworm"
+        },
+        {
+          "id": "0970-000",
+          "name": "Glimmora"
+        },
+        {
+          "id": "0981-000",
+          "name": "Farigiraf"
+        },
+        {
+          "id": "0983-000",
+          "name": "Kingambit"
+        },
+        {
+          "id": "1013-000",
+          "name": "Sinistcha"
+        },
+        {
+          "id": "1018-000",
+          "name": "Archaludon"
+        },
+        {
+          "id": "1019-000",
+          "name": "Hydrapple"
+        }
+      ],
+      "allowedMegaNames": [
+        "Mega Venusaur",
+        "Mega Charizard X",
+        "Mega Charizard Y",
+        "Mega Blastoise",
+        "Mega Beedrill",
+        "Mega Pidgeot",
+        "Mega Clefable",
+        "Mega Alakazam",
+        "Mega Victreebel",
+        "Mega Slowbro",
+        "Mega Gengar",
+        "Mega Kangaskhan",
+        "Mega Starmie",
+        "Mega Pinsir",
+        "Mega Gyarados",
+        "Mega Aerodactyl",
+        "Mega Dragonite",
+        "Mega Meganium",
+        "Mega Feraligatr",
+        "Mega Ampharos",
+        "Mega Steelix",
+        "Mega Scizor",
+        "Mega Heracross",
+        "Mega Skarmory",
+        "Mega Houndoom",
+        "Mega Tyranitar",
+        "Mega Gardevoir",
+        "Mega Sableye",
+        "Mega Aggron",
+        "Mega Medicham",
+        "Mega Manectric",
+        "Mega Sharpedo",
+        "Mega Camerupt",
+        "Mega Altaria",
+        "Mega Banette",
+        "Mega Chimecho",
+        "Mega Absol",
+        "Mega Glalie",
+        "Mega Lopunny",
+        "Mega Garchomp",
+        "Mega Lucario",
+        "Mega Abomasnow",
+        "Mega Gallade",
+        "Mega Froslass",
+        "Mega Emboar",
+        "Mega Excadrill",
+        "Mega Audino",
+        "Mega Chandelure",
+        "Mega Golurk",
+        "Mega Chesnaught",
+        "Mega Delphox",
+        "Mega Greninja",
+        "Mega Floette",
+        "Mega Meowstic",
+        "Mega Hawlucha",
+        "Mega Crabominable",
+        "Mega Drampa",
+        "Mega Scovillain",
+        "Mega Glimmora"
+      ],
+      "megaSources": [
+        "https://champions-news.pokemon-home.com/en/page/751.html"
+      ]
+    },
+    "M-B": {
+      "validFrom": "2026-06-17T02:00:00Z",
+      "validUntil": "2026-09-09T01:59:00Z",
+      "sourceUrl": "https://web-view.app.pokemonchampions.jp/battle/pages/events/rs178066986988lmoqpm/en/pokemon.html",
+      "regulationUrl": "https://champions-news.pokemon-home.com/en/page/776.html",
+      "checkedAt": "2026-11-08T23:42:01Z",
+      "sourceSha256": "642fed0034500c778894e10ca33418cb06eabf9403136e8acce277047bccf4f6",
+      "rowCount": 235,
+      "entries": [
+        {
+          "id": "0003-000",
+          "name": "Venusaur"
+        },
+        {
+          "id": "0006-000",
+          "name": "Charizard"
+        },
+        {
+          "id": "0009-000",
+          "name": "Blastoise"
+        },
+        {
+          "id": "0015-000",
+          "name": "Beedrill"
+        },
+        {
+          "id": "0018-000",
+          "name": "Pidgeot"
+        },
+        {
+          "id": "0024-000",
+          "name": "Arbok"
+        },
+        {
+          "id": "0025-000",
+          "name": "Pikachu"
+        },
+        {
+          "id": "0026-000",
+          "name": "Raichu"
+        },
+        {
+          "id": "0026-001",
+          "name": "Raichu (Alolan Form)"
+        },
+        {
+          "id": "0036-000",
+          "name": "Clefable"
+        },
+        {
+          "id": "0038-000",
+          "name": "Ninetales"
+        },
+        {
+          "id": "0038-001",
+          "name": "Ninetales (Alolan Form)"
+        },
+        {
+          "id": "0045-000",
+          "name": "Vileplume"
+        },
+        {
+          "id": "0059-000",
+          "name": "Arcanine"
+        },
+        {
+          "id": "0059-001",
+          "name": "Arcanine (Hisuian Form)"
+        },
+        {
+          "id": "0065-000",
+          "name": "Alakazam"
+        },
+        {
+          "id": "0068-000",
+          "name": "Machamp"
+        },
+        {
+          "id": "0071-000",
+          "name": "Victreebel"
+        },
+        {
+          "id": "0080-000",
+          "name": "Slowbro"
+        },
+        {
+          "id": "0080-002",
+          "name": "Slowbro (Galarian Form)"
+        },
+        {
+          "id": "0094-000",
+          "name": "Gengar"
+        },
+        {
+          "id": "0115-000",
+          "name": "Kangaskhan"
+        },
+        {
+          "id": "0121-000",
+          "name": "Starmie"
+        },
+        {
+          "id": "0127-000",
+          "name": "Pinsir"
+        },
+        {
+          "id": "0128-000",
+          "name": "Tauros"
+        },
+        {
+          "id": "0128-001",
+          "name": "Tauros (Paldean Form (Combat Breed))"
+        },
+        {
+          "id": "0128-002",
+          "name": "Tauros (Paldean Form (Blaze Breed))"
+        },
+        {
+          "id": "0128-003",
+          "name": "Tauros (Paldean Form (Aqua Breed))"
+        },
+        {
+          "id": "0130-000",
+          "name": "Gyarados"
+        },
+        {
+          "id": "0132-000",
+          "name": "Ditto"
+        },
+        {
+          "id": "0134-000",
+          "name": "Vaporeon"
+        },
+        {
+          "id": "0135-000",
+          "name": "Jolteon"
+        },
+        {
+          "id": "0136-000",
+          "name": "Flareon"
+        },
+        {
+          "id": "0142-000",
+          "name": "Aerodactyl"
+        },
+        {
+          "id": "0143-000",
+          "name": "Snorlax"
+        },
+        {
+          "id": "0149-000",
+          "name": "Dragonite"
+        },
+        {
+          "id": "0154-000",
+          "name": "Meganium"
+        },
+        {
+          "id": "0157-000",
+          "name": "Typhlosion"
+        },
+        {
+          "id": "0157-001",
+          "name": "Typhlosion (Hisuian Form)"
+        },
+        {
+          "id": "0160-000",
+          "name": "Feraligatr"
+        },
+        {
+          "id": "0168-000",
+          "name": "Ariados"
+        },
+        {
+          "id": "0181-000",
+          "name": "Ampharos"
+        },
+        {
+          "id": "0184-000",
+          "name": "Azumarill"
+        },
+        {
+          "id": "0186-000",
+          "name": "Politoed"
+        },
+        {
+          "id": "0196-000",
+          "name": "Espeon"
+        },
+        {
+          "id": "0197-000",
+          "name": "Umbreon"
+        },
+        {
+          "id": "0199-000",
+          "name": "Slowking"
+        },
+        {
+          "id": "0199-001",
+          "name": "Slowking (Galarian Form)"
+        },
+        {
+          "id": "0205-000",
+          "name": "Forretress"
+        },
+        {
+          "id": "0208-000",
+          "name": "Steelix"
+        },
+        {
+          "id": "0211-000",
+          "name": "Qwilfish"
+        },
+        {
+          "id": "0212-000",
+          "name": "Scizor"
+        },
+        {
+          "id": "0214-000",
+          "name": "Heracross"
+        },
+        {
+          "id": "0227-000",
+          "name": "Skarmory"
+        },
+        {
+          "id": "0229-000",
+          "name": "Houndoom"
+        },
+        {
+          "id": "0248-000",
+          "name": "Tyranitar"
+        },
+        {
+          "id": "0254-000",
+          "name": "Sceptile"
+        },
+        {
+          "id": "0257-000",
+          "name": "Blaziken"
+        },
+        {
+          "id": "0260-000",
+          "name": "Swampert"
+        },
+        {
+          "id": "0279-000",
+          "name": "Pelipper"
+        },
+        {
+          "id": "0282-000",
+          "name": "Gardevoir"
+        },
+        {
+          "id": "0302-000",
+          "name": "Sableye"
+        },
+        {
+          "id": "0303-000",
+          "name": "Mawile"
+        },
+        {
+          "id": "0306-000",
+          "name": "Aggron"
+        },
+        {
+          "id": "0308-000",
+          "name": "Medicham"
+        },
+        {
+          "id": "0310-000",
+          "name": "Manectric"
+        },
+        {
+          "id": "0319-000",
+          "name": "Sharpedo"
+        },
+        {
+          "id": "0323-000",
+          "name": "Camerupt"
+        },
+        {
+          "id": "0324-000",
+          "name": "Torkoal"
+        },
+        {
+          "id": "0334-000",
+          "name": "Altaria"
+        },
+        {
+          "id": "0350-000",
+          "name": "Milotic"
+        },
+        {
+          "id": "0351-000",
+          "name": "Castform"
+        },
+        {
+          "id": "0354-000",
+          "name": "Banette"
+        },
+        {
+          "id": "0358-000",
+          "name": "Chimecho"
+        },
+        {
+          "id": "0359-000",
+          "name": "Absol"
+        },
+        {
+          "id": "0362-000",
+          "name": "Glalie"
+        },
+        {
+          "id": "0376-000",
+          "name": "Metagross"
+        },
+        {
+          "id": "0389-000",
+          "name": "Torterra"
+        },
+        {
+          "id": "0392-000",
+          "name": "Infernape"
+        },
+        {
+          "id": "0395-000",
+          "name": "Empoleon"
+        },
+        {
+          "id": "0398-000",
+          "name": "Staraptor"
+        },
+        {
+          "id": "0405-000",
+          "name": "Luxray"
+        },
+        {
+          "id": "0407-000",
+          "name": "Roserade"
+        },
+        {
+          "id": "0409-000",
+          "name": "Rampardos"
+        },
+        {
+          "id": "0411-000",
+          "name": "Bastiodon"
+        },
+        {
+          "id": "0428-000",
+          "name": "Lopunny"
+        },
+        {
+          "id": "0442-000",
+          "name": "Spiritomb"
+        },
+        {
+          "id": "0445-000",
+          "name": "Garchomp"
+        },
+        {
+          "id": "0448-000",
+          "name": "Lucario"
+        },
+        {
+          "id": "0450-000",
+          "name": "Hippowdon"
+        },
+        {
+          "id": "0454-000",
+          "name": "Toxicroak"
+        },
+        {
+          "id": "0460-000",
+          "name": "Abomasnow"
+        },
+        {
+          "id": "0461-000",
+          "name": "Weavile"
+        },
+        {
+          "id": "0464-000",
+          "name": "Rhyperior"
+        },
+        {
+          "id": "0470-000",
+          "name": "Leafeon"
+        },
+        {
+          "id": "0471-000",
+          "name": "Glaceon"
+        },
+        {
+          "id": "0472-000",
+          "name": "Gliscor"
+        },
+        {
+          "id": "0473-000",
+          "name": "Mamoswine"
+        },
+        {
+          "id": "0475-000",
+          "name": "Gallade"
+        },
+        {
+          "id": "0478-000",
+          "name": "Froslass"
+        },
+        {
+          "id": "0479-000",
+          "name": "Rotom (Rotom)"
+        },
+        {
+          "id": "0479-001",
+          "name": "Rotom (Heat Rotom)"
+        },
+        {
+          "id": "0479-002",
+          "name": "Rotom (Wash Rotom)"
+        },
+        {
+          "id": "0479-003",
+          "name": "Rotom (Frost Rotom)"
+        },
+        {
+          "id": "0479-004",
+          "name": "Rotom (Fan Rotom)"
+        },
+        {
+          "id": "0479-005",
+          "name": "Rotom (Mow Rotom)"
+        },
+        {
+          "id": "0497-000",
+          "name": "Serperior"
+        },
+        {
+          "id": "0500-000",
+          "name": "Emboar"
+        },
+        {
+          "id": "0503-000",
+          "name": "Samurott"
+        },
+        {
+          "id": "0503-001",
+          "name": "Samurott (Hisuian Form)"
+        },
+        {
+          "id": "0505-000",
+          "name": "Watchog"
+        },
+        {
+          "id": "0510-000",
+          "name": "Liepard"
+        },
+        {
+          "id": "0512-000",
+          "name": "Simisage"
+        },
+        {
+          "id": "0514-000",
+          "name": "Simisear"
+        },
+        {
+          "id": "0516-000",
+          "name": "Simipour"
+        },
+        {
+          "id": "0518-000",
+          "name": "Musharna"
+        },
+        {
+          "id": "0530-000",
+          "name": "Excadrill"
+        },
+        {
+          "id": "0531-000",
+          "name": "Audino"
+        },
+        {
+          "id": "0534-000",
+          "name": "Conkeldurr"
+        },
+        {
+          "id": "0545-000",
+          "name": "Scolipede"
+        },
+        {
+          "id": "0547-000",
+          "name": "Whimsicott"
+        },
+        {
+          "id": "0553-000",
+          "name": "Krookodile"
+        },
+        {
+          "id": "0560-000",
+          "name": "Scrafty"
+        },
+        {
+          "id": "0563-000",
+          "name": "Cofagrigus"
+        },
+        {
+          "id": "0569-000",
+          "name": "Garbodor"
+        },
+        {
+          "id": "0571-000",
+          "name": "Zoroark"
+        },
+        {
+          "id": "0571-001",
+          "name": "Zoroark (Hisuian Form)"
+        },
+        {
+          "id": "0579-000",
+          "name": "Reuniclus"
+        },
+        {
+          "id": "0584-000",
+          "name": "Vanilluxe"
+        },
+        {
+          "id": "0587-000",
+          "name": "Emolga"
+        },
+        {
+          "id": "0604-000",
+          "name": "Eelektross"
+        },
+        {
+          "id": "0609-000",
+          "name": "Chandelure"
+        },
+        {
+          "id": "0614-000",
+          "name": "Beartic"
+        },
+        {
+          "id": "0618-000",
+          "name": "Stunfisk"
+        },
+        {
+          "id": "0618-001",
+          "name": "Stunfisk (Galarian Form)"
+        },
+        {
+          "id": "0623-000",
+          "name": "Golurk"
+        },
+        {
+          "id": "0635-000",
+          "name": "Hydreigon"
+        },
+        {
+          "id": "0637-000",
+          "name": "Volcarona"
+        },
+        {
+          "id": "0652-000",
+          "name": "Chesnaught"
+        },
+        {
+          "id": "0655-000",
+          "name": "Delphox"
+        },
+        {
+          "id": "0658-000",
+          "name": "Greninja"
+        },
+        {
+          "id": "0660-000",
+          "name": "Diggersby"
+        },
+        {
+          "id": "0663-000",
+          "name": "Talonflame"
+        },
+        {
+          "id": "0666-018",
+          "name": "Vivillon"
+        },
+        {
+          "id": "0668-000",
+          "name": "Pyroar"
+        },
+        {
+          "id": "0670-005",
+          "name": "Floette"
+        },
+        {
+          "id": "0671-000",
+          "name": "Florges"
+        },
+        {
+          "id": "0675-000",
+          "name": "Pangoro"
+        },
+        {
+          "id": "0676-000",
+          "name": "Furfrou"
+        },
+        {
+          "id": "0678-000",
+          "name": "Meowstic (Male)"
+        },
+        {
+          "id": "0678-001",
+          "name": "Meowstic (Female)"
+        },
+        {
+          "id": "0681-000",
+          "name": "Aegislash"
+        },
+        {
+          "id": "0683-000",
+          "name": "Aromatisse"
+        },
+        {
+          "id": "0685-000",
+          "name": "Slurpuff"
+        },
+        {
+          "id": "0687-000",
+          "name": "Malamar"
+        },
+        {
+          "id": "0689-000",
+          "name": "Barbaracle"
+        },
+        {
+          "id": "0691-000",
+          "name": "Dragalge"
+        },
+        {
+          "id": "0693-000",
+          "name": "Clawitzer"
+        },
+        {
+          "id": "0695-000",
+          "name": "Heliolisk"
+        },
+        {
+          "id": "0697-000",
+          "name": "Tyrantrum"
+        },
+        {
+          "id": "0699-000",
+          "name": "Aurorus"
+        },
+        {
+          "id": "0700-000",
+          "name": "Sylveon"
+        },
+        {
+          "id": "0701-000",
+          "name": "Hawlucha"
+        },
+        {
+          "id": "0702-000",
+          "name": "Dedenne"
+        },
+        {
+          "id": "0706-000",
+          "name": "Goodra"
+        },
+        {
+          "id": "0706-001",
+          "name": "Goodra (Hisuian Form)"
+        },
+        {
+          "id": "0707-000",
+          "name": "Klefki"
+        },
+        {
+          "id": "0709-000",
+          "name": "Trevenant"
+        },
+        {
+          "id": "0711-000",
+          "name": "Gourgeist (Medium Variety)"
+        },
+        {
+          "id": "0711-001",
+          "name": "Gourgeist (Small Variety)"
+        },
+        {
+          "id": "0711-002",
+          "name": "Gourgeist (Large Variety)"
+        },
+        {
+          "id": "0711-003",
+          "name": "Gourgeist (Jumbo Variety)"
+        },
+        {
+          "id": "0713-000",
+          "name": "Avalugg"
+        },
+        {
+          "id": "0713-001",
+          "name": "Avalugg (Hisuian Form)"
+        },
+        {
+          "id": "0715-000",
+          "name": "Noivern"
+        },
+        {
+          "id": "0724-000",
+          "name": "Decidueye"
+        },
+        {
+          "id": "0724-001",
+          "name": "Decidueye (Hisuian Form)"
+        },
+        {
+          "id": "0727-000",
+          "name": "Incineroar"
+        },
+        {
+          "id": "0730-000",
+          "name": "Primarina"
+        },
+        {
+          "id": "0733-000",
+          "name": "Toucannon"
+        },
+        {
+          "id": "0740-000",
+          "name": "Crabominable"
+        },
+        {
+          "id": "0745-000",
+          "name": "Lycanroc (Midday Form)"
+        },
+        {
+          "id": "0745-001",
+          "name": "Lycanroc (Midnight Form)"
+        },
+        {
+          "id": "0745-002",
+          "name": "Lycanroc (Dusk Form)"
+        },
+        {
+          "id": "0748-000",
+          "name": "Toxapex"
+        },
+        {
+          "id": "0750-000",
+          "name": "Mudsdale"
+        },
+        {
+          "id": "0752-000",
+          "name": "Araquanid"
+        },
+        {
+          "id": "0758-000",
+          "name": "Salazzle"
+        },
+        {
+          "id": "0763-000",
+          "name": "Tsareena"
+        },
+        {
+          "id": "0765-000",
+          "name": "Oranguru"
+        },
+        {
+          "id": "0766-000",
+          "name": "Passimian"
+        },
+        {
+          "id": "0778-000",
+          "name": "Mimikyu"
+        },
+        {
+          "id": "0780-000",
+          "name": "Drampa"
+        },
+        {
+          "id": "0784-000",
+          "name": "Kommo-o"
+        },
+        {
+          "id": "0823-000",
+          "name": "Corviknight"
+        },
+        {
+          "id": "0841-000",
+          "name": "Flapple"
+        },
+        {
+          "id": "0842-000",
+          "name": "Appletun"
+        },
+        {
+          "id": "0844-000",
+          "name": "Sandaconda"
+        },
+        {
+          "id": "0855-000",
+          "name": "Polteageist"
+        },
+        {
+          "id": "0858-000",
+          "name": "Hatterene"
+        },
+        {
+          "id": "0861-000",
+          "name": "Grimmsnarl"
+        },
+        {
+          "id": "0866-000",
+          "name": "Mr. Rime"
+        },
+        {
+          "id": "0867-000",
+          "name": "Runerigus"
+        },
+        {
+          "id": "0869-000",
+          "name": "Alcremie"
+        },
+        {
+          "id": "0870-000",
+          "name": "Falinks"
+        },
+        {
+          "id": "0877-000",
+          "name": "Morpeko"
+        },
+        {
+          "id": "0887-000",
+          "name": "Dragapult"
+        },
+        {
+          "id": "0899-000",
+          "name": "Wyrdeer"
+        },
+        {
+          "id": "0900-000",
+          "name": "Kleavor"
+        },
+        {
+          "id": "0902-000",
+          "name": "Basculegion (Male)"
+        },
+        {
+          "id": "0902-001",
+          "name": "Basculegion (Female)"
+        },
+        {
+          "id": "0903-000",
+          "name": "Sneasler"
+        },
+        {
+          "id": "0904-000",
+          "name": "Overqwil"
+        },
+        {
+          "id": "0908-000",
+          "name": "Meowscarada"
+        },
+        {
+          "id": "0911-000",
+          "name": "Skeledirge"
+        },
+        {
+          "id": "0914-000",
+          "name": "Quaquaval"
+        },
+        {
+          "id": "0925-000",
+          "name": "Maushold"
+        },
+        {
+          "id": "0934-000",
+          "name": "Garganacl"
+        },
+        {
+          "id": "0936-000",
+          "name": "Armarouge"
+        },
+        {
+          "id": "0937-000",
+          "name": "Ceruledge"
+        },
+        {
+          "id": "0939-000",
+          "name": "Bellibolt"
+        },
+        {
+          "id": "0952-000",
+          "name": "Scovillain"
+        },
+        {
+          "id": "0956-000",
+          "name": "Espathra"
+        },
+        {
+          "id": "0959-000",
+          "name": "Tinkaton"
+        },
+        {
+          "id": "0964-000",
+          "name": "Palafin"
+        },
+        {
+          "id": "0968-000",
+          "name": "Orthworm"
+        },
+        {
+          "id": "0970-000",
+          "name": "Glimmora"
+        },
+        {
+          "id": "0972-000",
+          "name": "Houndstone"
+        },
+        {
+          "id": "0979-000",
+          "name": "Annihilape"
+        },
+        {
+          "id": "0981-000",
+          "name": "Farigiraf"
+        },
+        {
+          "id": "0983-000",
+          "name": "Kingambit"
+        },
+        {
+          "id": "1000-000",
+          "name": "Gholdengo"
+        },
+        {
+          "id": "1013-000",
+          "name": "Sinistcha"
+        },
+        {
+          "id": "1018-000",
+          "name": "Archaludon"
+        },
+        {
+          "id": "1019-000",
+          "name": "Hydrapple"
+        }
+      ],
+      "newlyAllowedMegaNames": [
+        "Mega Raichu X",
+        "Mega Raichu Y",
+        "Mega Sceptile",
+        "Mega Blaziken",
+        "Mega Swampert",
+        "Mega Mawile",
+        "Mega Metagross",
+        "Mega Staraptor",
+        "Mega Scolipede",
+        "Mega Scrafty",
+        "Mega Eelektross",
+        "Mega Pyroar",
+        "Mega Malamar",
+        "Mega Barbaracle",
+        "Mega Dragalge",
+        "Mega Falinks"
+      ],
+      "allowedMegaNames": [
+        "Mega Venusaur",
+        "Mega Charizard X",
+        "Mega Charizard Y",
+        "Mega Blastoise",
+        "Mega Beedrill",
+        "Mega Pidgeot",
+        "Mega Clefable",
+        "Mega Alakazam",
+        "Mega Victreebel",
+        "Mega Slowbro",
+        "Mega Gengar",
+        "Mega Kangaskhan",
+        "Mega Starmie",
+        "Mega Pinsir",
+        "Mega Gyarados",
+        "Mega Aerodactyl",
+        "Mega Dragonite",
+        "Mega Meganium",
+        "Mega Feraligatr",
+        "Mega Ampharos",
+        "Mega Steelix",
+        "Mega Scizor",
+        "Mega Heracross",
+        "Mega Skarmory",
+        "Mega Houndoom",
+        "Mega Tyranitar",
+        "Mega Gardevoir",
+        "Mega Sableye",
+        "Mega Aggron",
+        "Mega Medicham",
+        "Mega Manectric",
+        "Mega Sharpedo",
+        "Mega Camerupt",
+        "Mega Altaria",
+        "Mega Banette",
+        "Mega Chimecho",
+        "Mega Absol",
+        "Mega Glalie",
+        "Mega Lopunny",
+        "Mega Garchomp",
+        "Mega Lucario",
+        "Mega Abomasnow",
+        "Mega Gallade",
+        "Mega Froslass",
+        "Mega Emboar",
+        "Mega Excadrill",
+        "Mega Audino",
+        "Mega Chandelure",
+        "Mega Golurk",
+        "Mega Chesnaught",
+        "Mega Delphox",
+        "Mega Greninja",
+        "Mega Floette",
+        "Mega Meowstic",
+        "Mega Hawlucha",
+        "Mega Crabominable",
+        "Mega Drampa",
+        "Mega Scovillain",
+        "Mega Glimmora",
+        "Mega Raichu X",
+        "Mega Raichu Y",
+        "Mega Sceptile",
+        "Mega Blaziken",
+        "Mega Swampert",
+        "Mega Mawile",
+        "Mega Metagross",
+        "Mega Staraptor",
+        "Mega Scolipede",
+        "Mega Scrafty",
+        "Mega Eelektross",
+        "Mega Pyroar",
+        "Mega Malamar",
+        "Mega Barbaracle",
+        "Mega Dragalge",
+        "Mega Falinks"
+      ],
+      "megaSources": [
+        "https://champions-news.pokemon-home.com/en/page/751.html",
+        "https://champions-news.pokemon-home.com/en/page/776.html"
+      ]
+    },
+    "M-C": {
+      "validFrom": "2026-09-09T02:00:00Z",
+      "validUntil": "2026-12-02T01:59:00Z",
+      "sourceUrl": "https://web-view.app.pokemonchampions.jp/battle/pages/events/rs178713870219xeaaio/en/pokemon.html",
+      "regulationUrl": "https://champions-news.pokemon-home.com/en/page/816.html",
+      "checkedAt": "2026-11-08T23:42:01Z",
+      "sourceSha256": "899f89a99f035090fac091702dc2ca0279cc5e5dfeec1dd317bb4186a495a4d0",
+      "rowCount": 262,
+      "entries": [
+        {
+          "id": "0003-000",
+          "name": "Venusaur"
+        },
+        {
+          "id": "0006-000",
+          "name": "Charizard"
+        },
+        {
+          "id": "0009-000",
+          "name": "Blastoise"
+        },
+        {
+          "id": "0015-000",
+          "name": "Beedrill"
+        },
+        {
+          "id": "0018-000",
+          "name": "Pidgeot"
+        },
+        {
+          "id": "0024-000",
+          "name": "Arbok"
+        },
+        {
+          "id": "0025-000",
+          "name": "Pikachu"
+        },
+        {
+          "id": "0026-000",
+          "name": "Raichu"
+        },
+        {
+          "id": "0026-001",
+          "name": "Raichu (Alolan Form)"
+        },
+        {
+          "id": "0036-000",
+          "name": "Clefable"
+        },
+        {
+          "id": "0038-000",
+          "name": "Ninetales"
+        },
+        {
+          "id": "0038-001",
+          "name": "Ninetales (Alolan Form)"
+        },
+        {
+          "id": "0040-000",
+          "name": "Wigglytuff"
+        },
+        {
+          "id": "0045-000",
+          "name": "Vileplume"
+        },
+        {
+          "id": "0053-000",
+          "name": "Persian"
+        },
+        {
+          "id": "0053-001",
+          "name": "Persian (Alolan Form)"
+        },
+        {
+          "id": "0059-000",
+          "name": "Arcanine"
+        },
+        {
+          "id": "0059-001",
+          "name": "Arcanine (Hisuian Form)"
+        },
+        {
+          "id": "0065-000",
+          "name": "Alakazam"
+        },
+        {
+          "id": "0068-000",
+          "name": "Machamp"
+        },
+        {
+          "id": "0071-000",
+          "name": "Victreebel"
+        },
+        {
+          "id": "0080-000",
+          "name": "Slowbro"
+        },
+        {
+          "id": "0080-002",
+          "name": "Slowbro (Galarian Form)"
+        },
+        {
+          "id": "0083-000",
+          "name": "Farfetch’d"
+        },
+        {
+          "id": "0094-000",
+          "name": "Gengar"
+        },
+        {
+          "id": "0115-000",
+          "name": "Kangaskhan"
+        },
+        {
+          "id": "0121-000",
+          "name": "Starmie"
+        },
+        {
+          "id": "0122-000",
+          "name": "Mr. Mime"
+        },
+        {
+          "id": "0127-000",
+          "name": "Pinsir"
+        },
+        {
+          "id": "0128-000",
+          "name": "Tauros"
+        },
+        {
+          "id": "0128-001",
+          "name": "Tauros (Paldean Form (Combat Breed))"
+        },
+        {
+          "id": "0128-002",
+          "name": "Tauros (Paldean Form (Blaze Breed))"
+        },
+        {
+          "id": "0128-003",
+          "name": "Tauros (Paldean Form (Aqua Breed))"
+        },
+        {
+          "id": "0130-000",
+          "name": "Gyarados"
+        },
+        {
+          "id": "0132-000",
+          "name": "Ditto"
+        },
+        {
+          "id": "0134-000",
+          "name": "Vaporeon"
+        },
+        {
+          "id": "0135-000",
+          "name": "Jolteon"
+        },
+        {
+          "id": "0136-000",
+          "name": "Flareon"
+        },
+        {
+          "id": "0142-000",
+          "name": "Aerodactyl"
+        },
+        {
+          "id": "0143-000",
+          "name": "Snorlax"
+        },
+        {
+          "id": "0149-000",
+          "name": "Dragonite"
+        },
+        {
+          "id": "0154-000",
+          "name": "Meganium"
+        },
+        {
+          "id": "0157-000",
+          "name": "Typhlosion"
+        },
+        {
+          "id": "0157-001",
+          "name": "Typhlosion (Hisuian Form)"
+        },
+        {
+          "id": "0160-000",
+          "name": "Feraligatr"
+        },
+        {
+          "id": "0168-000",
+          "name": "Ariados"
+        },
+        {
+          "id": "0181-000",
+          "name": "Ampharos"
+        },
+        {
+          "id": "0184-000",
+          "name": "Azumarill"
+        },
+        {
+          "id": "0186-000",
+          "name": "Politoed"
+        },
+        {
+          "id": "0196-000",
+          "name": "Espeon"
+        },
+        {
+          "id": "0197-000",
+          "name": "Umbreon"
+        },
+        {
+          "id": "0199-000",
+          "name": "Slowking"
+        },
+        {
+          "id": "0199-001",
+          "name": "Slowking (Galarian Form)"
+        },
+        {
+          "id": "0205-000",
+          "name": "Forretress"
+        },
+        {
+          "id": "0208-000",
+          "name": "Steelix"
+        },
+        {
+          "id": "0211-000",
+          "name": "Qwilfish"
+        },
+        {
+          "id": "0212-000",
+          "name": "Scizor"
+        },
+        {
+          "id": "0214-000",
+          "name": "Heracross"
+        },
+        {
+          "id": "0227-000",
+          "name": "Skarmory"
+        },
+        {
+          "id": "0229-000",
+          "name": "Houndoom"
+        },
+        {
+          "id": "0248-000",
+          "name": "Tyranitar"
+        },
+        {
+          "id": "0254-000",
+          "name": "Sceptile"
+        },
+        {
+          "id": "0257-000",
+          "name": "Blaziken"
+        },
+        {
+          "id": "0260-000",
+          "name": "Swampert"
+        },
+        {
+          "id": "0279-000",
+          "name": "Pelipper"
+        },
+        {
+          "id": "0282-000",
+          "name": "Gardevoir"
+        },
+        {
+          "id": "0302-000",
+          "name": "Sableye"
+        },
+        {
+          "id": "0303-000",
+          "name": "Mawile"
+        },
+        {
+          "id": "0306-000",
+          "name": "Aggron"
+        },
+        {
+          "id": "0308-000",
+          "name": "Medicham"
+        },
+        {
+          "id": "0310-000",
+          "name": "Manectric"
+        },
+        {
+          "id": "0317-000",
+          "name": "Swalot"
+        },
+        {
+          "id": "0319-000",
+          "name": "Sharpedo"
+        },
+        {
+          "id": "0323-000",
+          "name": "Camerupt"
+        },
+        {
+          "id": "0324-000",
+          "name": "Torkoal"
+        },
+        {
+          "id": "0334-000",
+          "name": "Altaria"
+        },
+        {
+          "id": "0350-000",
+          "name": "Milotic"
+        },
+        {
+          "id": "0351-000",
+          "name": "Castform"
+        },
+        {
+          "id": "0354-000",
+          "name": "Banette"
+        },
+        {
+          "id": "0358-000",
+          "name": "Chimecho"
+        },
+        {
+          "id": "0359-000",
+          "name": "Absol"
+        },
+        {
+          "id": "0362-000",
+          "name": "Glalie"
+        },
+        {
+          "id": "0373-000",
+          "name": "Salamence"
+        },
+        {
+          "id": "0376-000",
+          "name": "Metagross"
+        },
+        {
+          "id": "0389-000",
+          "name": "Torterra"
+        },
+        {
+          "id": "0392-000",
+          "name": "Infernape"
+        },
+        {
+          "id": "0395-000",
+          "name": "Empoleon"
+        },
+        {
+          "id": "0398-000",
+          "name": "Staraptor"
+        },
+        {
+          "id": "0405-000",
+          "name": "Luxray"
+        },
+        {
+          "id": "0407-000",
+          "name": "Roserade"
+        },
+        {
+          "id": "0409-000",
+          "name": "Rampardos"
+        },
+        {
+          "id": "0411-000",
+          "name": "Bastiodon"
+        },
+        {
+          "id": "0428-000",
+          "name": "Lopunny"
+        },
+        {
+          "id": "0442-000",
+          "name": "Spiritomb"
+        },
+        {
+          "id": "0445-000",
+          "name": "Garchomp"
+        },
+        {
+          "id": "0448-000",
+          "name": "Lucario"
+        },
+        {
+          "id": "0450-000",
+          "name": "Hippowdon"
+        },
+        {
+          "id": "0454-000",
+          "name": "Toxicroak"
+        },
+        {
+          "id": "0460-000",
+          "name": "Abomasnow"
+        },
+        {
+          "id": "0461-000",
+          "name": "Weavile"
+        },
+        {
+          "id": "0464-000",
+          "name": "Rhyperior"
+        },
+        {
+          "id": "0470-000",
+          "name": "Leafeon"
+        },
+        {
+          "id": "0471-000",
+          "name": "Glaceon"
+        },
+        {
+          "id": "0472-000",
+          "name": "Gliscor"
+        },
+        {
+          "id": "0473-000",
+          "name": "Mamoswine"
+        },
+        {
+          "id": "0475-000",
+          "name": "Gallade"
+        },
+        {
+          "id": "0478-000",
+          "name": "Froslass"
+        },
+        {
+          "id": "0479-000",
+          "name": "Rotom (Rotom)"
+        },
+        {
+          "id": "0479-001",
+          "name": "Rotom (Heat Rotom)"
+        },
+        {
+          "id": "0479-002",
+          "name": "Rotom (Wash Rotom)"
+        },
+        {
+          "id": "0479-003",
+          "name": "Rotom (Frost Rotom)"
+        },
+        {
+          "id": "0479-004",
+          "name": "Rotom (Fan Rotom)"
+        },
+        {
+          "id": "0479-005",
+          "name": "Rotom (Mow Rotom)"
+        },
+        {
+          "id": "0497-000",
+          "name": "Serperior"
+        },
+        {
+          "id": "0500-000",
+          "name": "Emboar"
+        },
+        {
+          "id": "0503-000",
+          "name": "Samurott"
+        },
+        {
+          "id": "0503-001",
+          "name": "Samurott (Hisuian Form)"
+        },
+        {
+          "id": "0505-000",
+          "name": "Watchog"
+        },
+        {
+          "id": "0510-000",
+          "name": "Liepard"
+        },
+        {
+          "id": "0512-000",
+          "name": "Simisage"
+        },
+        {
+          "id": "0514-000",
+          "name": "Simisear"
+        },
+        {
+          "id": "0516-000",
+          "name": "Simipour"
+        },
+        {
+          "id": "0518-000",
+          "name": "Musharna"
+        },
+        {
+          "id": "0530-000",
+          "name": "Excadrill"
+        },
+        {
+          "id": "0531-000",
+          "name": "Audino"
+        },
+        {
+          "id": "0534-000",
+          "name": "Conkeldurr"
+        },
+        {
+          "id": "0545-000",
+          "name": "Scolipede"
+        },
+        {
+          "id": "0547-000",
+          "name": "Whimsicott"
+        },
+        {
+          "id": "0553-000",
+          "name": "Krookodile"
+        },
+        {
+          "id": "0560-000",
+          "name": "Scrafty"
+        },
+        {
+          "id": "0563-000",
+          "name": "Cofagrigus"
+        },
+        {
+          "id": "0569-000",
+          "name": "Garbodor"
+        },
+        {
+          "id": "0571-000",
+          "name": "Zoroark"
+        },
+        {
+          "id": "0571-001",
+          "name": "Zoroark (Hisuian Form)"
+        },
+        {
+          "id": "0579-000",
+          "name": "Reuniclus"
+        },
+        {
+          "id": "0584-000",
+          "name": "Vanilluxe"
+        },
+        {
+          "id": "0587-000",
+          "name": "Emolga"
+        },
+        {
+          "id": "0604-000",
+          "name": "Eelektross"
+        },
+        {
+          "id": "0609-000",
+          "name": "Chandelure"
+        },
+        {
+          "id": "0614-000",
+          "name": "Beartic"
+        },
+        {
+          "id": "0618-000",
+          "name": "Stunfisk"
+        },
+        {
+          "id": "0618-001",
+          "name": "Stunfisk (Galarian Form)"
+        },
+        {
+          "id": "0623-000",
+          "name": "Golurk"
+        },
+        {
+          "id": "0635-000",
+          "name": "Hydreigon"
+        },
+        {
+          "id": "0637-000",
+          "name": "Volcarona"
+        },
+        {
+          "id": "0652-000",
+          "name": "Chesnaught"
+        },
+        {
+          "id": "0655-000",
+          "name": "Delphox"
+        },
+        {
+          "id": "0658-000",
+          "name": "Greninja"
+        },
+        {
+          "id": "0660-000",
+          "name": "Diggersby"
+        },
+        {
+          "id": "0663-000",
+          "name": "Talonflame"
+        },
+        {
+          "id": "0666-018",
+          "name": "Vivillon"
+        },
+        {
+          "id": "0668-000",
+          "name": "Pyroar"
+        },
+        {
+          "id": "0670-005",
+          "name": "Floette"
+        },
+        {
+          "id": "0671-000",
+          "name": "Florges"
+        },
+        {
+          "id": "0673-000",
+          "name": "Gogoat"
+        },
+        {
+          "id": "0675-000",
+          "name": "Pangoro"
+        },
+        {
+          "id": "0676-000",
+          "name": "Furfrou"
+        },
+        {
+          "id": "0678-000",
+          "name": "Meowstic (Male)"
+        },
+        {
+          "id": "0678-001",
+          "name": "Meowstic (Female)"
+        },
+        {
+          "id": "0681-000",
+          "name": "Aegislash"
+        },
+        {
+          "id": "0683-000",
+          "name": "Aromatisse"
+        },
+        {
+          "id": "0685-000",
+          "name": "Slurpuff"
+        },
+        {
+          "id": "0687-000",
+          "name": "Malamar"
+        },
+        {
+          "id": "0689-000",
+          "name": "Barbaracle"
+        },
+        {
+          "id": "0691-000",
+          "name": "Dragalge"
+        },
+        {
+          "id": "0693-000",
+          "name": "Clawitzer"
+        },
+        {
+          "id": "0695-000",
+          "name": "Heliolisk"
+        },
+        {
+          "id": "0697-000",
+          "name": "Tyrantrum"
+        },
+        {
+          "id": "0699-000",
+          "name": "Aurorus"
+        },
+        {
+          "id": "0700-000",
+          "name": "Sylveon"
+        },
+        {
+          "id": "0701-000",
+          "name": "Hawlucha"
+        },
+        {
+          "id": "0702-000",
+          "name": "Dedenne"
+        },
+        {
+          "id": "0706-000",
+          "name": "Goodra"
+        },
+        {
+          "id": "0706-001",
+          "name": "Goodra (Hisuian Form)"
+        },
+        {
+          "id": "0707-000",
+          "name": "Klefki"
+        },
+        {
+          "id": "0709-000",
+          "name": "Trevenant"
+        },
+        {
+          "id": "0711-000",
+          "name": "Gourgeist (Medium Variety)"
+        },
+        {
+          "id": "0711-001",
+          "name": "Gourgeist (Small Variety)"
+        },
+        {
+          "id": "0711-002",
+          "name": "Gourgeist (Large Variety)"
+        },
+        {
+          "id": "0711-003",
+          "name": "Gourgeist (Jumbo Variety)"
+        },
+        {
+          "id": "0713-000",
+          "name": "Avalugg"
+        },
+        {
+          "id": "0713-001",
+          "name": "Avalugg (Hisuian Form)"
+        },
+        {
+          "id": "0715-000",
+          "name": "Noivern"
+        },
+        {
+          "id": "0724-000",
+          "name": "Decidueye"
+        },
+        {
+          "id": "0724-001",
+          "name": "Decidueye (Hisuian Form)"
+        },
+        {
+          "id": "0727-000",
+          "name": "Incineroar"
+        },
+        {
+          "id": "0730-000",
+          "name": "Primarina"
+        },
+        {
+          "id": "0733-000",
+          "name": "Toucannon"
+        },
+        {
+          "id": "0740-000",
+          "name": "Crabominable"
+        },
+        {
+          "id": "0745-000",
+          "name": "Lycanroc (Midday Form)"
+        },
+        {
+          "id": "0745-001",
+          "name": "Lycanroc (Midnight Form)"
+        },
+        {
+          "id": "0745-002",
+          "name": "Lycanroc (Dusk Form)"
+        },
+        {
+          "id": "0748-000",
+          "name": "Toxapex"
+        },
+        {
+          "id": "0750-000",
+          "name": "Mudsdale"
+        },
+        {
+          "id": "0752-000",
+          "name": "Araquanid"
+        },
+        {
+          "id": "0758-000",
+          "name": "Salazzle"
+        },
+        {
+          "id": "0763-000",
+          "name": "Tsareena"
+        },
+        {
+          "id": "0765-000",
+          "name": "Oranguru"
+        },
+        {
+          "id": "0766-000",
+          "name": "Passimian"
+        },
+        {
+          "id": "0768-000",
+          "name": "Golisopod"
+        },
+        {
+          "id": "0778-000",
+          "name": "Mimikyu"
+        },
+        {
+          "id": "0780-000",
+          "name": "Drampa"
+        },
+        {
+          "id": "0784-000",
+          "name": "Kommo-o"
+        },
+        {
+          "id": "0812-000",
+          "name": "Rillaboom"
+        },
+        {
+          "id": "0815-000",
+          "name": "Cinderace"
+        },
+        {
+          "id": "0818-000",
+          "name": "Inteleon"
+        },
+        {
+          "id": "0823-000",
+          "name": "Corviknight"
+        },
+        {
+          "id": "0828-000",
+          "name": "Thievul"
+        },
+        {
+          "id": "0841-000",
+          "name": "Flapple"
+        },
+        {
+          "id": "0842-000",
+          "name": "Appletun"
+        },
+        {
+          "id": "0844-000",
+          "name": "Sandaconda"
+        },
+        {
+          "id": "0849-000",
+          "name": "Toxtricity (Amped Form)"
+        },
+        {
+          "id": "0849-001",
+          "name": "Toxtricity (Low Key Form)"
+        },
+        {
+          "id": "0853-000",
+          "name": "Grapploct"
+        },
+        {
+          "id": "0855-000",
+          "name": "Polteageist"
+        },
+        {
+          "id": "0858-000",
+          "name": "Hatterene"
+        },
+        {
+          "id": "0861-000",
+          "name": "Grimmsnarl"
+        },
+        {
+          "id": "0863-000",
+          "name": "Perrserker"
+        },
+        {
+          "id": "0865-000",
+          "name": "Sirfetch’d"
+        },
+        {
+          "id": "0866-000",
+          "name": "Mr. Rime"
+        },
+        {
+          "id": "0867-000",
+          "name": "Runerigus"
+        },
+        {
+          "id": "0869-000",
+          "name": "Alcremie"
+        },
+        {
+          "id": "0870-000",
+          "name": "Falinks"
+        },
+        {
+          "id": "0871-000",
+          "name": "Pincurchin"
+        },
+        {
+          "id": "0876-000",
+          "name": "Indeedee (Male)"
+        },
+        {
+          "id": "0876-001",
+          "name": "Indeedee (Female)"
+        },
+        {
+          "id": "0877-000",
+          "name": "Morpeko"
+        },
+        {
+          "id": "0887-000",
+          "name": "Dragapult"
+        },
+        {
+          "id": "0899-000",
+          "name": "Wyrdeer"
+        },
+        {
+          "id": "0900-000",
+          "name": "Kleavor"
+        },
+        {
+          "id": "0902-000",
+          "name": "Basculegion (Male)"
+        },
+        {
+          "id": "0902-001",
+          "name": "Basculegion (Female)"
+        },
+        {
+          "id": "0903-000",
+          "name": "Sneasler"
+        },
+        {
+          "id": "0904-000",
+          "name": "Overqwil"
+        },
+        {
+          "id": "0908-000",
+          "name": "Meowscarada"
+        },
+        {
+          "id": "0911-000",
+          "name": "Skeledirge"
+        },
+        {
+          "id": "0914-000",
+          "name": "Quaquaval"
+        },
+        {
+          "id": "0923-000",
+          "name": "Pawmot"
+        },
+        {
+          "id": "0925-001",
+          "name": "Maushold"
+        },
+        {
+          "id": "0930-000",
+          "name": "Arboliva"
+        },
+        {
+          "id": "0931-000",
+          "name": "Squawkabilly"
+        },
+        {
+          "id": "0931-002",
+          "name": "Squawkabilly"
+        },
+        {
+          "id": "0934-000",
+          "name": "Garganacl"
+        },
+        {
+          "id": "0936-000",
+          "name": "Armarouge"
+        },
+        {
+          "id": "0937-000",
+          "name": "Ceruledge"
+        },
+        {
+          "id": "0939-000",
+          "name": "Bellibolt"
+        },
+        {
+          "id": "0943-000",
+          "name": "Mabosstiff"
+        },
+        {
+          "id": "0952-000",
+          "name": "Scovillain"
+        },
+        {
+          "id": "0956-000",
+          "name": "Espathra"
+        },
+        {
+          "id": "0959-000",
+          "name": "Tinkaton"
+        },
+        {
+          "id": "0964-000",
+          "name": "Palafin"
+        },
+        {
+          "id": "0968-000",
+          "name": "Orthworm"
+        },
+        {
+          "id": "0970-000",
+          "name": "Glimmora"
+        },
+        {
+          "id": "0972-000",
+          "name": "Houndstone"
+        },
+        {
+          "id": "0979-000",
+          "name": "Annihilape"
+        },
+        {
+          "id": "0981-000",
+          "name": "Farigiraf"
+        },
+        {
+          "id": "0983-000",
+          "name": "Kingambit"
+        },
+        {
+          "id": "0998-000",
+          "name": "Baxcalibur"
+        },
+        {
+          "id": "1000-000",
+          "name": "Gholdengo"
+        },
+        {
+          "id": "1013-000",
+          "name": "Sinistcha"
+        },
+        {
+          "id": "1018-000",
+          "name": "Archaludon"
+        },
+        {
+          "id": "1019-000",
+          "name": "Hydrapple"
+        }
+      ],
+      "rankedSeason": {
+        "id": "M-8",
+        "validFrom": "2026-11-04T02:00:00Z",
+        "validUntil": "2026-12-02T01:59:00Z",
+        "sourceUrl": "https://champions-news.pokemon-home.com/en/page/867.html"
+      },
+      "regulationAnnouncedNewMegas": [
+        "Mega Absol Z",
+        "Mega Salamence",
+        "Mega Garchomp Z",
+        "Mega Lucario Z",
+        "Mega Golisopod",
+        "Mega Baxcalibur"
+      ],
+      "rosterAnnouncement": {
+        "sourceUrl": "https://champions-news.pokemon-home.com/en/page/821.html",
+        "terminology": "newly featured",
+        "newlyFeatured": [
+          "Wigglytuff",
+          "Persian",
+          "Persian (Alolan Form)",
+          "Farfetch’d",
+          "Mr. Mime",
+          "Swalot",
+          "Salamence",
+          "Gogoat",
+          "Golisopod",
+          "Rillaboom",
+          "Cinderace",
+          "Inteleon",
+          "Thievul",
+          "Toxtricity (Amped Form)",
+          "Toxtricity (Low Key Form)",
+          "Grapploct",
+          "Perrserker",
+          "Sirfetch’d",
+          "Pincurchin",
+          "Indeedee (Male)",
+          "Indeedee (Female)",
+          "Pawmot",
+          "Arboliva",
+          "Squawkabilly (Green Plumage)",
+          "Squawkabilly (Blue Plumage)",
+          "Squawkabilly (Yellow Plumage)",
+          "Squawkabilly (White Plumage)",
+          "Mabosstiff",
+          "Baxcalibur"
+        ]
+      },
+      "newlyAllowedMegaNames": [
+        "Mega Absol Z",
+        "Mega Salamence",
+        "Mega Garchomp Z",
+        "Mega Lucario Z",
+        "Mega Golisopod",
+        "Mega Baxcalibur"
+      ],
+      "allowedMegaNames": [
+        "Mega Venusaur",
+        "Mega Charizard X",
+        "Mega Charizard Y",
+        "Mega Blastoise",
+        "Mega Beedrill",
+        "Mega Pidgeot",
+        "Mega Clefable",
+        "Mega Alakazam",
+        "Mega Victreebel",
+        "Mega Slowbro",
+        "Mega Gengar",
+        "Mega Kangaskhan",
+        "Mega Starmie",
+        "Mega Pinsir",
+        "Mega Gyarados",
+        "Mega Aerodactyl",
+        "Mega Dragonite",
+        "Mega Meganium",
+        "Mega Feraligatr",
+        "Mega Ampharos",
+        "Mega Steelix",
+        "Mega Scizor",
+        "Mega Heracross",
+        "Mega Skarmory",
+        "Mega Houndoom",
+        "Mega Tyranitar",
+        "Mega Gardevoir",
+        "Mega Sableye",
+        "Mega Aggron",
+        "Mega Medicham",
+        "Mega Manectric",
+        "Mega Sharpedo",
+        "Mega Camerupt",
+        "Mega Altaria",
+        "Mega Banette",
+        "Mega Chimecho",
+        "Mega Absol",
+        "Mega Glalie",
+        "Mega Lopunny",
+        "Mega Garchomp",
+        "Mega Lucario",
+        "Mega Abomasnow",
+        "Mega Gallade",
+        "Mega Froslass",
+        "Mega Emboar",
+        "Mega Excadrill",
+        "Mega Audino",
+        "Mega Chandelure",
+        "Mega Golurk",
+        "Mega Chesnaught",
+        "Mega Delphox",
+        "Mega Greninja",
+        "Mega Floette",
+        "Mega Meowstic",
+        "Mega Hawlucha",
+        "Mega Crabominable",
+        "Mega Drampa",
+        "Mega Scovillain",
+        "Mega Glimmora",
+        "Mega Raichu X",
+        "Mega Raichu Y",
+        "Mega Sceptile",
+        "Mega Blaziken",
+        "Mega Swampert",
+        "Mega Mawile",
+        "Mega Metagross",
+        "Mega Staraptor",
+        "Mega Scolipede",
+        "Mega Scrafty",
+        "Mega Eelektross",
+        "Mega Pyroar",
+        "Mega Malamar",
+        "Mega Barbaracle",
+        "Mega Dragalge",
+        "Mega Falinks",
+        "Mega Absol Z",
+        "Mega Salamence",
+        "Mega Garchomp Z",
+        "Mega Lucario Z",
+        "Mega Golisopod",
+        "Mega Baxcalibur"
+      ],
+      "megaSources": [
+        "https://champions-news.pokemon-home.com/en/page/751.html",
+        "https://champions-news.pokemon-home.com/en/page/776.html",
+        "https://champions-news.pokemon-home.com/en/page/816.html"
+      ]
+    }
+  }
+}

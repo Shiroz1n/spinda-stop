@@ -3,9 +3,12 @@ import { formatNationalNumber } from "@spinda-stop/domain";
 import { PokemonSprite } from "./PokemonSprite.jsx";
 import { TypeTag } from "./TypeTag.jsx";
 
-export function PokemonCard({ pokemon, onOpen }) {
+export function PokemonCard({ pokemon, onOpen, isFavorite = false, onToggleFavorite }) {
   return (
     <article className="pokemon-card">
+      {onToggleFavorite && <button className={`pokemon-favorite${isFavorite ? " is-favorite" : ""}`} type="button" aria-pressed={isFavorite} aria-label={`${isFavorite ? "Remover dos" : "Adicionar aos"} favoritos: ${pokemon.name}`} onClick={() => onToggleFavorite(pokemon.slug)}>
+        <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
+      </button>}
       <Link className="pokemon-card-link" to={`/dex/${encodeURIComponent(pokemon.slug)}`} onClick={onOpen}>
         <span className="pokemon-card-art"><PokemonSprite pokemon={pokemon} name={pokemon.name} size={112} decorative /></span>
         <span className="pokemon-card-copy">

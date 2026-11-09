@@ -275,14 +275,18 @@ test("rejects unsupported or invalid Champions point budgets and malformed speci
   assert.match(importShowdownTeam(Array(7).fill("Pikachu").join("\n\n"), catalog).error, /mais de seis/);
 });
 
-test("searches by accents, slug, type, and generation with no filters by default", () => {
+test("searches by accents, safe punctuation aliases, number, type, and generation", () => {
   const entries = [
     { ...catalog[0], name: "Nidorán", speciesName: "Nidorán" },
     { ...catalog[0], slug: "raichu-alola", name: "Raichu de Alola", speciesName: "Raichu", formName: "Alola", types: ["electric", "psychic"], generation: 7 },
+    { ...catalog[0], slug: "farfetchd", name: "Farfetch’d", speciesId: 83, aliases: ["Farfetch'd"] },
   ];
-  assert.equal(searchPokemon(entries).length, 2);
+  assert.equal(searchPokemon(entries).length, 3);
   assert.equal(searchPokemon(entries, "raichu", { type: "electric", generation: 7 }).length, 1);
   assert.equal(searchPokemon(entries, "nidoran").length, 1);
+  assert.equal(searchPokemon(entries, "Farfetch'd").length, 1);
+  assert.equal(searchPokemon(entries, "#0083").map(({ slug }) => slug).join(","), "farfetchd");
+  assert.equal(searchPokemon(entries, "83").map(({ slug }) => slug).join(","), "farfetchd");
   assert.equal(formatNationalNumber(25), "#0025");
 });
 

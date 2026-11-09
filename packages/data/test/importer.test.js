@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildEvolutionRules, buildPokedex, buildPokemonMoveLearnsets, parseCsv, POKEAPI_COMMIT, publishGeneratedSnapshot, shardPokemonMoveLearnsets, toDexIndex } from "../scripts/sync-pokedex.mjs";
@@ -162,9 +162,32 @@ test("publishes generated data as one staged directory and keeps the prior snaps
     assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "new shard");
     await assert.rejects(readFile(join(generatedDirectory, "old-only.json")));
 
+    const previousSnapshot = await readlink(generatedDirectory);
+    await publishGeneratedSnapshot({
+      "pokedex.json": "latest dex",
+      "learnsets/00.json": "latest shard",
+    }, generatedDirectory);
+    assert.notEqual(await readlink(generatedDirectory), previousSnapshot);
+    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "latest dex");
+    assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "latest shard");
+
     await assert.rejects(publishGeneratedSnapshot({ "../escape.json": "invalid" }, generatedDirectory), /Caminho de saída inválido/);
-    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "new dex");
-    assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "new shard");
+    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "latest dex");
+    assert.equal(await readFile(join(generatedDirectory, "learnsets/00.json"), "utf8"), "latest shard");
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test("recovers the previous complete snapshot after an interrupted directory swap", async () => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), "spinda-data-recovery-"));
+  const generatedDirectory = join(temporaryDirectory, "generated");
+  const backupDirectory = join(temporaryDirectory, ".generated-backup-interrupted");
+  try {
+    await mkdir(backupDirectory, { recursive: true });
+    await writeFile(join(backupDirectory, "pokedex.json"), "prior complete snapshot", "utf8");
+    await assert.rejects(publishGeneratedSnapshot({ "../invalid.json": "invalid" }, generatedDirectory), /Caminho de saída inválido/);
+    assert.equal(await readFile(join(generatedDirectory, "pokedex.json"), "utf8"), "prior complete snapshot");
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

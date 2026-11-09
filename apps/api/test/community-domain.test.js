@@ -18,23 +18,33 @@ const sampleTeam = {
   ],
 };
 const pokemonCatalog = [{ slug: "garchomp", speciesId: 445, speciesSlug: "garchomp", formId: "default" }];
+const movesCatalog = [{ slug: "earthquake", name: "Earthquake" }, { slug: "tackle", name: "Tackle" }];
 
 test("keeps a team payload intact, including unfinished sets and Stat Points", () => {
-  const result = validateTeamPayload(sampleTeam, pokemonCatalog);
+  const result = validateTeamPayload(sampleTeam, pokemonCatalog, movesCatalog);
   assert.equal(result.ok, true);
   assert.equal(result.value, sampleTeam);
   assert.equal(result.value.members[0].item, "Clear Amulet");
   assert.equal(result.value.members[0].statPoints.atk, 14);
   assert.deepEqual(result.value.members[0].moves, ["Earthquake", "", "", ""]);
   assert.equal(result.value.members[0].formId, "default");
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [null] }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, format: "singles" }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], formId: 445 }, null, null, null, null, null] }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], speciesSlug: "wrong" }, null, null, null, null, null] }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { ...sampleTeam.members[0].statPoints, atk: -1 } }, null, null, null, null, null] }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 32, atk: 32, def: 2, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog).ok, true);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 32, atk: 32, def: 3, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog).ok, false);
-  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 33, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [null] }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, format: "singles" }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], formId: 445 }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], speciesSlug: "wrong" }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { ...sampleTeam.members[0].statPoints, atk: -1 } }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 32, atk: 32, def: 2, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, true);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 32, atk: 32, def: 3, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, false);
+  assert.equal(validateTeamPayload({ ...sampleTeam, members: [{ ...sampleTeam.members[0], statPoints: { hp: 33, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } }, null, null, null, null, null] }, pokemonCatalog, movesCatalog).ok, false);
+});
+
+test("server-side team validation accepts empty moves and rejects unknown moves", () => {
+  const emptyMove = structuredClone(sampleTeam);
+  emptyMove.members[0].moves = ["Earthquake", "", "", ""];
+  assert.equal(validateTeamPayload(emptyMove, pokemonCatalog, movesCatalog).ok, true);
+  const invalidMove = structuredClone(sampleTeam);
+  invalidMove.members[0].moves[0] = "Made Up Move";
+  assert.equal(validateTeamPayload(invalidMove, pokemonCatalog, movesCatalog).ok, false);
 });
 
 test("room transitions require an open or locked room and enough check-ins", () => {
